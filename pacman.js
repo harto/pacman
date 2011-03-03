@@ -5,7 +5,7 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, window */
+/*global $, window, Image */
 
 var TILE_SIZE = 8,
     COLS = 28,
@@ -17,7 +17,7 @@ var TILE_SIZE = 8,
 
     MAX_SPEED = 1,
 
-    DEBUG = true,
+    DEBUG = false,//true,
 
     NORTH = 1,
     SOUTH = 2,
@@ -44,6 +44,10 @@ function invalidateScreen() {
 
 /// miscellany
 
+function toLocal(coord) {
+    return coord % TILE_SIZE;
+}
+
 function intersecting(ax, ay, aw, ah, bx, by, bw, bh) {
     var ax2 = ax + aw, ay2 = ay + ah,
         bx2 = bx + bw, by2 = by + bh;
@@ -55,22 +59,44 @@ function intersecting(ax, ay, aw, ah, bx, by, bw, bh) {
              ((ay <= by && by <= ay2) || (ay <= by2 && by2 <= ay2))));
 }
 
+Array.prototype.remove = function (o) {
+    var i = this.indexOf(o);
+    if (i !== -1) {
+        this.splice(i, 1);
+    }
+};
+
 function Sprite() {}
 
 Sprite.prototype = {
-    intersects: function (o) {
-        return intersecting(this.x, this.y, this.w, this.h, o.x, o.y, o.w, o.h);
+    intersects: function (x, y, w, h) {
+        return intersecting(this.x, this.y, this.w, this.h, x, y, w, h);
     },
     invalidate: function () {
         invalidateRegion(this.x, this.y, this.w, this.h);
     },
-    draw: function (g) {},
-    update: function () {}
+    repaint: function (g, invalidated) {
+        var s = this;
+        var invalid = invalidated.some(function (r) {
+            return s.intersects(r.x, r.y, r.w, r.h);
+        });
+        if (invalid) {
+            this.draw(g);
+        }
+    },
+    draw: function (g) {
+        // implemented by subclasses
+    },
+    update: function () {
+        // implemented by subclasses
+    }
 };
 
 /// dots
 
 function Dot(col, row) {
+    this.col = col;
+    this.row = row;
     this.x = col * TILE_SIZE + (TILE_SIZE - Dot.SIZE) / 2;
     this.y = row * TILE_SIZE + (TILE_SIZE - Dot.SIZE) / 2;
     this.w = this.h = Dot.SIZE;
@@ -86,9 +112,12 @@ Dot.prototype.draw = function (g) {
     g.fillRect(this.x, this.y, this.w, this.h);
     g.restore();
 };
-
+Dot.prototype.value = 10;
+Dot.prototype.delay = 1;
 
 function Energiser(col, row) {
+    this.col = col;
+    this.row = row;
     this.x = col * TILE_SIZE + (TILE_SIZE - Energiser.SIZE) / 2;
     this.y = row * TILE_SIZE + (TILE_SIZE - Energiser.SIZE) / 2;
     this.w = this.h = Energiser.SIZE;
@@ -117,6 +146,8 @@ Energiser.prototype.update = function () {
         this.blinkFrames = Energiser.BLINK_FRAMES;
     }
 };
+Energiser.prototype.value = 50;
+Energiser.prototype.delay = 3;
 
 /// maze
 
@@ -159,20 +190,21 @@ var maze = {
              '############################',
              '############################'],
 
-    initDots: function () {
-        var layout = this.layout;
-        var dots = [];
-        for (var row = 0; row < layout.length; row++) {
-            for (var col = 0; col < layout[row].length; col++) {
-                var c = layout[row][col];
+    reset: function () {
+        this.dots = [];
+        this.energisers = [];
+        for (var row = 0; row < this.layout.length; row++) {
+            for (var col = 0; col < this.layout[row].length; col++) {
+                var c = this.layout[row][col];
                 if (c === '.') {
-                    dots.push(new Dot(col, row));
+                    this.dots.push(new Dot(col, row));
                 } else if (c === 'o') {
-                    dots.push(new Energiser(col, row));
+                    var e = new Energiser(col, row);
+                    this.dots.push(e);
+                    this.energisers.push(e);
                 }
             }
         }
-        return dots;
     },
 
     adjacentTiles: function (col, row) {
@@ -186,6 +218,40 @@ var maze = {
 
     canEnter: function (col, row) {
         return this.layout[row][col] !== '#';
+    },
+
+    dotAt: function (col, row) {
+        for (var i = 0; i < this.dots.length; i++) {
+            var dot = this.dots[i];
+            if (dot.col === col && dot.row === row) {
+                return dot;
+            }
+        }
+    },
+
+    remove: function (dot) {
+        dot.invalidate();
+        this.dots.remove(dot);
+        if (dot instanceof Energiser) {
+            this.energisers.remove(dot);
+        }
+    },
+
+    repaint: function (g, invalidated) {
+        var bg = this.bg;
+        invalidated.forEach(function (r) {
+            var x = r.x, y = r.y, w = r.w, h = r.h;
+            g.drawImage(bg, x, y, w, h, x, y, w, h);
+        });
+        this.dots.forEach(function (d) {
+            d.repaint(g, invalidated);
+        });
+    },
+
+    update: function () {
+        this.energisers.forEach(function (e) {
+            e.update();
+        });
     }
 };
 
@@ -199,19 +265,20 @@ pacman.speed = 0.8 * MAX_SPEED;
 pacman.reset = function () {
     this.x = 14 * TILE_SIZE - this.w / 2;
     this.y = 26 * TILE_SIZE - (this.h - TILE_SIZE) / 2;
-    this.updateAdjacentTiles();
+    this.updateCentrepoint();
+    this.updateTileLocation();
     this.direction = EAST;
 };
 
-pacman.calcCol = function () {
-    return Math.floor((this.x + this.w / 2) / TILE_SIZE);
-};
-pacman.calcRow = function () {
-    return Math.floor((this.y + this.h / 2) / TILE_SIZE);
+pacman.updateCentrepoint = function () {
+    this.cx = this.x + this.w / 2;
+    this.cy = this.y + this.h / 2;
 };
 
-pacman.updateAdjacentTiles = function () {
-    this.adjacentTiles = maze.adjacentTiles(this.calcCol(), this.calcRow());
+pacman.updateTileLocation = function () {
+    this.col = Math.floor((this.x + this.w / 2) / TILE_SIZE);
+    this.row = Math.floor((this.y + this.h / 2) / TILE_SIZE);
+    this.adjacentTiles = maze.adjacentTiles(this.col, this.row);
 };
 
 pacman.draw = function (g) {
@@ -222,43 +289,79 @@ pacman.draw = function (g) {
     g.restore();
 };
 
+pacman.enteringTile = function () {
+    return (this.direction === EAST && toLocal(this.cx) === 0) ||
+           (this.direction === WEST && toLocal(this.cx) === TILE_SIZE - 1) ||
+           (this.direction === SOUTH && toLocal(this.cy) === 0) ||
+           (this.direction === NORTH && toLocal(this.cy) === TILE_SIZE - 1);
+};
+
 pacman.update = function () {
+    if (this.wait) {
+        --this.wait;
+        return;
+    }
+
+    var newDirection = this.turning || this.direction;
+    if (this.move(newDirection)) {
+        this.direction = newDirection;
+    } else if (this.direction !== newDirection) {
+        this.move(this.direction);
+    }
+
+    if (this.enteringTile()) {
+        this.updateTileLocation();
+        var dot = maze.dotAt(this.col, this.row);
+        if (dot) {
+            score += dot.value;
+            maze.remove(dot);
+            this.wait = dot.delay;
+            if (dot instanceof Energiser) {
+                // TODO: energise
+            }
+        }
+    }
+};
+
+pacman.move = function (direction) {
     var dx = 0;
     var dy = 0;
     var exiting;
     var centre = TILE_SIZE / 2;
 
-    if (this.direction === EAST) {
-        dx = 1;
-        exiting = (this.x + this.w + dx) % TILE_SIZE > centre;
-    } // else if (this.direction === WEST) {
-    //     dx = -1;
-    // } else if (this.direction === SOUTH) {
-    //     dy = 1;
-    // } else if (this.direction === NORTH) {
-    //     dy = -1;
-    // }
+    // Move in the given direction iff before tile centrepoint or
+    // an adjacent tile lies beyond.
 
-    if (exiting && !this.adjacentTiles[this.direction]) {
-        return;
+    if (direction === EAST) {
+        dx = 1;
+        exiting = toLocal(this.cx + dx) > centre;
+    } else if (direction === WEST) {
+        dx = -1;
+        exiting = toLocal(this.cx + dx) < centre;
+    } else if (direction === SOUTH) {
+        dy = 1;
+        exiting = toLocal(this.cy + dy) > centre;
+    } else if (direction === NORTH) {
+        dy = -1;
+        exiting = toLocal(this.cy + dy) < centre;
     }
 
-    this.invalidate();
+    if (!exiting || this.adjacentTiles[direction]) {
+        this.invalidate();
 
-    if (dx) {
-        var prevCol = this.calcCol();
+        // pre/post-turning
+        if (dx) {
+            var localY = toLocal(this.cy);
+            dy = localY > centre ? -1 : localY < centre ? 1 : 0;
+        } else if (dy) {
+            var localX = toLocal(this.cx);
+            dx = localX > centre ? -1 : localX < centre ? 1 : 0;
+        }
+
         this.x += dx;
-        var col = this.calcCol();
-        if (col !== prevCol) {
-            this.updateAdjacentTiles();
-        }
-    } else if (dy) {
-        var prevRow = this.calcRow();
         this.y += dy;
-        var row = this.calcRow();
-        if (row !== prevRow) {
-            this.updateAdjacentTiles();
-        }
+        this.updateCentrepoint();
+        return true;
     }
 };
 
@@ -290,8 +393,8 @@ pacman.update = function () {
 
 /// engine
 
-var entities = [],
-    bg,
+var entities = [maze, pacman],
+    ctx,
 
     // game states
     State = {
@@ -302,48 +405,31 @@ var entities = [],
     state,
     paused;
 
-function draw(g) {
-    // repaint background over invalidated regions
-    invalidated.forEach(function (r) {
-        var x = r.x, y = r.y, w = r.w, h = r.h;
-        g.drawImage(bg, x, y, w, h, x, y, w, h);
+function draw() {
+    entities.forEach(function (e) {
+        e.repaint(ctx, invalidated);
     });
-    // repaint affected entities
-    entities.filter(function (e) {
-        return e.invalidated || invalidated.some(function (r) {
-            return e.intersects(r);
-        });
-    }).forEach(function (e) {
-        e.draw(g);
-    });
-    // clear invalidated regions
     invalidated = [];
 
     if (paused || state === State.FINISHED) {
         var text = paused ? '<Paused>' : 'Press <N> to restart';
         var padding = TEXT_HEIGHT / 2;
-        var w = g.measureText(text).width + 2 * padding;
+        var w = ctx.measureText(text).width + 2 * padding;
         var h = TEXT_HEIGHT + 2 * padding;
         var x = (SCREEN_W - w) / 2;
         var y = (SCREEN_H - h) / 1.5;
 
-        g.fillStyle = 'white';
-        g.fillRect(x, y, w, h);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(x, y, w, h);
 
-        g.fillStyle = 'black';
-        g.textAlign = 'left';
-        g.verticalAlign = 'top';
-        g.fillText(text, x + padding, y + padding);
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'left';
+        ctx.verticalAlign = 'top';
+        ctx.fillText(text, x + padding, y + padding);
     }
 }
 
-var // movingLeft,
-    // movingRight,
-    timeOfDeath;
-
 function update() {
-//    pacman.move();
-
     if (state === State.RUNNING) {
         entities.forEach(function (a) {
             a.update();
@@ -358,30 +444,24 @@ function update() {
 
 var UPDATE_HZ = 60,
     UPDATE_DELAY = 1000 / UPDATE_HZ,
-    timer,
-    nextLoopTime,
-    ctx;
+    timer;
 
 function loop() {
-    // TODO: if another loop has already been scheduled
-    // (nextLoopTime > now?), drop this frame
-
     if (!paused) {
         update();
     }
-    draw(ctx);
+    draw();
 
     if (state !== State.FINISHED) {
-        nextLoopTime += UPDATE_DELAY;
-        var delay = nextLoopTime - new Date();
-        timer = window.setTimeout(loop, Math.max(0, delay));
+        timer = window.setTimeout(loop, UPDATE_DELAY);
     }
 }
 
 function levelUp() {
-    pacman.reset();
+    entities.forEach(function (e) {
+        e.reset();
+    });
     invalidateScreen();
-    entities.push.apply(entities, maze.initDots());
 }
 
 /// initialisation
@@ -395,10 +475,8 @@ function newGame() {
     state = State.RUNNING;
     paused = false;
 
-    entities = [pacman];
     levelUp();
 
-    nextLoopTime = +new Date();
     timer = window.setTimeout(loop, UPDATE_DELAY);
 }
 
@@ -409,7 +487,7 @@ function togglePause() {
     }
 }
 
-function createOffscreenBuffer(w, h) {
+function ScreenBuffer(w, h) {
     var canvas = $('<canvas></canvas>').attr({ width: w, height: h }).hide();
     $('body').append(canvas);
     return canvas.get(0);
@@ -428,8 +506,11 @@ $(function () {
     }
 
     var keys = {
-        moveLeft:    37, // left arrow
-        moveRight:   39, // right arrow
+        left:        37, // left arrow
+        right:       39, // right arrow
+        up:          38, // up arrow
+        down:        40, // down arrow
+
         togglePause: charCode('P'),
         newGame:     charCode('N'),
         kill:        charCode('K')
@@ -452,6 +533,12 @@ $(function () {
         return k;
     }
 
+    var directions = {};
+    directions[keys.up] = NORTH;
+    directions[keys.down] = SOUTH;
+    directions[keys.right] = EAST;
+    directions[keys.left] = WEST;
+
     $(window).keydown(function (e) {
         var k = getKeyCode(e);
         if (!k) {
@@ -459,11 +546,11 @@ $(function () {
         }
 
         switch (k) {
-        case keys.moveLeft:
-            //movingLeft = true;
-            break;
-        case keys.moveRight:
-            //movingRight = true;
+        case keys.left:
+        case keys.right:
+        case keys.up:
+        case keys.down:
+            pacman.turning = directions[k];
             break;
         case keys.togglePause:
             togglePause();
@@ -481,24 +568,16 @@ $(function () {
 
     $(window).keyup(function (e) {
         var k = getKeyCode(e);
-
-        switch (k) {
-        case keys.moveLeft:
-            //movingLeft = false;
-            break;
-        case keys.moveRight:
-            //movingRight = false;
-            break;
-        default:
-            // ignore
+        if (pacman.turning === directions[k]) {
+            pacman.turning = null;
         }
     });
 
     // FIXME: include error handling, progress bar
-    bg = createOffscreenBuffer(canvas.width, canvas.height);
+    maze.bg = new ScreenBuffer(canvas.width, canvas.height);
     var bgImg = new Image();
     bgImg.onload = function () {
-        var g = bg.getContext('2d');
+        var g = maze.bg.getContext('2d');
         g.drawImage(bgImg, 0, 0, SCREEN_W, SCREEN_H);
         if (DEBUG) {
             g.strokeStyle = 'white';
