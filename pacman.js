@@ -8,12 +8,14 @@
  * Requires: jQuery 1.4.2
  */
 
+/*jslint bitwise: false */
 /*global $, window, Image */
 
 var TILE_SIZE = 8,
     TILE_CENTRE = TILE_SIZE / 2,
     COLS = 28,
     ROWS = 36,
+    UPDATE_HZ = 60,
 
     SCREEN_W = COLS * TILE_SIZE,
     SCREEN_H = ROWS * TILE_SIZE,
@@ -30,9 +32,14 @@ var TILE_SIZE = 8,
 
     lives,
     score,
-    level/*,
+    level,/*,
     lifeLost,
-    dotsEaten*/;
+    dotsEaten,*/
+
+    blinky,
+    inky,
+    pinky,
+    clyde;
 
 /// miscellany
 
@@ -71,6 +78,7 @@ function reverse(direction) {
            EAST;
 }
 
+// remove element from array in linear time
 Array.prototype.remove = function (o) {
     var i = this.indexOf(o);
     if (i !== -1) {
@@ -78,7 +86,23 @@ Array.prototype.remove = function (o) {
     }
 };
 
-/// partial re-rendering
+// return first element matching pred in linear time
+Array.prototype.first = function (pred) {
+    for (var i = 0; i < this.length; i++) {
+        var x = this[i];
+        if (pred(x)) {
+            return x;
+        }
+    }
+};
+
+/// graphics
+
+function ScreenBuffer(w, h) {
+    var canvas = $('<canvas></canvas>').attr({ width: w, height: h }).hide();
+    $('body').append(canvas);
+    return canvas.get(0);
+}
 
 var invalidated = [];
 
@@ -179,7 +203,15 @@ Energiser.prototype.delay = 3;
 /// maze
 
 var maze = {
+    // house entry/exit tile
+    HOME_COL: 13,
     HOME_ROW: 14,
+
+    // no NORTH-turn zones
+    NNTZ_MIN_COL: 12,
+    NNTZ_MAX_COL: 15,
+    NNTZ_ROW_1: 14,
+    NNTZ_ROW_2: 26,
 
     // collision map including dots and energisers
     layout: ['############################',
@@ -219,6 +251,62 @@ var maze = {
              '############################',
              '############################'],
 
+    // FIXME: load remaining images
+
+    img: 'bg.png',
+
+    loaded: function (img) {
+        this.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
+        var g = this.bg.getContext('2d');
+        g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
+
+        // FIXME: should this be toggleable?
+        if (DEBUG) {
+            // gridlines
+            g.strokeStyle = 'white';
+            g.lineWidth = 0.25;
+            for (var row = 0; row < ROWS; row++) {
+                g.beginPath();
+                g.moveTo(0, row * TILE_SIZE);
+                g.lineTo(SCREEN_W, row * TILE_SIZE);
+                g.stroke();
+            }
+            for (var col = 0; col < COLS; col++) {
+                g.beginPath();
+                g.moveTo(col * TILE_SIZE, 0);
+                g.lineTo(col * TILE_SIZE, SCREEN_H);
+                g.stroke();
+            }
+            g.globalAlpha = 0.5;
+
+            // no-NORTH-turn zones
+            g.fillStyle = 'grey';
+            var nntzX = this.NNTZ_MIN_COL * TILE_SIZE;
+            var nntzW = (this.NNTZ_MAX_COL - this.NNTZ_MIN_COL + 1) * TILE_SIZE;
+            g.fillRect(nntzX, this.NNTZ_ROW_1 * TILE_SIZE,
+                       nntzW, TILE_SIZE);
+            g.fillRect(nntzX, this.NNTZ_ROW_2 * TILE_SIZE,
+                       nntzW, TILE_SIZE);
+
+            // ghost home tile
+            g.fillStyle = 'green';
+            g.fillRect(this.HOME_COL * TILE_SIZE, this.HOME_ROW * TILE_SIZE,
+                       TILE_SIZE, TILE_SIZE);
+
+            // ghost scatter tiles
+            var ghosts = [[ 'red', blinky ],
+                          [ 'cyan', inky ],
+                          [ 'pink', pinky ],
+                          [ 'orange', clyde ]];
+            ghosts.forEach(function (ghost) {
+                g.fillStyle = ghost[0];
+                g.fillRect(ghost[1].scatterCol * TILE_SIZE,
+                           ghost[1].scatterRow * TILE_SIZE,
+                           TILE_SIZE, TILE_SIZE);
+            });
+        }
+    },
+
     reset: function () {
         this.dots = [];
         this.energisers = [];
@@ -257,7 +345,8 @@ var maze = {
     // check if tile falls within one of two zones in which ghosts are
     // prohibited from turning north
     northDisallowed: function (col, row) {
-        return (12 <= col && col <= 15) && (row === 14 || row === 26);
+        return (this.NNTZ_MIN_COL <= col && col <= this.NNTZ_MAX_COL) &&
+               (row === this.NNTZ_ROW_1 || row === this.NNTZ_ROW_2);
     },
 
     inTunnel: function (col, row) {
@@ -332,7 +421,7 @@ function Actor() {}
 Actor.prototype = new Sprite();
 
 Actor.prototype.place = function (col, row) {
-    this.x = col * TILE_SIZE - this.w / 2;
+    this.x = col * TILE_SIZE + (this.w - TILE_SIZE) / 2;
     this.y = row * TILE_SIZE - (this.h - TILE_SIZE) / 2;
 };
 Actor.prototype.calcCentreX = function () {
@@ -379,8 +468,9 @@ pacman.colour = 'yellow';
 //pacman.speed = 0.8 * MAX_SPEED;
 
 pacman.reset = function () {
-    this.place(14, 26);
+    this.place(maze.HOME_COL, 26);
     this.direction = WEST;
+    this.resetDotTimer();
 };
 
 pacman.resetDotTimer = function () {
@@ -485,20 +575,19 @@ function Ghost(name, startCol, startRow, scatterCol, scatterRow) {
 
     this.scatterCol = scatterCol;
     this.scatterRow = scatterRow;
-
-    this.state = Ghost.STATE_INSIDE;
 }
 
 Ghost.SIZE = TILE_SIZE * 1.5;
 
-Ghost.STATE_WAITING = 1;
-Ghost.STATE_INSIDE = 2;
-Ghost.STATE_EXITING = 3;
-Ghost.STATE_CHASING = 4;
-// Ghost.CHASE = 1;
-// Ghost.SCATTER = 2;
-// Ghost.FRIGHTENED = 3;
-// Ghost.MODE =
+Ghost.STATE_WAITING = 'WAITING';
+Ghost.STATE_INSIDE = 'INSIDE';
+Ghost.STATE_OUTSIDE = 'OUTSIDE';
+Ghost.STATE_EXITING = 'EXITING';
+
+// global modes
+Ghost.MODE_CHASING = 'CHASING';
+Ghost.MODE_SCATTER = 'SCATTER';
+Ghost.MODE_FRIGHTENED = 'FRIGHTENED';
 
 Ghost.prototype = new Actor();
 
@@ -510,7 +599,7 @@ Ghost.prototype.reset = function () {
     this.place(this.startCol, this.startRow);
     // FIXME
     if (this.name === 'blinky') {
-        this.state = Ghost.STATE_CHASING;
+        this.state = Ghost.STATE_OUTSIDE;
         this.direction = WEST;
         this.nextDirection = this.calcNextDirection();
     } else {
@@ -525,19 +614,22 @@ Ghost.prototype.move = function (direction) {
 };
 
 Ghost.prototype.update = function () {
-    if (this.state === Ghost.STATE_WAITING) {
+    if (this.state === Ghost.STATE_WAITING || this.state === Ghost.STATE_INSIDE) {
         return;
     }
 
     if (this.state === Ghost.STATE_EXITING) {
+        // TODO: horizontally align with exit
         this.move(NORTH);
         if (this.calcRow() === maze.HOME_ROW && this.calcTileY() === TILE_CENTRE) {
-            this.state = Ghost.STATE_CHASING;
+            this.state = Ghost.STATE_OUTSIDE;
             // FIXME
             this.direction = WEST;
             this.nextDirection = this.calcNextDirection();
             return;
         }
+    } else if (this.state !== Ghost.STATE_OUTSIDE) {
+        return;
     }
 
     this.move(this.direction);
@@ -562,12 +654,10 @@ Ghost.prototype.update = function () {
     // the centre of the tile. This simplifies the lookahead logic. Hopefully it
     // doesn't significantly affect gameplay.
 
-    if (this.calcTileX() !== TILE_CENTRE || this.calcTileY() !== TILE_CENTRE) {
-        return;
+    if (this.calcTileX() === TILE_CENTRE && this.calcTileY() === TILE_CENTRE) {
+        this.direction = this.nextDirection;
+        this.nextDirection = this.calcNextDirection();
     }
-
-    this.direction = this.nextDirection;
-    this.nextDirection = this.calcNextDirection();
 };
 
 // calculate direction to be taken when next tile is reached
@@ -616,14 +706,22 @@ Ghost.prototype.calcNextDirection = function () {
         return a.dist - b.dist;
     });
 
+    if (!directions.length) {
+        if (DEBUG) {
+            debugger;
+        } else {
+            throw new Error(this + ' can\'t calculate direction at [' +
+                            nextCol + ', ' + nextRow + ']');
+        }
+    }
     return directions[0].direction;
 };
 
 /// blinky
 
-var blinky = new Ghost('blinky',
-                       14, maze.HOME_ROW,
-                       COLS - 4, 0);
+blinky = new Ghost('blinky',
+                       maze.HOME_COL, maze.HOME_ROW,
+                       COLS - 3, 0);
 // FIXME
 blinky.colour = 'red';
 blinky.calcTarget = function () {
@@ -633,9 +731,9 @@ blinky.calcTarget = function () {
 
 /// pinky
 
-var pinky = new Ghost('pinky',
-                      14, maze.HOME_ROW + 3,
-                      3, 0);
+pinky = new Ghost('pinky',
+                      maze.HOME_COL, maze.HOME_ROW + 3,
+                      2, 0);
 // FIXME
 pinky.colour = 'pink';
 pinky.calcTarget = function () {
@@ -646,14 +744,14 @@ pinky.calcTarget = function () {
 
 /// inky
 
-var inky = new Ghost('inky',
-                     12, maze.HOME_ROW + 3,
+inky = new Ghost('inky',
+                     maze.HOME_COL - 2, maze.HOME_ROW + 3,
                      COLS - 1, ROWS - 2);
 // FIXME
 inky.colour = 'cyan';
 inky.calcTarget = function () {
-    // target tile at vector extending from blinky, through the tile 2 ahead of
-    // pacman, doubled
+    // target tile at vector extending from blinky with midpoint 2 tiles
+    // ahead of pacman
     var cx = pacman.calcCol() + toDx(pacman.direction) * 2;
     var cy = pacman.calcRow() + toDy(pacman.direction) * 2;
     return { col: cx + cx - blinky.calcCol(),
@@ -662,8 +760,8 @@ inky.calcTarget = function () {
 
 /// clyde
 
-var clyde = new Ghost('clyde',
-                      16, maze.HOME_ROW + 3,
+clyde = new Ghost('clyde',
+                      maze.HOME_COL + 2, maze.HOME_ROW + 3,
                       0, ROWS - 2);
 // FIXME
 clyde.colour = 'orange';
@@ -709,9 +807,9 @@ var entities = [maze, pacman, blinky, pinky, inky, clyde],
     ctx,
 
     // game states
-    STATE_RUNNING = 1,
-    STATE_LEVELUP = 2,
-    STATE_FINISHED = 3,
+    STATE_RUNNING = 'RUNNING',
+    STATE_LEVELUP = 'LEVELUP',
+    STATE_FINISHED = 'FINISHED',
 
     state,
     paused;
@@ -756,13 +854,64 @@ function releaseGhost() {
     // } else if (globalCounterEnabled) {
     //     // TODO
     } else {
-        var ghost;
-        while ((ghost = insiders.shift())) {
-            if (ghost.dotCounter === 0) {
-                ghost.state = Ghost.STATE_EXITING;
-                break;
-            }
+        var ghost = insiders.first(function (g) {
+            return g.dotCounter === 0;
+        });
+        if (ghost) {
+            ghost.state = Ghost.STATE_EXITING;
         }
+    }
+}
+
+var frightenedTimer,
+    scatterChaseTimer,
+    scatterChaseSwitches;
+
+// maybe switch between chase and scatter modes
+function updateGhostMode() {
+    if (Ghost.mode === Ghost.STATE_FRIGHTENED) {
+        // ?
+    } else if (scatterChaseSwitches < 7 && --scatterChaseTimer <= 0) {
+        ++scatterChaseSwitches;
+        var mode;
+        switch (scatterChaseSwitches) {
+        // case 0 handled by levelUp()
+        case 1:
+            mode = Ghost.STATE_CHASING;
+            scatterChaseTimer = 20 * UPDATE_HZ;
+            break;
+        case 2:
+            mode = Ghost.STATE_SCATTER;
+            scatterChaseTimer = (level < 5 ? 7 : 5) * UPDATE_HZ;
+            break;
+        case 3:
+            mode = Ghost.STATE_CHASING;
+            scatterChaseTimer = 20 * UPDATE_HZ;
+            break;
+        case 4:
+            mode = Ghost.STATE_SCATTER;
+            scatterChaseTimer = 5 * UPDATE_HZ;
+            break;
+        case 5:
+            mode = Ghost.STATE_CHASING;
+            scatterChaseTimer = (level === 1 ? 20 :
+                                 level < 5 ? 1033 :
+                                 1037) * UPDATE_HZ;
+            break;
+        case 6:
+            mode = Ghost.STATE_SCATTER;
+            scatterChaseTimer = level === 1 ? 5 * UPDATE_HZ : 1;
+            break;
+        case 7:
+            mode = Ghost.STATE_CHASING;
+            // forever
+            break;
+        default:
+            throw new Error('unexpected number of mode changes: ' +
+                            scatterChaseSwitches);
+        }
+
+        // TODO: set mode
     }
 }
 
@@ -777,6 +926,8 @@ function update() {
         }
 
         releaseGhost();
+        updateGhostMode();
+
     } else if (state === STATE_LEVELUP) {
         // FIXME: delay
         levelUp();
@@ -788,8 +939,7 @@ function update() {
     }
 }
 
-var UPDATE_HZ = 60,
-    UPDATE_DELAY = 1000 / UPDATE_HZ,
+var UPDATE_DELAY = 1000 / UPDATE_HZ,
     timer;
 
 function loop() {
@@ -837,12 +987,6 @@ function togglePause() {
     if (!paused) {
         invalidateScreen();
     }
-}
-
-function ScreenBuffer(w, h) {
-    var canvas = $('<canvas></canvas>').attr({ width: w, height: h }).hide();
-    $('body').append(canvas);
-    return canvas.get(0);
 }
 
 $(function () {
@@ -926,30 +1070,11 @@ $(function () {
     });
 
     // FIXME: include error handling, progress bar
-    maze.bg = new ScreenBuffer(canvas.width, canvas.height);
-    var bgImg = new Image();
-    bgImg.onload = function () {
-        var g = maze.bg.getContext('2d');
-        g.drawImage(bgImg, 0, 0, SCREEN_W, SCREEN_H);
-        if (DEBUG) {
-            g.strokeStyle = 'white';
-            g.lineWidth = 0.5;
-            for (var row = 0; row < ROWS; row++) {
-                g.beginPath();
-                g.moveTo(0, row * TILE_SIZE);
-                g.lineTo(SCREEN_W, row * TILE_SIZE);
-                g.stroke();
-            }
-            for (var col = 0; col < COLS; col++) {
-                g.beginPath();
-                g.moveTo(col * TILE_SIZE, 0);
-                g.lineTo(col * TILE_SIZE, SCREEN_H);
-                g.stroke();
-            }
-        }
-
+    var img = new Image();
+    img.onload = function () {
+        maze.loaded(img);
         newGame();
     };
-    bgImg.src = 'bg.png';
+    img.src = maze.img;
 });
 
