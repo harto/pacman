@@ -13,9 +13,9 @@
          NORTH, SOUTH, EAST, WEST,
          invalidateScreen, invalidated: true, debug, Ghost,
          score: true, lives: true, level: true,
-         maze, pacman, blinky, inky, pinky, clyde */
+         Maze, pacman, blinky, inky, pinky, clyde */
 
-var entities = [maze, pacman, blinky, pinky, inky, clyde],
+var entities = [Maze, pacman, blinky, pinky, inky, clyde],
     ctx,
 
     // game states
@@ -54,7 +54,7 @@ function draw() {
 
 function levelUp() {
     ++level;
-    maze.reset();
+    Maze.reset();
     pacman.reset();
     Ghost.resetAll();
 
@@ -86,7 +86,7 @@ function update() {
                 //debug('dead');
                 //state = STATE_DEAD;
             }
-        } else if (maze.isEmpty()) {
+        } else if (Maze.isEmpty()) {
             state = STATE_LEVELUP;
         }
     } else if (state === STATE_LEVELUP) {
@@ -220,9 +220,9 @@ $(function () {
     // FIXME: include error handling, progress bar
     var img = new Image();
     img.onload = function () {
-        maze.loaded(img);
+        Maze.loaded(img);
         newGame();
     };
-    img.src = 'res/' + maze.img;
+    img.src = 'res/' + Maze.img;
 });
 

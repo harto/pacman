@@ -67,11 +67,10 @@ Energiser.prototype.delay = 3;
 
 /// maze
 
-var maze = {
+var Maze = {
     // house entry/exit tile
     HOME_COL: 13,
     HOME_ROW: 14,
-    HOME_TILE: { col: this.HOME_COL, row: this.HOME_ROW },
 
     // no NORTH-turn zones
     NNTZ_COL_MIN: 12,
@@ -261,3 +260,6 @@ var maze = {
         });
     }
 };
+
+Maze.HOME_TILE = { col: Maze.HOME_COL, row: Maze.HOME_ROW };
+

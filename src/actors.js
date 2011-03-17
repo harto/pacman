@@ -6,7 +6,7 @@
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, UPDATE_HZ, DEBUG
          NORTH, SOUTH, EAST, WEST,
          debug, distance, reverse, toDx, toDy, toTileCoord, Sprite, Energiser,
-         level, score: true, maze */
+         level, score: true, Maze */
 
 function Actor() {}
 
@@ -60,7 +60,7 @@ pacman.colour = 'yellow';
 //pacman.speed = 0.8 * MAX_SPEED;
 
 pacman.reset = function () {
-    this.place(maze.HOME_COL, 26);
+    this.place(Maze.HOME_COL, 26);
     this.direction = WEST;
     this.resetDotTimer();
 };
@@ -89,14 +89,16 @@ pacman.update = function () {
         return;
     }
 
+    // FIXME: most of this should live outside this method
+
     var col = this.calcCol();
-    var reentryCol = maze.reentryCol(col);
+    var reentryCol = Maze.reentryCol(col);
     if (reentryCol) {
         this.x = TILE_SIZE * reentryCol;
         return;
     }
 
-    var dot = maze.dotAt(col, this.calcRow());
+    var dot = Maze.dotAt(col, this.calcRow());
     if (dot) {
         score += dot.value;
         this.wait = dot.delay;
@@ -104,7 +106,7 @@ pacman.update = function () {
         if (dot instanceof Energiser) {
             Ghost.frighten();
         }
-        maze.remove(dot);
+        Maze.remove(dot);
         // FIXME: use global counter, move this to Ghost method
         var ghost = Ghost.insiders.first(function (g) {
             return g.state === Ghost.STATE_INSIDE;
@@ -113,8 +115,6 @@ pacman.update = function () {
             --ghost.dotCounter;
         }
     }
-
-    // TODO: ghost collision check
 };
 
 pacman.move = function (direction) {
@@ -141,7 +141,7 @@ pacman.move = function (direction) {
         exiting = toTileCoord(cy + dy) < TILE_CENTRE;
     }
 
-    if (exiting && !(direction & maze.exitsFrom(this.calcCol(), this.calcRow()))) {
+    if (exiting && !(direction & Maze.exitsFrom(this.calcCol(), this.calcRow()))) {
         return false;
     }
 
@@ -225,13 +225,9 @@ Ghost.prototype.draw = function (g) {
 
 Ghost.prototype.release = function () {
     this.state = Ghost.STATE_EXITING;
-    var x = maze.HOME_COL * TILE_SIZE + ((this.w - TILE_SIZE) / 2);
-    var y = (maze.HOME_ROW) * TILE_SIZE - ((this.h - TILE_SIZE) / 2);
+    var x = Maze.HOME_COL * TILE_SIZE + ((this.w - TILE_SIZE) / 2);
+    var y = (Maze.HOME_ROW) * TILE_SIZE - ((this.h - TILE_SIZE) / 2);
     this.exitPath = [{ x: x, y: y + 3 * TILE_SIZE }, { x: x, y: y }];
-};
-
-Math.sign = function (x) {
-    return x < 0 ? -1 : x > 0 ? 1 : 0;
 };
 
 Ghost.prototype.update = function () {
@@ -261,10 +257,10 @@ Ghost.prototype.update = function () {
     this.y += toDy(this.direction);
 
     var col = this.calcCol();
-    if (maze.inTunnel(col, this.calcRow())) {
+    if (Maze.inTunnel(col, this.calcRow())) {
         // TODO: reduce speed
 
-        var reentryCol = maze.reentryCol(col);
+        var reentryCol = Maze.reentryCol(col);
         if (reentryCol) {
             this.x = TILE_SIZE * reentryCol;
         }
@@ -291,10 +287,10 @@ Ghost.prototype.calcNextDirection = function () {
     var nextCol = this.calcCol() + toDx(this.direction);
     var nextRow = this.calcRow() + toDy(this.direction);
 
-    var exits = maze.exitsFrom(nextCol, nextRow);
+    var exits = Maze.exitsFrom(nextCol, nextRow);
     // exclude illegal moves
     exits &= ~reverse(this.direction);
-    if (maze.northDisallowed(nextCol, nextRow)) {
+    if (Maze.northDisallowed(nextCol, nextRow)) {
         exits &= ~NORTH;
     }
     if (!exits) {
@@ -312,7 +308,7 @@ Ghost.prototype.calcNextDirection = function () {
     // some current target tile.
 
     if (this.state === Ghost.STATE_DEAD || Ghost.mode !== Ghost.MODE_FRIGHTENED) {
-        var target = this.state === Ghost.STATE_DEAD ? { col: maze.HOME_COL, row: maze.HOME_ROW } :
+        var target = this.state === Ghost.STATE_DEAD ? Maze.HOME_TILE :
                      Ghost.mode === Ghost.MODE_SCATTER ? this.scatterTile :
                      this.calcTarget();
 
@@ -345,7 +341,7 @@ Ghost.prototype.calcNextDirection = function () {
 /// blinky
 
 var blinky = new Ghost('blinky',
-                       maze.HOME_COL, maze.HOME_ROW,
+                       Maze.HOME_COL, Maze.HOME_ROW,
                        COLS - 3, 0);
 // FIXME
 blinky.colour = 'red';
@@ -357,7 +353,7 @@ blinky.calcTarget = function () {
 /// pinky
 
 var pinky = new Ghost('pinky',
-                      maze.HOME_COL, maze.HOME_ROW + 3,
+                      Maze.HOME_COL, Maze.HOME_ROW + 3,
                       2, 0);
 // FIXME
 pinky.colour = 'pink';
@@ -370,7 +366,7 @@ pinky.calcTarget = function () {
 /// inky
 
 var inky = new Ghost('inky',
-                     maze.HOME_COL - 2, maze.HOME_ROW + 3,
+                     Maze.HOME_COL - 2, Maze.HOME_ROW + 3,
                      COLS - 1, ROWS - 2);
 // FIXME
 inky.colour = 'cyan';
@@ -386,7 +382,7 @@ inky.calcTarget = function () {
 /// clyde
 
 var clyde = new Ghost('clyde',
-                      maze.HOME_COL + 2, maze.HOME_ROW + 3,
+                      Maze.HOME_COL + 2, Maze.HOME_ROW + 3,
                       0, ROWS - 2);
 // FIXME
 clyde.colour = 'orange';
@@ -487,10 +483,14 @@ Ghost.updateMode = function () {
         }
         Ghost.mode = (Ghost.modeSwitches % 2) ? Ghost.MODE_CHASE : Ghost.MODE_SCATTER;
         Ghost.scatterChaseTimer = time;
-        debug('mode switch ({}): entering {} mode for {}s',
-              Ghost.modeSwitches, Ghost.mode, time / UPDATE_HZ);
+        debug('mode switch ({}): entering {} mode {}',
+              Ghost.modeSwitches,
+              Ghost.mode,
+              time ? 'for ' + time / UPDATE_HZ + 's' : 'indefinitely');
         Ghost.all.forEach(function (g) {
-            g.nextDirection = reverse(g.direction);
+            if (g.state !== Ghost.STATE_DEAD) {
+                g.nextDirection = reverse(g.direction);
+            }
         });
     }
 };
