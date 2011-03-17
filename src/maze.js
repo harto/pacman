@@ -5,7 +5,8 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
          NORTH, SOUTH, EAST, WEST,
-         ScreenBuffer, Sprite */
+         ScreenBuffer, Sprite,
+         blinky, inky, pinky, clyde */
 
 /// dots
 
@@ -70,10 +71,11 @@ var maze = {
     // house entry/exit tile
     HOME_COL: 13,
     HOME_ROW: 14,
+    HOME_TILE: { col: this.HOME_COL, row: this.HOME_ROW },
 
     // no NORTH-turn zones
-    NNTZ_MIN_COL: 12,
-    NNTZ_MAX_COL: 15,
+    NNTZ_COL_MIN: 12,
+    NNTZ_COL_MAX: 15,
     NNTZ_ROW_1: 14,
     NNTZ_ROW_2: 26,
 
@@ -141,12 +143,13 @@ var maze = {
                 g.lineTo(col * TILE_SIZE, SCREEN_H);
                 g.stroke();
             }
+
             g.globalAlpha = 0.5;
 
             // no-NORTH-turn zones
             g.fillStyle = 'grey';
-            var nntzX = this.NNTZ_MIN_COL * TILE_SIZE;
-            var nntzW = (this.NNTZ_MAX_COL - this.NNTZ_MIN_COL + 1) * TILE_SIZE;
+            var nntzX = this.NNTZ_COL_MIN * TILE_SIZE;
+            var nntzW = (this.NNTZ_COL_MAX - this.NNTZ_COL_MIN + 1) * TILE_SIZE;
             g.fillRect(nntzX, this.NNTZ_ROW_1 * TILE_SIZE,
                        nntzW, TILE_SIZE);
             g.fillRect(nntzX, this.NNTZ_ROW_2 * TILE_SIZE,
@@ -156,18 +159,6 @@ var maze = {
             g.fillStyle = 'green';
             g.fillRect(this.HOME_COL * TILE_SIZE, this.HOME_ROW * TILE_SIZE,
                        TILE_SIZE, TILE_SIZE);
-
-            // ghost scatter tiles
-            var ghosts = [[ 'red', blinky ],
-                          [ 'cyan', inky ],
-                          [ 'pink', pinky ],
-                          [ 'orange', clyde ]];
-            ghosts.forEach(function (ghost) {
-                g.fillStyle = ghost[0];
-                g.fillRect(ghost[1].scatterTile.col * TILE_SIZE,
-                           ghost[1].scatterTile.row * TILE_SIZE,
-                           TILE_SIZE, TILE_SIZE);
-            });
         }
     },
 
@@ -209,7 +200,7 @@ var maze = {
     // check if tile falls within one of two zones in which ghosts are
     // prohibited from turning north
     northDisallowed: function (col, row) {
-        return (this.NNTZ_MIN_COL <= col && col <= this.NNTZ_MAX_COL) &&
+        return (this.NNTZ_COL_MIN <= col && col <= this.NNTZ_COL_MAX) &&
                (row === this.NNTZ_ROW_1 || row === this.NNTZ_ROW_2);
     },
 
@@ -231,6 +222,7 @@ var maze = {
                 return dot;
             }
         }
+        return null;
     },
 
     remove: function (dot) {
@@ -242,14 +234,6 @@ var maze = {
 
         if (this.dots.length === 174 || this.dots.length === 74) {
             // TODO: add fruit
-        }
-
-        // TODO: global dot counter
-        var ghost = [inky, pinky, clyde].filter(function (g) {
-            return g.state === Ghost.STATE_INSIDE;
-        })[0];
-        if (ghost) {
-            --ghost.dotCounter;
         }
     },
 

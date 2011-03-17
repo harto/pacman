@@ -81,6 +81,8 @@ function debug(msg /*, args*/) {
     }
 }
 
+/// extensions of native objects (yes, I went there)
+
 // remove element from array in linear time
 Array.prototype.remove = function (o) {
     var i = this.indexOf(o);
@@ -97,6 +99,10 @@ Array.prototype.first = function (pred) {
             return x;
         }
     }
+};
+
+Math.sign = function (x) {
+    return x < 0 ? -1 : x > 0 ? 1 : 0;
 };
 
 /// graphics
@@ -128,7 +134,8 @@ Sprite.prototype = {
         return intersecting(this.x, this.y, this.w, this.h, x, y, w, h);
     },
     invalidate: function () {
-        invalidateRegion(this.x, this.y, this.w, this.h);
+        // cover antialiasing and sub-pixel artifacts
+        invalidateRegion(this.x - 1, this.y - 1, this.w + 2, this.h + 2);
     },
     repaint: function (g, invalidated) {
         var invalid = invalidated.some(function (r) {

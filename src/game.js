@@ -19,8 +19,9 @@ var entities = [maze, pacman, blinky, pinky, inky, clyde],
     ctx,
 
     // game states
-    STATE_RUNNING = 'RUNNING',
-    STATE_LEVELUP = 'LEVELUP',
+    STATE_RUNNING  = 'RUNNING',
+    STATE_LEVELUP  = 'LEVELUP',
+    STATE_DEAD     = 'DEAD',
     STATE_FINISHED = 'FINISHED',
 
     state,
@@ -65,13 +66,29 @@ function update() {
         entities.forEach(function (a) {
             a.update();
         });
-        if (maze.isEmpty()) {
-            state = STATE_LEVELUP;
-            return;
-        }
 
         Ghost.release();
         Ghost.updateMode();
+
+        var pCol = pacman.calcCol();
+        var pRow = pacman.calcRow();
+        var colliding = Ghost.all.filter(function (g) {
+            return pCol === g.calcCol() && pRow === g.calcRow();
+        });
+
+        if (colliding.length) {
+            if (Ghost.mode === Ghost.MODE_FRIGHTENED) {
+                colliding.forEach(function (g) {
+                    debug('killing {}', g);
+                    g.state = Ghost.STATE_DEAD;
+                });
+            } else {
+                //debug('dead');
+                //state = STATE_DEAD;
+            }
+        } else if (maze.isEmpty()) {
+            state = STATE_LEVELUP;
+        }
     } else if (state === STATE_LEVELUP) {
         // FIXME: delay
         levelUp();
