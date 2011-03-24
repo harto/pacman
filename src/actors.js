@@ -3,10 +3,9 @@
  */
 
 /*jslint bitwise: false */
-/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, UPDATE_HZ, MAX_SPEED, DEBUG
-         NORTH, SOUTH, EAST, WEST,
-         debug, distance, reverse, toDx, toDy, toTileCoord, Sprite, Energiser,
-         Maze, level, score: true, dotCounter: true */
+/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
+         debug, distance, reverse, toDx, toDy, toTileCoord, toRow, toCol, toFrames,
+         Sprite, Energiser, Maze, level, score: true, dotCounter: true */
 
 function Actor() {}
 
@@ -29,8 +28,8 @@ Actor.prototype.moveTo = function (x, y) {
 
     this.prevCol = this.col;
     this.prevRow = this.row;
-    this.col = Math.floor(this.cx / TILE_SIZE);
-    this.row = Math.floor(this.cy / TILE_SIZE);
+    this.col = toCol(this.cx);
+    this.row = toRow(this.cy);
 };
 
 Actor.prototype.moveBy = function (dx, dy) {
@@ -93,7 +92,7 @@ pacman.reset = function () {
 
 // reset timer that releases ghost when a dot hasn't been eaten for a while
 pacman.resetDotTimer = function () {
-    this.dotTimer = (level < 5 ? 4 : 3) * UPDATE_HZ;
+    this.dotTimer = toFrames(level < 5 ? 4 : 3);
 };
 
 pacman.update = function () {
@@ -226,8 +225,6 @@ Ghost.prototype.release = function () {
 };
 
 Ghost.prototype.update = function () {
-    this.invalidate();
-
     if (this.state === Ghost.STATE_INSIDE) {
         return;
     }
@@ -397,10 +394,10 @@ clyde.colour = 'orange';
 clyde.calcTarget = function () {
     // target pacman directly when further than 8 tiles from him, otherwise
     // target scatter mode tile
-    var px = pacman.col;
-    var py = pacman.row;
-    return distance(px, py, this.col, this.row) > 8 ?
-              { col: px, row: py } :
+    var pCol = pacman.col;
+    var pRow = pacman.row;
+    return distance(pCol, pRow, this.col, this.row) > 8 ?
+              { col: pCol, row: pRow } :
               this.scatterTile;
 };
 
@@ -423,7 +420,7 @@ Ghost.resetAll = function () {
     clyde.dotCounter = level === 1 ? 60 : level === 2 ? 50 : 0;
 
     Ghost.modeSwitches = 0;
-    Ghost.scatterChaseTimer = (level < 5 ? 7 : 5) * UPDATE_HZ;
+    Ghost.scatterChaseTimer = toFrames(level < 5 ? 7 : 5);
     Ghost.mode = Ghost.MODE_SCATTER;
     Ghost.speed = Ghost.calcSpeed(level);
 };
@@ -502,48 +499,28 @@ Ghost.updateMode = function () {
     if (Ghost.mode === Ghost.MODE_FRIGHTENED) {
         if (--Ghost.frightenedTimer <= 0) {
             Ghost.mode = Ghost.prevMode;
-            debug('resuming {} mode for {}s',
+            debug('resuming %s mode for %t',
                   Ghost.mode,
-                  Ghost.scatterChaseTimer / UPDATE_HZ);
+                  Ghost.scatterChaseTimer);
             Ghost.speed = Ghost.calcSpeed(level);
         }
     } else if (Ghost.modeSwitches < 7 && --Ghost.scatterChaseTimer <= 0) {
-        var time;
-        switch (++Ghost.modeSwitches) {
-        // case 0 handled by levelUp()
-        case 1:
-            time = 20 * UPDATE_HZ;
-            break;
-        case 2:
-            time = (level < 5 ? 7 : 5) * UPDATE_HZ;
-            break;
-        case 3:
-            time = 20 * UPDATE_HZ;
-            break;
-        case 4:
-            time = 5 * UPDATE_HZ;
-            break;
-        case 5:
-            time = (level === 1 ? 20 :
-                    level < 5 ? 1033 :
-                    1037) * UPDATE_HZ;
-            break;
-        case 6:
-            time = level === 1 ? 5 * UPDATE_HZ : 1;
-            break;
-        case 7:
-            //
-            break;
-        default:
-            throw new Error('unexpected number of mode changes: ' +
-                            Ghost.modeSwitches);
-        }
+        ++Ghost.modeSwitches;
         Ghost.mode = (Ghost.modeSwitches % 2) ? Ghost.MODE_CHASE : Ghost.MODE_SCATTER;
-        Ghost.scatterChaseTimer = time;
-        debug('mode switch ({}): entering {} mode {}',
+        Ghost.scatterChaseTimer =
+            Ghost.modeSwitches === 1 ? toFrames(20) :
+            Ghost.modeSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
+            Ghost.modeSwitches === 3 ? toFrames(20) :
+            Ghost.modeSwitches === 4 ? toFrames(5) :
+            Ghost.modeSwitches === 5 ? toFrames(level === 1 ? 20 :
+                                                level < 5 ? 1033 :
+                                                1037) :
+            Ghost.modeSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
+            null;
+        debug('mode switch (%s): entering %s mode for %t',
               Ghost.modeSwitches,
               Ghost.mode,
-              time ? 'for ' + time / UPDATE_HZ + 's' : 'indefinitely');
+              Ghost.scatterChaseTimer);
         Ghost.reverseAll();
     }
 };
@@ -575,8 +552,8 @@ Ghost.frightenAll = function () {
         return;
     }
 
-    debug('entering {} mode for {}s', Ghost.mode, time);
-    Ghost.frightenedTimer = time * UPDATE_HZ;
+    debug('entering %s mode for %ss', Ghost.mode, time);
+    Ghost.frightenedTimer = toFrames(time);
     // TODO: flashing
     Ghost.speed = Ghost.calcFrightenedSpeed(level);
     Ghost.all.forEach(function (g) {

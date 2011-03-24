@@ -60,7 +60,7 @@ function levelUp() {
     pacman.reset();
     pacman.speed = (level === 1 ? 0.8 :
                     level < 5 || level > 20 ? 0.9 :
-                    1) * MAX_SPEED;
+                    1);
 
     Ghost.resetAll();
 
@@ -85,7 +85,7 @@ function update() {
         if (colliding.length) {
             if (Ghost.mode === Ghost.MODE_FRIGHTENED) {
                 colliding.forEach(function (g) {
-                    debug('killing {}', g);
+                    debug('killing %s', g);
                     g.state = Ghost.STATE_DEAD;
                 });
             } else {
