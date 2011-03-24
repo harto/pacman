@@ -11,16 +11,17 @@
 /// dots
 
 function Dot(col, row) {
-    this.col = col;
-    this.row = row;
-    this.x = col * TILE_SIZE + (TILE_SIZE - Dot.SIZE) / 2;
-    this.y = row * TILE_SIZE + (TILE_SIZE - Dot.SIZE) / 2;
-    this.w = this.h = Dot.SIZE;
+    this.init(col, row, 3);
 }
 
-Dot.SIZE = 3;
-
 Dot.prototype = new Sprite();
+Dot.prototype.init = function (col, row, size) {
+    this.col = col;
+    this.row = row;
+    this.x = col * TILE_SIZE + (TILE_SIZE - size) / 2;
+    this.y = row * TILE_SIZE + (TILE_SIZE - size) / 2;
+    this.w = this.h = size;
+};
 Dot.prototype.draw = function (g) {
     g.save();
     // FIXME
@@ -32,27 +33,17 @@ Dot.prototype.value = 10;
 Dot.prototype.delay = 1;
 
 function Energiser(col, row) {
-    this.col = col;
-    this.row = row;
-    this.x = col * TILE_SIZE + (TILE_SIZE - Energiser.SIZE) / 2;
-    this.y = row * TILE_SIZE + (TILE_SIZE - Energiser.SIZE) / 2;
-    this.w = this.h = Energiser.SIZE;
-
+    this.init(col, row, TILE_SIZE - 2);
     this.blinkFrames = Energiser.BLINK_FRAMES;
     this.visible = true;
 }
 
-Energiser.SIZE = TILE_SIZE;
 Energiser.BLINK_FRAMES = 30;
 
-Energiser.prototype = new Sprite();
+Energiser.prototype = new Dot();
 Energiser.prototype.draw = function (g) {
     if (this.visible) {
-        // FIXME
-        g.save();
-        g.fillStyle = 'white';
-        g.fillRect(this.x, this.y, this.w, this.h);
-        g.restore();
+        Dot.prototype.draw.apply(this, arguments);
     }
 };
 Energiser.prototype.update = function () {
