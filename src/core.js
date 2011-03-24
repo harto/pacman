@@ -16,7 +16,7 @@ var TILE_SIZE = 8,
 
     MAX_SPEED = 1,
 
-    DEBUG = true,//false,
+    DEBUG = true,
 
     NORTH = 1,
     SOUTH = 2,
@@ -81,7 +81,7 @@ function debug(msg /*, args*/) {
     }
 }
 
-/// extensions of native objects (yes, I went there)
+/// native object extensions
 
 // remove element from array in linear time
 Array.prototype.remove = function (o) {
@@ -103,6 +103,11 @@ Array.prototype.first = function (pred) {
 
 Math.sign = function (x) {
     return x < 0 ? -1 : x > 0 ? 1 : 0;
+};
+
+// remove fractional part of number
+Math.trunc = function (x) {
+    return Math.sign(x) * Math.floor(Math.abs(x));
 };
 
 /// graphics

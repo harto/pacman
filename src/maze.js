@@ -243,12 +243,15 @@ var Maze = {
     repaint: function (g, invalidated) {
         invalidated.forEach(function (r) {
             // handle out-of-bounds indexes
-            var x = Math.max(0, r.x), y = r.y,
-                w = r.w - (x - r.x), h = r.h;
+            var x = Math.max(0, r.x),
+                y = Math.max(0, r.y),
+                w = r.w - (x - r.x),
+                h = r.h - (y - r.y);
             if (w > 0) {
                 g.drawImage(this.bg, x, y, w, h, x, y, w, h);
             }
         }, this);
+        // FIXME: do faster check - tile-based?
         this.dots.forEach(function (d) {
             d.repaint(g, invalidated);
         });

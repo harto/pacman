@@ -54,8 +54,14 @@ function draw() {
 
 function levelUp() {
     ++level;
+
     Maze.reset();
+
     pacman.reset();
+    pacman.speed = (level === 1 ? 0.8 :
+                    level < 5 || level > 20 ? 0.9 :
+                    1) * MAX_SPEED;
+
     Ghost.resetAll();
 
     invalidateScreen();
@@ -70,10 +76,10 @@ function update() {
         Ghost.release();
         Ghost.updateMode();
 
-        var pCol = pacman.calcCol();
-        var pRow = pacman.calcRow();
         var colliding = Ghost.all.filter(function (g) {
-            return pCol === g.calcCol() && pRow === g.calcRow();
+            return g.state !== Ghost.STATE_DEAD &&
+                   pacman.col === g.col &&
+                   pacman.row === g.row;
         });
 
         if (colliding.length) {

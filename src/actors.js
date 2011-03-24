@@ -3,44 +3,64 @@
  */
 
 /*jslint bitwise: false */
-/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, UPDATE_HZ, DEBUG
+/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, UPDATE_HZ, MAX_SPEED, DEBUG
          NORTH, SOUTH, EAST, WEST,
          debug, distance, reverse, toDx, toDy, toTileCoord, Sprite, Energiser,
-         level, score: true, Maze */
+         Maze, level, score: true, dotCounter: true */
 
 function Actor() {}
 
 Actor.prototype = new Sprite();
 
 Actor.prototype.place = function (col, row) {
-    this.x = col * TILE_SIZE + (this.w - TILE_SIZE) / 2;
-    this.y = row * TILE_SIZE - (this.h - TILE_SIZE) / 2;
+    this.moveTo(col * TILE_SIZE + (this.w - TILE_SIZE) / 2,
+                row * TILE_SIZE - (this.h - TILE_SIZE) / 2);
 };
-Actor.prototype.calcCentreX = function () {
-    return this.x + this.w / 2;
+
+Actor.prototype.moveTo = function (x, y) {
+    this.x = x;
+    this.y = y;
+    // centre x, y
+    this.cx = x + this.w / 2;
+    this.cy = y + this.h / 2;
+    // local x, y
+    this.lx = toTileCoord(this.cx);
+    this.ly = toTileCoord(this.cy);
+
+    this.prevCol = this.col;
+    this.prevRow = this.row;
+    this.col = Math.floor(this.cx / TILE_SIZE);
+    this.row = Math.floor(this.cy / TILE_SIZE);
 };
-Actor.prototype.calcCentreY = function () {
-    return this.y + this.h / 2;
-};
-Actor.prototype.calcCol = function () {
-    return Math.floor(this.calcCentreX() / TILE_SIZE);
-};
-Actor.prototype.calcRow = function () {
-    return Math.floor(this.calcCentreY() / TILE_SIZE);
-};
-Actor.prototype.calcTileX = function () {
-    return toTileCoord(this.calcCentreX());
-};
-Actor.prototype.calcTileY = function () {
-    return toTileCoord(this.calcCentreY());
+
+Actor.prototype.moveBy = function (dx, dy) {
+    this.invalidate();
+
+    // Actors can only move in whole-pixel offsets. This avoids dealing with
+    // sub-pixel values when rendering and calculating in-tile locations. To
+    // allow for variable speeds, any fractional amount of movement is
+    // accumulated and added to the actor's next move.
+
+    // reset accumulated value when changing direction
+    if (!dx || Math.sign(dx) !== Math.sign(this.accX)) {
+        this.accX = 0;
+    }
+    if (!dy || Math.sign(dy) !== Math.sign(this.accY)) {
+        this.accY = 0;
+    }
+
+    var x = dx + (this.accX || 0);
+    var y = dy + (this.accY || 0);
+    var actualX = Math.trunc(x);
+    var actualY = Math.trunc(y);
+
+    this.moveTo(this.x + actualX, this.y + actualY);
+    this.accX = x - actualX;
+    this.accY = y - actualY;
 };
 
 Actor.prototype.enteringTile = function () {
-    var x = this.calcTileX(), y = this.calcTileY();
-    return (this.direction === EAST && x === 0) ||
-           (this.direction === WEST && x === TILE_SIZE - 1) ||
-           (this.direction === SOUTH && y === 0) ||
-           (this.direction === NORTH && y === TILE_SIZE - 1);
+    return this.col !== this.prevCol || this.row !== this.prevRow;
 };
 
 Actor.prototype.draw = function (g) {
@@ -51,13 +71,19 @@ Actor.prototype.draw = function (g) {
     g.restore();
 };
 
+Actor.exitingTile = function (direction, lx, ly) {
+    return (direction === WEST && lx <= TILE_CENTRE) ||
+           (direction === EAST && lx >= TILE_CENTRE) ||
+           (direction === NORTH && ly <= TILE_CENTRE) ||
+           (direction === SOUTH && ly >= TILE_CENTRE);
+};
+
 /// pacman
 
 var pacman = new Actor();
 pacman.w = pacman.h = 1.5 * TILE_SIZE;
 // FIXME
 pacman.colour = 'yellow';
-//pacman.speed = 0.8 * MAX_SPEED;
 
 pacman.reset = function () {
     this.place(Maze.HOME_COL, 26);
@@ -91,72 +117,53 @@ pacman.update = function () {
 
     // FIXME: most of this should live outside this method
 
-    var col = this.calcCol();
-    var reentryCol = Maze.reentryCol(col);
+    var reentryCol = Maze.reentryCol(this.col);
     if (reentryCol) {
         this.x = TILE_SIZE * reentryCol;
         return;
     }
 
-    var dot = Maze.dotAt(col, this.calcRow());
+    var dot = Maze.dotAt(this.col, this.row);
     if (dot) {
         score += dot.value;
         this.wait = dot.delay;
         this.resetDotTimer();
         if (dot instanceof Energiser) {
-            Ghost.frighten();
+            Ghost.frightenAll();
         }
         Maze.remove(dot);
-        // FIXME: use global counter, move this to Ghost method
-        var ghost = Ghost.insiders.first(function (g) {
-            return g.state === Ghost.STATE_INSIDE;
-        });
-        if (ghost) {
-            --ghost.dotCounter;
-        }
+        Ghost.decrementDotCounter();
     }
 };
 
 pacman.move = function (direction) {
-    var dx = 0;
-    var dy = 0;
-    var exiting;
-    var cx = this.calcCentreX();
-    var cy = this.calcCentreY();
+    var dx = 0,
+        dy = 0,
+        lx = this.lx,
+        ly = this.ly,
+        speed = this.speed;
 
     // Move in the given direction iff before tile centrepoint or
     // an adjacent tile lies beyond.
+    //
+    // FIXME: consider accumulated sub-pixel movement
 
-    if (direction === EAST) {
-        dx = 1;
-        exiting = toTileCoord(cx + dx) > TILE_CENTRE;
-    } else if (direction === WEST) {
-        dx = -1;
-        exiting = toTileCoord(cx + dx) < TILE_CENTRE;
-    } else if (direction === SOUTH) {
-        dy = 1;
-        exiting = toTileCoord(cy + dy) > TILE_CENTRE;
-    } else if (direction === NORTH) {
-        dy = -1;
-        exiting = toTileCoord(cy + dy) < TILE_CENTRE;
-    }
+    dx = toDx(direction) * speed;
+    dy = toDy(direction) * speed;
 
-    if (exiting && !(direction & Maze.exitsFrom(this.calcCol(), this.calcRow()))) {
+    if (Actor.exitingTile(direction, lx + dx, ly + dy) &&
+        !(direction & Maze.exitsFrom(this.col, this.row))) {
         return false;
     }
 
     // cornering
     if (dx) {
-        var localY = toTileCoord(cy);
-        dy = localY > TILE_CENTRE ? -1 : localY < TILE_CENTRE ? 1 : 0;
+        dy = (ly > TILE_CENTRE ? -1 : ly < TILE_CENTRE ? 1 : 0) * speed;
     } else if (dy) {
-        var localX = toTileCoord(cx);
-        dx = localX > TILE_CENTRE ? -1 : localX < TILE_CENTRE ? 1 : 0;
+        dx = (lx > TILE_CENTRE ? -1 : lx < TILE_CENTRE ? 1 : 0) * speed;
     }
 
-    this.invalidate();
-    this.x += dx;
-    this.y += dy;
+    this.moveBy(dx, dy);
     return true;
 };
 
@@ -195,18 +202,6 @@ Ghost.prototype.toString = function () {
     return this.name;
 };
 
-Ghost.prototype.reset = function () {
-    this.place(this.startCol, this.startRow);
-    // FIXME
-    if (this.name === 'blinky') {
-        this.state = Ghost.STATE_OUTSIDE;
-        this.direction = WEST;
-        this.nextDirection = this.calcNextDirection();
-    } else {
-        this.state = Ghost.STATE_INSIDE;
-    }
-};
-
 Ghost.prototype.draw = function (g) {
     g.save();
     if (this.state === Ghost.STATE_DEAD) {
@@ -237,65 +232,79 @@ Ghost.prototype.update = function () {
         return;
     }
 
+    var speed = this.speed || Ghost.speed;
+
     if (this.state === Ghost.STATE_EXITING) {
         var p = this.exitPath.shift();
         if (p && !(p.x === this.x && p.y === this.y)) {
-            this.x += Math.sign(p.x - this.x);
-            this.y += Math.sign(p.y - this.y);
+            this.moveBy(Math.sign(p.x - this.x) * speed,
+                        Math.sign(p.y - this.y) * speed);
             this.exitPath.unshift(p);
         }
         if (!this.exitPath.length) {
             this.state = Ghost.STATE_OUTSIDE;
-            // FIXME
-            this.direction = WEST;
-            this.nextDirection = this.calcNextDirection();
+            this.nextTileDirection = this.calcNextDirection();
         }
         return;
     }
 
-    this.x += toDx(this.direction);
-    this.y += toDy(this.direction);
+    this.moveBy(toDx(this.direction) * speed,
+                toDy(this.direction) * speed);
 
-    var col = this.calcCol();
-    if (Maze.inTunnel(col, this.calcRow())) {
-        // TODO: reduce speed
-
-        var reentryCol = Maze.reentryCol(col);
-        if (reentryCol) {
-            this.x = TILE_SIZE * reentryCol;
+    if (this.enteringTile()) {
+        this.setNextDirection(this.nextTileDirection);
+        // entering/exiting tunnel?
+        if (Maze.inTunnel(this.col, this.row)) {
+            // TODO: reduce speed
+            // FIXME: pull into main update routine
+            var reentryCol = Maze.reentryCol(this.col);
+            if (reentryCol) {
+                this.x = TILE_SIZE * reentryCol;
+            }
         }
-    }
-
-    // Moves are computed one tile in advance - when a ghost reaches a tile, it
-    // inspects the next tile in its current direction and determines which way
-    // to go when it arrives at that tile.
-    //
-    // According to the Pac-Man Dossier, "arriving" at a tile occurs at the
-    // moment an actor's centrepoint crosses the tile boundary. For the purposes
-    // of this pathfinding algorithm, it is defined as the moment a ghost reaches
-    // the centre of the tile. This simplifies the lookahead logic. Hopefully it
-    // doesn't significantly affect gameplay.
-
-    if (this.calcTileX() === TILE_CENTRE && this.calcTileY() === TILE_CENTRE) {
-        this.direction = this.nextDirection;
-        this.nextDirection = this.calcNextDirection();
+    } else {
+        // FIXME: check for overshoot (when travelling at >1 speed)
+        if (this.lx === TILE_CENTRE && this.ly === TILE_CENTRE) {
+            if (!this.currTileDirection) {
+                debugger;
+            }
+            this.direction = this.currTileDirection;
+        }
     }
 };
 
-// calculate direction to be taken when next tile is reached
+Ghost.prototype.setNextDirection = function (nextDirection) {
+    // Direction is computed on tile entry, but not enacted until the tile
+    // centre is reached. If a ghost has not yet reached the tile centre,
+    // update the direction it leaves this tile. Otherwise, wait until the
+    // next tile is reached.
+    if (Actor.exitingTile(this.direction, this.lx, this.ly)) {
+        // wait until next tile
+        this.nextTileDirection = nextDirection;
+    } else {
+        this.currTileDirection = nextDirection;
+        this.nextTileDirection = this.calcNextDirection();
+    }
+};
+
+// Calculates exit direction from next tile based on the planned exit direction
+// from the current tile.
 Ghost.prototype.calcNextDirection = function () {
-    var nextCol = this.calcCol() + toDx(this.direction);
-    var nextRow = this.calcRow() + toDy(this.direction);
+    var direction = this.currTileDirection;
+    var nextCol = this.col + toDx(direction);
+    var nextRow = this.row + toDy(direction);
 
     var exits = Maze.exitsFrom(nextCol, nextRow);
     // exclude illegal moves
-    exits &= ~reverse(this.direction);
+    exits &= ~reverse(direction);
     if (Maze.northDisallowed(nextCol, nextRow)) {
         exits &= ~NORTH;
     }
     if (!exits) {
-        throw new Error(this + ': no exits from [' +
-                        nextCol + ', ' + nextRow + ']');
+        // XXX: this could happen when a ghost is inside the house
+        debugger;
+        // throw new Error(this + ': no exits from [' +
+        //                 nextCol + ', ' + nextRow + ']');
     }
     // check for single available exit
     if (exits === NORTH || exits === SOUTH || exits === WEST || exits === EAST) {
@@ -306,8 +315,14 @@ Ghost.prototype.calcNextDirection = function () {
     // clockwise until a valid exit is found. In any other mode, an exit is
     // selected according to the Euclidean distance between the exit tile and
     // some current target tile.
-
-    if (this.state === Ghost.STATE_DEAD || Ghost.mode !== Ghost.MODE_FRIGHTENED) {
+    var nextTileDirection;
+    if (Ghost.mode === Ghost.MODE_FRIGHTENED && this.state !== Ghost.STATE_DEAD) {
+        var directions = [NORTH, EAST, SOUTH, WEST];
+        var i = Math.floor(Math.random() * directions.length);
+        while (!(nextTileDirection = directions[i] & exits)) {
+            i = (i + 1) % directions.length;
+        }
+    } else {
         var target = this.state === Ghost.STATE_DEAD ? Maze.HOME_TILE :
                      Ghost.mode === Ghost.MODE_SCATTER ? this.scatterTile :
                      this.calcTarget();
@@ -326,16 +341,9 @@ Ghost.prototype.calcNextDirection = function () {
         candidates.sort(function (a, b) {
             return a.dist - b.dist;
         });
-        return candidates[0].direction;
-    } else {
-        var directions = [NORTH, EAST, SOUTH, WEST];
-        var i = Math.floor(Math.random() * directions.length);
-        var d;
-        while (!(d = directions[i] & exits)) {
-            i = (i + 1) % directions.length;
-        }
-        return d;
+        nextTileDirection = candidates[0].direction;
     }
+    return nextTileDirection;
 };
 
 /// blinky
@@ -347,7 +355,7 @@ var blinky = new Ghost('blinky',
 blinky.colour = 'red';
 blinky.calcTarget = function () {
     // target pacman directly
-    return { col: pacman.calcCol(), row: pacman.calcRow() };
+    return { col: pacman.col, row: pacman.row };
 };
 
 /// pinky
@@ -359,8 +367,8 @@ var pinky = new Ghost('pinky',
 pinky.colour = 'pink';
 pinky.calcTarget = function () {
     // target 4 tiles ahead of pacman's current direction
-    return { col: pacman.calcCol() + toDx(pacman.direction) * 4,
-             row: pacman.calcRow() + toDy(pacman.direction) * 4 };
+    return { col: pacman.col + toDx(pacman.direction) * 4,
+             row: pacman.row + toDy(pacman.direction) * 4 };
 };
 
 /// inky
@@ -373,10 +381,10 @@ inky.colour = 'cyan';
 inky.calcTarget = function () {
     // target tile at vector extending from blinky with midpoint 2 tiles
     // ahead of pacman
-    var cx = pacman.calcCol() + toDx(pacman.direction) * 2;
-    var cy = pacman.calcRow() + toDy(pacman.direction) * 2;
-    return { col: cx + cx - blinky.calcCol(),
-             row: cy + cy - blinky.calcRow() };
+    var cx = pacman.col + toDx(pacman.direction) * 2;
+    var cy = pacman.row + toDy(pacman.direction) * 2;
+    return { col: cx + cx - blinky.col,
+             row: cy + cy - blinky.row };
 };
 
 /// clyde
@@ -389,9 +397,9 @@ clyde.colour = 'orange';
 clyde.calcTarget = function () {
     // target pacman directly when further than 8 tiles from him, otherwise
     // target scatter mode tile
-    var px = pacman.calcCol();
-    var py = pacman.calcRow();
-    return distance(px, py, this.calcCol(), this.calcRow()) > 8 ?
+    var px = pacman.col;
+    var py = pacman.row;
+    return distance(px, py, this.col, this.row) > 8 ?
               { col: px, row: py } :
               this.scatterTile;
 };
@@ -402,8 +410,13 @@ Ghost.all = [blinky, inky, pinky, clyde];
 
 Ghost.resetAll = function () {
     Ghost.all.forEach(function (g) {
-        g.reset();
+        g.state = Ghost.STATE_INSIDE;
+        g.place(g.startCol, g.startRow);
+        g.direction = g.currTileDirection = WEST;
     });
+
+    blinky.state = Ghost.STATE_OUTSIDE;
+    blinky.nextTileDirection = blinky.calcNextDirection();
 
     pinky.dotCounter = 0;
     inky.dotCounter = level === 1 ? 30 : 0;
@@ -412,32 +425,75 @@ Ghost.resetAll = function () {
     Ghost.modeSwitches = 0;
     Ghost.scatterChaseTimer = (level < 5 ? 7 : 5) * UPDATE_HZ;
     Ghost.mode = Ghost.MODE_SCATTER;
+    Ghost.speed = Ghost.calcSpeed(level);
 };
 
-Ghost.insiders = [pinky, inky, clyde];
+// Ghosts are individually released from the house according to the number of
+// dots eaten by Pac-Man and the time since a dot was last eaten.
+//
+// At the start of each level, each ghost is initialised with a personal dot
+// counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
+// eaten, the counter of the most preferred ghost within the house (in order:
+// Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
+// released.
+//
+// Whenever a life is lost, a global dot counter is used in place of the
+// individual counters. Ghosts are released according to the value of this
+// counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
+// when the counter reaches 32, the individual dot counters are used henceforth
+// as previously described. Otherwise, the global counter remains in effect.
+//
+// Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
+// is eaten for some level-specific amount of time, the preferred ghost is
+// released.
+
+// get the ghosts currently inside the house
+Ghost.insiders = function () {
+    return [pinky, inky, clyde].filter(function (g) {
+        return g.state === Ghost.STATE_INSIDE;
+    });
+};
+
+Ghost.decrementDotCounter = function () {
+    if (Ghost.useGlobalCounter) {
+        if (++Ghost.dotCounter === 32 && clyde.state === Ghost.STATE_INSIDE) {
+            Ghost.useGlobalCounter = false;
+        }
+    } else {
+        var insiders = Ghost.insiders();
+        if (insiders.length) {
+            --insiders[0].dotCounter;
+        }
+    }
+};
 
 // maybe release a ghost from the house
 Ghost.release = function () {
-    var candidates = Ghost.insiders.filter(function (g) {
-        return g.state === Ghost.STATE_INSIDE;
-    });
-
-    if (!candidates.length) {
+    var insiders = Ghost.insiders();
+    if (!insiders.length) {
+        // nobody home
         return;
     }
 
+    var ghost;
     if (pacman.dotTimer <= 0) {
-        candidates[0].release();
         pacman.resetDotTimer();
-    // } else if (globalCounterEnabled) {
-    //     // TODO
+        ghost = insiders[0];
+    } else if (Ghost.useGlobalCounter) {
+        ghost = Ghost.dotCounter === 7 && pinky.state === Ghost.STATE_INSIDE ?
+                    pinky :
+                Ghost.dotCounter === 17 && inky.state === Ghost.STATE_INSIDE ?
+                    inky :
+                Ghost.dotCounter === 32 && clyde.state === Ghost.STATE_INSIDE ?
+                    clyde :
+                null;
     } else {
-        var ghost = candidates.first(function (g) {
+        ghost = insiders.first(function (g) {
             return g.dotCounter === 0;
         });
-        if (ghost) {
-            ghost.release();
-        }
+    }
+    if (ghost) {
+        ghost.release();
     }
 };
 
@@ -449,6 +505,7 @@ Ghost.updateMode = function () {
             debug('resuming {} mode for {}s',
                   Ghost.mode,
                   Ghost.scatterChaseTimer / UPDATE_HZ);
+            Ghost.speed = Ghost.calcSpeed(level);
         }
     } else if (Ghost.modeSwitches < 7 && --Ghost.scatterChaseTimer <= 0) {
         var time;
@@ -487,41 +544,63 @@ Ghost.updateMode = function () {
               Ghost.modeSwitches,
               Ghost.mode,
               time ? 'for ' + time / UPDATE_HZ + 's' : 'indefinitely');
-        Ghost.all.forEach(function (g) {
-            if (g.state !== Ghost.STATE_DEAD) {
-                g.nextDirection = reverse(g.direction);
-            }
-        });
+        Ghost.reverseAll();
     }
 };
 
 // duration of frightened time in seconds, indexed by level
-Ghost.FRIGHT_SEC =     [ 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1 ];
+Ghost.FRIGHT_SEC =     [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1];
 // number of times to flash when becoming unfrightened, indexed by level
-Ghost.FRIGHT_FLASHES = [ 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3 ];
+Ghost.FRIGHT_FLASHES = [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3];
 
-Ghost.frighten = function () {
-    Ghost.all.forEach(function (g) {
-        g.nextDirection = reverse(g.direction);
+Ghost.reverseAll = function () {
+    Ghost.all.filter(function (g) {
+        return g.state !== Ghost.STATE_DEAD;
+    }).forEach(function (g) {
+        g.setNextDirection(reverse(g.direction));
     });
+};
+
+Ghost.frightenAll = function () {
+    Ghost.reverseAll();
 
     if (Ghost.mode !== Ghost.MODE_FRIGHTENED) {
         Ghost.prevMode = Ghost.mode;
     }
     Ghost.mode = Ghost.MODE_FRIGHTENED;
 
-    var time = Ghost.FRIGHT_SEC[level - 1];
-    //var flashes = Ghost.FRIGHT_FLASHES[level - 1];
+    var time = Ghost.FRIGHT_SEC[level];
+    //var flashes = Ghost.FRIGHT_FLASHES[level];
     if (!time) {
         return;
     }
 
     debug('entering {} mode for {}s', Ghost.mode, time);
     Ghost.frightenedTimer = time * UPDATE_HZ;
-    // TODO: flashing, speed
+    // TODO: flashing
+    Ghost.speed = Ghost.calcFrightenedSpeed(level);
     Ghost.all.forEach(function (g) {
         // ensure stationary ghosts are redrawn
+        // FIXME: might be unnecessary
         g.invalidate();
     });
+};
+
+Ghost.calcSpeed = function (level) {
+    return level === 1 ? 0.75 :
+           2 <= level && level <= 4 ? 0.85 :
+           0.95;
+};
+
+Ghost.calcFrightenedSpeed = function (level) {
+    return level === 1 ? 0.5 :
+           2 <= level && level <= 4 ? 0.55 :
+           0.6;
+};
+
+Ghost.calcTunnelSpeed = function (level) {
+    return level === 1 ? 0.4 :
+           2 <= level && level <= 4 ? 0.45 :
+           0.5;
 };
 
