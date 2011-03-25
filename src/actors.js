@@ -4,7 +4,7 @@
 
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
-         debug, distance, reverse, toDx, toDy, toTileCoord, toRow, toCol, toFrames,
+         debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow, toTileCoord,
          Sprite, Energiser, Maze, level, score: true, dotCounter: true */
 
 function Actor() {}
@@ -240,7 +240,6 @@ Ghost.prototype.update = function () {
         }
         if (!this.exitPath.length) {
             this.state = Ghost.STATE_OUTSIDE;
-            this.nextTileDirection = this.calcNextDirection();
         }
         return;
     }
@@ -275,33 +274,36 @@ Ghost.prototype.setNextDirection = function (nextDirection) {
     // centre is reached. If a ghost has not yet reached the tile centre,
     // update the direction it leaves this tile. Otherwise, wait until the
     // next tile is reached.
-    if (Actor.exitingTile(this.direction, this.lx, this.ly)) {
+    if (this.state === Ghost.STATE_ENTERING ||
+        this.state === Ghost.STATE_INSIDE ||
+        this.state === Ghost.STATE_EXITING) {
+        // Set the direction to be taken when ghost gets outside the house.
+        this.direction = this.currTileDirection = nextDirection;
+        this.nextTileDirection = this.calcNextDirection(Maze.HOME_COL,
+                                                        Maze.HOME_ROW,
+                                                        nextDirection);
+    }
+    else if (Actor.exitingTile(this.direction, this.lx, this.ly)) {
         // wait until next tile
         this.nextTileDirection = nextDirection;
     } else {
         this.currTileDirection = nextDirection;
-        this.nextTileDirection = this.calcNextDirection();
+        this.nextTileDirection = this.calcNextDirection(this.col + toDx(nextDirection),
+                                                        this.row + toDy(nextDirection),
+                                                        nextDirection);
     }
 };
 
-// Calculates exit direction from next tile based on the planned exit direction
-// from the current tile.
-Ghost.prototype.calcNextDirection = function () {
-    var direction = this.currTileDirection;
-    var nextCol = this.col + toDx(direction);
-    var nextRow = this.row + toDy(direction);
-
-    var exits = Maze.exitsFrom(nextCol, nextRow);
+// calculates direction to exit a tile
+Ghost.prototype.calcNextDirection = function (col, row, entryDirection) {
+    var exits = Maze.exitsFrom(col, row);
     // exclude illegal moves
-    exits &= ~reverse(direction);
-    if (Maze.northDisallowed(nextCol, nextRow)) {
+    exits &= ~reverse(entryDirection);
+    if (Maze.northDisallowed(col, row)) {
         exits &= ~NORTH;
     }
     if (!exits) {
-        // XXX: this could happen when a ghost is inside the house
-        debugger;
-        // throw new Error(this + ': no exits from [' +
-        //                 nextCol + ', ' + nextRow + ']');
+        throw new Error(format('%s: no exits from [%s, %s]', this, col, row));
     }
     // check for single available exit
     if (exits === NORTH || exits === SOUTH || exits === WEST || exits === EAST) {
@@ -312,11 +314,11 @@ Ghost.prototype.calcNextDirection = function () {
     // clockwise until a valid exit is found. In any other mode, an exit is
     // selected according to the Euclidean distance between the exit tile and
     // some current target tile.
-    var nextTileDirection;
+    var exitDirection;
     if (Ghost.mode === Ghost.MODE_FRIGHTENED && this.state !== Ghost.STATE_DEAD) {
         var directions = [NORTH, EAST, SOUTH, WEST];
         var i = Math.floor(Math.random() * directions.length);
-        while (!(nextTileDirection = directions[i] & exits)) {
+        while (!(exitDirection = directions[i] & exits)) {
             i = (i + 1) % directions.length;
         }
     } else {
@@ -330,17 +332,17 @@ Ghost.prototype.calcNextDirection = function () {
             return exits & d;
         }).forEach(function (d) {
             candidates.push({ direction: d,
-                              dist: distance(nextCol + toDx(d),
-                                             nextRow + toDy(d),
+                              dist: distance(col + toDx(d),
+                                             row + toDy(d),
                                              target.col,
                                              target.row) });
         });
         candidates.sort(function (a, b) {
             return a.dist - b.dist;
         });
-        nextTileDirection = candidates[0].direction;
+        exitDirection = candidates[0].direction;
     }
-    return nextTileDirection;
+    return exitDirection;
 };
 
 /// blinky
@@ -409,11 +411,10 @@ Ghost.resetAll = function () {
     Ghost.all.forEach(function (g) {
         g.state = Ghost.STATE_INSIDE;
         g.place(g.startCol, g.startRow);
-        g.direction = g.currTileDirection = WEST;
+        g.setNextDirection(WEST);
     });
 
     blinky.state = Ghost.STATE_OUTSIDE;
-    blinky.nextTileDirection = blinky.calcNextDirection();
 
     pinky.dotCounter = 0;
     inky.dotCounter = level === 1 ? 30 : 0;
