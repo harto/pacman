@@ -54,15 +54,8 @@ function toDy(direction) {
 }
 
 function intersecting(ax, ay, aw, ah, bx, by, bw, bh) {
-    var ax2 = ax + aw, ay2 = ay + ah,
-        bx2 = bx + bw, by2 = by + bh;
-    // game world is taller than it is wide - y-check first, maybe skip x-check
-    return (// y-overlap
-            ((by <= ay && ay <= by2) || (by <= ay2 && ay2 <= by2)) ||
-            ((ay <= by && by <= ay2) || (ay <= by2 && by2 <= ay2))) &&
-           (// x-overlap
-            ((bx <= ax && ax <= bx2) || (bx <= ax2 && ax2 <= bx2)) ||
-            ((ax <= bx && bx <= ax2) || (ax <= bx2 && bx2 <= ax2)));
+    // y-check first since game height > width
+    return !(ay > by + bh || by > ay + ah || ax > bx + bw || bx > ax + aw);
 }
 
 function distance(x1, y1, x2, y2) {
