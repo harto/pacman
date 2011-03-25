@@ -9,11 +9,9 @@
  */
 
 /*global $, window, Image,
-         SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT,
-         NORTH, SOUTH, EAST, WEST,
-         invalidateScreen, invalidated: true, debug, Ghost,
-         score: true, lives: true, level: true,
-         Maze, pacman, blinky, inky, pinky, clyde */
+         SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, NORTH, SOUTH, EAST, WEST,
+         invalidateScreen, invalidated: true, debug, score: true, lives: true, level: true,
+         Ghost, Maze, pacman, blinky, inky, pinky, clyde */
 
 var entities = [Maze, pacman, blinky, pinky, inky, clyde],
     ctx,
@@ -25,13 +23,32 @@ var entities = [Maze, pacman, blinky, pinky, inky, clyde],
     STATE_FINISHED = 'FINISHED',
 
     state,
-    paused;
+    paused,
+    fps = 0;
+
+function drawText(g, txt, x, y, size) {
+    var padding = 2;
+    var height = size || TEXT_HEIGHT;
+    ctx.save();
+    ctx.setFontSize(height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(x, y, ctx.measureText(txt).width + 2 * padding, height + 2 * padding);
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(txt, x + padding, y + padding);
+    ctx.restore();
+}
 
 function draw() {
     entities.forEach(function (e) {
         e.repaint(ctx, invalidated);
     });
     invalidated = [];
+
+    if (DEBUG) {
+        drawText(ctx, 'FPS: ' + fps, 5, 5);
+    }
 
     if (paused || state === STATE_FINISHED) {
         // FIXME
@@ -54,16 +71,12 @@ function draw() {
 
 function levelUp() {
     ++level;
-
     Maze.reset();
-
     pacman.reset();
     pacman.speed = (level === 1 ? 0.8 :
                     level < 5 || level > 20 ? 0.9 :
                     1);
-
     Ghost.resetAll();
-
     invalidateScreen();
 }
 
@@ -107,16 +120,31 @@ function update() {
 }
 
 var UPDATE_DELAY = 1000 / UPDATE_HZ,
-    timer;
+    timer,
+    lastLoopTime = new Date(),
+    frameCount = 0,
+    lastFrameTime = new Date();
 
 function loop() {
+    var now = new Date();
+
     if (!paused) {
         update();
     }
     draw();
 
+    if (DEBUG) {
+        if (now - lastFrameTime >= 1000) {
+            lastFrameTime = now;
+            fps = frameCount;
+            frameCount = 0;
+        }
+        ++frameCount;
+    }
+
+    var elapsed = new Date() - now;
     if (state !== STATE_FINISHED) {
-        timer = window.setTimeout(loop, UPDATE_DELAY);
+        timer = window.setTimeout(loop, Math.max(0, UPDATE_DELAY - elapsed));
     }
 }
 
@@ -149,7 +177,10 @@ $(function () {
     ctx = canvas.getContext('2d');
 
     ctx.scale(canvas.width / SCREEN_W, canvas.height / SCREEN_H);
-    ctx.font = 'bold ' + TEXT_HEIGHT + 'px Helvetica, Arial, sans-serif';
+    ctx.setFontSize = function (size) {
+        ctx.font = 'bold ' + size + 'px Helvetica, Arial, sans-serif';
+    };
+    ctx.setFontSize(TEXT_HEIGHT);
 
     function charCode(c) {
         return c.charCodeAt(0);
