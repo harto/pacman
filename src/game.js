@@ -98,8 +98,7 @@ function update() {
         if (colliding.length) {
             if (Ghost.mode === Ghost.MODE_FRIGHTENED) {
                 colliding.forEach(function (g) {
-                    debug('killing %s', g);
-                    g.state = Ghost.STATE_DEAD;
+                    g.kill();
                 });
             } else {
                 //debug('dead');

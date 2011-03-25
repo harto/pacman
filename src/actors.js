@@ -224,6 +224,12 @@ Ghost.prototype.release = function () {
     this.exitPath = [{ x: x, y: y + 3 * TILE_SIZE }, { x: x, y: y }];
 };
 
+Ghost.prototype.kill = function () {
+    debug('killing %s', this);
+    this.state = Ghost.STATE_DEAD;
+    this.speed = 2;
+};
+
 Ghost.prototype.update = function () {
     if (this.state === Ghost.STATE_INSIDE) {
         return;
@@ -259,11 +265,11 @@ Ghost.prototype.update = function () {
             }
         }
     } else {
-        // FIXME: check for overshoot (when travelling at >1 speed)
-        if (this.lx === TILE_CENTRE && this.ly === TILE_CENTRE) {
-            if (!this.currTileDirection) {
-                debugger;
-            }
+        // turn at tile centre, ensuring no overshoot at >1 speed
+        var dx = this.lx - TILE_CENTRE;
+        var dy = this.ly - TILE_CENTRE;
+        if (Math.abs(dx) < speed && Math.abs(dy) < speed) {
+            this.moveTo(this.x - dx, this.y - dy);
             this.direction = this.currTileDirection;
         }
     }
