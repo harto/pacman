@@ -4,12 +4,16 @@
 
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
-         debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow, toTileCoord,
+         debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow
          Sprite, Energiser, Maze, level, score: true, dotCounter: true */
 
 function Actor() {}
 
 Actor.prototype = new Sprite();
+
+Actor.prototype.centreAt = function (x, y) {
+    this.moveTo(x - this.w / 2, y - this.h / 2);
+};
 
 Actor.prototype.place = function (col, row) {
     this.moveTo(col * TILE_SIZE + (this.w - TILE_SIZE) / 2,
@@ -23,8 +27,8 @@ Actor.prototype.moveTo = function (x, y) {
     this.cx = x + this.w / 2;
     this.cy = y + this.h / 2;
     // local x, y
-    this.lx = toTileCoord(this.cx);
-    this.ly = toTileCoord(this.cy);
+    this.lx = Math.abs(this.cx % TILE_SIZE);
+    this.ly = Math.abs(this.cy % TILE_SIZE);
 
     this.prevCol = this.col;
     this.prevRow = this.row;
@@ -85,7 +89,7 @@ pacman.w = pacman.h = 1.5 * TILE_SIZE;
 pacman.colour = 'yellow';
 
 pacman.reset = function () {
-    this.place(Maze.HOME_COL, 26);
+    this.centreAt(Maze.HOME_COL * TILE_SIZE, 26 * TILE_SIZE + TILE_CENTRE);
     this.direction = WEST;
     this.resetDotTimer();
 };
@@ -176,24 +180,22 @@ function Ghost(name, startCol, startRow, scatterCol, scatterRow) {
     this.name = name;
 
     this.w = this.h = Ghost.SIZE;
-    this.startCol = startCol;
-    this.startRow = startRow;
+    this.startCx = startCol * TILE_SIZE;
+    this.startCy = startRow * TILE_SIZE + TILE_CENTRE;
 
     this.scatterTile = { col: scatterCol, row: scatterRow };
 }
 
 Ghost.SIZE = TILE_SIZE * 1.5;
 
-Ghost.STATE_WAITING = 'WAITING';
-Ghost.STATE_INSIDE  = 'INSIDE';
-Ghost.STATE_OUTSIDE = 'OUTSIDE';
-Ghost.STATE_EXITING = 'EXITING';
-Ghost.STATE_DEAD    = 'DEAD';
-
-// global modes
-Ghost.MODE_CHASE      = 'CHASE';
-Ghost.MODE_SCATTER    = 'SCATTER';
-Ghost.MODE_FRIGHTENED = 'FRIGHTENED';
+Ghost.STATE_ENTERING   = 1 << 0;
+Ghost.STATE_INSIDE     = 1 << 1;
+Ghost.STATE_EXITING    = 1 << 2;
+Ghost.STATE_OUTSIDE    = 1 << 3;
+Ghost.STATE_FRIGHTENED = 1 << 4;
+Ghost.STATE_DEAD       = 1 << 5;
+Ghost.STATE_CHASING    = 1 << 6;
+Ghost.STATE_SCATTERING = 1 << 7;
 
 Ghost.prototype = new Actor();
 
@@ -203,11 +205,11 @@ Ghost.prototype.toString = function () {
 
 Ghost.prototype.draw = function (g) {
     g.save();
-    if (this.state === Ghost.STATE_DEAD) {
+    if (this.state & Ghost.STATE_DEAD) {
         // FIXME
         g.strokeStyle = 'blue';
         g.strokeRect(this.x, this.y, this.w, this.h);
-    } else if (Ghost.mode === Ghost.MODE_FRIGHTENED) {
+    } else if (this.state & Ghost.STATE_FRIGHTENED) {
         // FIXME
         g.fillStyle = 'blue';
         g.fillRect(this.x, this.y, this.w, this.h);
@@ -217,36 +219,51 @@ Ghost.prototype.draw = function (g) {
     g.restore();
 };
 
-Ghost.prototype.release = function () {
-    this.state = Ghost.STATE_EXITING;
-    var x = Maze.HOME_COL * TILE_SIZE + ((this.w - TILE_SIZE) / 2);
-    var y = (Maze.HOME_ROW) * TILE_SIZE - ((this.h - TILE_SIZE) / 2);
-    this.exitPath = [{ x: x, y: y + 3 * TILE_SIZE }, { x: x, y: y }];
-};
-
-Ghost.prototype.kill = function () {
-    debug('killing %s', this);
-    this.state = Ghost.STATE_DEAD;
-    this.speed = 2;
+Ghost.prototype.calcExitPath = function () {
+    var x = Maze.HOME_COL * TILE_SIZE;
+    var y = Maze.HOME_ROW * TILE_SIZE + TILE_CENTRE;
+    return [{ x: x, y: y + 3 * TILE_SIZE }, { x: x, y: y }];
 };
 
 Ghost.prototype.update = function () {
-    if (this.state === Ghost.STATE_INSIDE) {
+    if (this.state & Ghost.STATE_INSIDE) {
+        // FIXME: jostle
         return;
     }
 
     var speed = this.speed || Ghost.speed;
+    var dx, dy;
 
-    if (this.state === Ghost.STATE_EXITING) {
-        var p = this.exitPath.shift();
-        if (p && !(p.x === this.x && p.y === this.y)) {
-            this.moveBy(Math.sign(p.x - this.x) * speed,
-                        Math.sign(p.y - this.y) * speed);
-            this.exitPath.unshift(p);
+    if (this.state & (Ghost.STATE_ENTERING | Ghost.STATE_EXITING)) {
+        // follow path into/out of house
+        var point = this.path.shift();
+        dx = point.x - this.cx;
+        dy = point.y - this.cy;
+        if (point && !(Math.abs(dx) < speed && Math.abs(dy) < speed)) {
+            this.moveBy(Math.sign(dx) * speed, Math.sign(dy) * speed);
+            this.path.unshift(point);
         }
-        if (!this.exitPath.length) {
-            this.state = Ghost.STATE_OUTSIDE;
+        if (!this.path.length) {
+            if (this.state & Ghost.STATE_ENTERING) {
+                this.state &= ~Ghost.STATE_ENTERING;
+                this.state |= Ghost.STATE_INSIDE;
+                this.resetDotCounter();
+                this.speed = null;
+            } else {
+                this.state &= ~Ghost.STATE_EXITING;
+                this.state |= Ghost.STATE_OUTSIDE;
+            }
         }
+        return;
+    } else if (this.state & Ghost.STATE_DEAD && this.row === Maze.HOME_ROW &&
+               Math.abs(this.cx - Maze.HOME_COL * TILE_SIZE) < speed) {
+        debug('%s: entering house', this);
+        this.state &= ~(Ghost.STATE_DEAD | Ghost.STATE_OUTSIDE);
+        this.state |= Ghost.STATE_ENTERING;
+        var entryPath = this.calcExitPath();
+        entryPath.reverse();
+        entryPath.push({ x: this.startCx, y: this.startCy });
+        this.path = entryPath;
         return;
     }
 
@@ -266,8 +283,8 @@ Ghost.prototype.update = function () {
         }
     } else {
         // turn at tile centre, ensuring no overshoot at >1 speed
-        var dx = this.lx - TILE_CENTRE;
-        var dy = this.ly - TILE_CENTRE;
+        dx = this.lx - TILE_CENTRE;
+        dy = this.ly - TILE_CENTRE;
         if (Math.abs(dx) < speed && Math.abs(dy) < speed) {
             this.moveTo(this.x - dx, this.y - dy);
             this.direction = this.currTileDirection;
@@ -280,9 +297,7 @@ Ghost.prototype.setNextDirection = function (nextDirection) {
     // centre is reached. If a ghost has not yet reached the tile centre,
     // update the direction it leaves this tile. Otherwise, wait until the
     // next tile is reached.
-    if (this.state === Ghost.STATE_ENTERING ||
-        this.state === Ghost.STATE_INSIDE ||
-        this.state === Ghost.STATE_EXITING) {
+    if (this.state & (Ghost.STATE_ENTERING | Ghost.STATE_INSIDE | Ghost.STATE_EXITING)) {
         // Set the direction to be taken when ghost gets outside the house.
         this.direction = this.currTileDirection = nextDirection;
         this.nextTileDirection = this.calcNextDirection(Maze.HOME_COL,
@@ -321,15 +336,15 @@ Ghost.prototype.calcNextDirection = function (col, row, entryDirection) {
     // selected according to the Euclidean distance between the exit tile and
     // some current target tile.
     var exitDirection;
-    if (Ghost.mode === Ghost.MODE_FRIGHTENED && this.state !== Ghost.STATE_DEAD) {
+    if (this.state & Ghost.STATE_FRIGHTENED) {
         var directions = [NORTH, EAST, SOUTH, WEST];
         var i = Math.floor(Math.random() * directions.length);
         while (!(exitDirection = directions[i] & exits)) {
             i = (i + 1) % directions.length;
         }
     } else {
-        var target = this.state === Ghost.STATE_DEAD ? Maze.HOME_TILE :
-                     Ghost.mode === Ghost.MODE_SCATTER ? this.scatterTile :
+        var target = this.state & Ghost.STATE_DEAD ? Maze.HOME_TILE :
+                     this.state & Ghost.STATE_SCATTERING ? this.scatterTile :
                      this.calcTarget();
 
         var candidates = [];
@@ -349,6 +364,10 @@ Ghost.prototype.calcNextDirection = function (col, row, entryDirection) {
         exitDirection = candidates[0].direction;
     }
     return exitDirection;
+};
+
+Ghost.prototype.resetDotCounter = function () {
+    this.dotCounter = 0;
 };
 
 /// blinky
@@ -391,6 +410,9 @@ inky.calcTarget = function () {
     return { col: cx + cx - blinky.col,
              row: cy + cy - blinky.row };
 };
+inky.resetDotCounter = function () {
+    this.dotCounter = level === 1 ? 30 : 0;
+};
 
 /// clyde
 
@@ -408,6 +430,9 @@ clyde.calcTarget = function () {
               { col: pCol, row: pRow } :
               this.scatterTile;
 };
+clyde.resetDotCounter = function () {
+    this.dotCounter = level === 1 ? 60 : level === 2 ? 50 : 0;
+};
 
 /// aggregate functions
 
@@ -415,21 +440,19 @@ Ghost.all = [blinky, inky, pinky, clyde];
 
 Ghost.resetAll = function () {
     Ghost.all.forEach(function (g) {
-        g.state = Ghost.STATE_INSIDE;
-        g.place(g.startCol, g.startRow);
+        g.state = Ghost.STATE_INSIDE | Ghost.STATE_SCATTERING;
+        g.resetDotCounter();
+        g.centreAt(g.startCx, g.startCy);
         g.setNextDirection(WEST);
     });
 
-    blinky.state = Ghost.STATE_OUTSIDE;
-
-    pinky.dotCounter = 0;
-    inky.dotCounter = level === 1 ? 30 : 0;
-    clyde.dotCounter = level === 1 ? 60 : level === 2 ? 50 : 0;
+    blinky.state &= ~Ghost.STATE_INSIDE;
 
     Ghost.modeSwitches = 0;
     Ghost.scatterChaseTimer = toFrames(level < 5 ? 7 : 5);
-    Ghost.mode = Ghost.MODE_SCATTER;
     Ghost.speed = Ghost.calcSpeed(level);
+    Ghost.useGlobalCounter = false;
+    Ghost.dotCounter = 0;
 };
 
 // Ghosts are individually released from the house according to the number of
@@ -453,14 +476,14 @@ Ghost.resetAll = function () {
 
 // get the ghosts currently inside the house
 Ghost.insiders = function () {
-    return [pinky, inky, clyde].filter(function (g) {
-        return g.state === Ghost.STATE_INSIDE;
+    return [blinky, pinky, inky, clyde].filter(function (g) {
+        return g.state & Ghost.STATE_INSIDE;
     });
 };
 
 Ghost.decrementDotCounter = function () {
     if (Ghost.useGlobalCounter) {
-        if (++Ghost.dotCounter === 32 && clyde.state === Ghost.STATE_INSIDE) {
+        if (++Ghost.dotCounter === 32 && clyde.state & Ghost.STATE_INSIDE) {
             Ghost.useGlobalCounter = false;
         }
     } else {
@@ -472,7 +495,7 @@ Ghost.decrementDotCounter = function () {
 };
 
 // maybe release a ghost from the house
-Ghost.release = function () {
+Ghost.maybeRelease = function () {
     var insiders = Ghost.insiders();
     if (!insiders.length) {
         // nobody home
@@ -483,37 +506,51 @@ Ghost.release = function () {
     if (pacman.dotTimer <= 0) {
         pacman.resetDotTimer();
         ghost = insiders[0];
-    } else if (Ghost.useGlobalCounter) {
-        ghost = Ghost.dotCounter === 7 && pinky.state === Ghost.STATE_INSIDE ?
-                    pinky :
-                Ghost.dotCounter === 17 && inky.state === Ghost.STATE_INSIDE ?
-                    inky :
-                Ghost.dotCounter === 32 && clyde.state === Ghost.STATE_INSIDE ?
-                    clyde :
-                null;
     } else {
         ghost = insiders.first(function (g) {
-            return g.dotCounter === 0;
+            return g.dotCounter <= 0;
         });
+        ghost = ghost ||
+            // check global counter
+            (Ghost.dotCounter === 7 && pinky.state & Ghost.STATE_INSIDE ? pinky :
+             Ghost.dotCounter === 17 && inky.state & Ghost.STATE_INSIDE ? inky :
+             Ghost.dotCounter === 32 && clyde.state & Ghost.STATE_INSIDE ? clyde :
+             null);
     }
     if (ghost) {
-        ghost.release();
+        ghost.state &= ~Ghost.STATE_INSIDE;
+        ghost.state |= Ghost.STATE_EXITING;
+        ghost.path = ghost.calcExitPath();
     }
 };
 
 // maybe switch between modes
-Ghost.updateMode = function () {
-    if (Ghost.mode === Ghost.MODE_FRIGHTENED) {
+Ghost.maybeUpdateMode = function () {
+    if (Ghost.frightened) {
         if (--Ghost.frightenedTimer <= 0) {
-            Ghost.mode = Ghost.prevMode;
-            debug('resuming %s mode for %t',
-                  Ghost.mode,
-                  Ghost.scatterChaseTimer);
+            Ghost.frightened = false;
+            Ghost.all.forEach(function (g) {
+                g.state &= ~Ghost.STATE_FRIGHTENED;
+            });
+            // debug('resuming %s mode for %t',
+            //       Ghost.mode,
+            //       Ghost.scatterChaseTimer);
             Ghost.speed = Ghost.calcSpeed(level);
         }
     } else if (Ghost.modeSwitches < 7 && --Ghost.scatterChaseTimer <= 0) {
         ++Ghost.modeSwitches;
-        Ghost.mode = (Ghost.modeSwitches % 2) ? Ghost.MODE_CHASE : Ghost.MODE_SCATTER;
+        var newState, oldState;
+        if (Ghost.modeSwitches % 2) {
+            newState = Ghost.STATE_CHASING;
+            oldState = Ghost.STATE_SCATTERING;
+        } else {
+            newState = Ghost.STATE_SCATTERING;
+            oldState = Ghost.STATE_CHASING;
+        }
+        Ghost.all.forEach(function (g) {
+            g.state &= ~oldState;
+            g.state |= newState;
+        });
         Ghost.scatterChaseTimer =
             Ghost.modeSwitches === 1 ? toFrames(20) :
             Ghost.modeSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
@@ -524,9 +561,9 @@ Ghost.updateMode = function () {
                                                 1037) :
             Ghost.modeSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
             null;
-        debug('mode switch (%s): entering %s mode for %t',
+        debug('mode switch (%s): entering mode %s for %t',
               Ghost.modeSwitches,
-              Ghost.mode,
+              newState,
               Ghost.scatterChaseTimer);
         Ghost.reverseAll();
     }
@@ -539,7 +576,7 @@ Ghost.FRIGHT_FLASHES = [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0,
 
 Ghost.reverseAll = function () {
     Ghost.all.filter(function (g) {
-        return g.state !== Ghost.STATE_DEAD;
+        return !(g.state & Ghost.STATE_DEAD);
     }).forEach(function (g) {
         g.setNextDirection(reverse(g.direction));
     });
@@ -548,22 +585,19 @@ Ghost.reverseAll = function () {
 Ghost.frightenAll = function () {
     Ghost.reverseAll();
 
-    if (Ghost.mode !== Ghost.MODE_FRIGHTENED) {
-        Ghost.prevMode = Ghost.mode;
-    }
-    Ghost.mode = Ghost.MODE_FRIGHTENED;
-
     var time = Ghost.FRIGHT_SEC[level];
     //var flashes = Ghost.FRIGHT_FLASHES[level];
     if (!time) {
         return;
     }
 
-    debug('entering %s mode for %ss', Ghost.mode, time);
+    debug('entering frightened mode for %ss', time);
+    Ghost.frightened = true;
     Ghost.frightenedTimer = toFrames(time);
     // TODO: flashing
     Ghost.speed = Ghost.calcFrightenedSpeed(level);
     Ghost.all.forEach(function (g) {
+        g.state |= Ghost.STATE_FRIGHTENED;
         // ensure stationary ghosts are redrawn
         // FIXME: might be unnecessary
         g.invalidate();
@@ -586,5 +620,22 @@ Ghost.calcTunnelSpeed = function (level) {
     return level === 1 ? 0.4 :
            2 <= level && level <= 4 ? 0.45 :
            0.5;
+};
+
+Ghost.processCollisions = function () {
+    Ghost.all.filter(function (g) {
+        return !(g.state & Ghost.STATE_DEAD) &&
+               pacman.col === g.col &&
+               pacman.row === g.row;
+    }).forEach(function (g) {
+        if (g.state & Ghost.STATE_FRIGHTENED) {
+            debug('killing %s', g);
+            g.state &= ~Ghost.STATE_FRIGHTENED;
+            g.state |= Ghost.STATE_DEAD;
+            g.speed = 2;
+        } else {
+            pacman.dead = true;
+        }
+    });
 };
 

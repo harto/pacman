@@ -36,11 +36,6 @@ var TILE_SIZE = 8,
 
 /// miscellany
 
-function toTileCoord(coord) {
-    var x = coord % TILE_SIZE;
-    // handle negative x-coord for tunnel
-    return x < 0 ? x + TILE_SIZE : x;
-}
 function toCol(x) {
     return Math.floor(x / TILE_SIZE);
 }

@@ -60,7 +60,7 @@ Energiser.prototype.delay = 3;
 
 var Maze = {
     // house entry/exit tile
-    HOME_COL: 13,
+    HOME_COL: 14,
     HOME_ROW: 14,
 
     // no NORTH-turn zones

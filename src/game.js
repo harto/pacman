@@ -47,7 +47,7 @@ function draw() {
     invalidated = [];
 
     if (DEBUG) {
-        drawText(ctx, 'FPS: ' + fps, 5, 5);
+        drawText(ctx, fps + ' fps', 5, 5);
     }
 
     if (paused || state === STATE_FINISHED) {
@@ -86,24 +86,12 @@ function update() {
             a.update();
         });
 
-        Ghost.release();
-        Ghost.updateMode();
+        Ghost.maybeRelease();
+        Ghost.maybeUpdateMode();
+        Ghost.processCollisions();
 
-        var colliding = Ghost.all.filter(function (g) {
-            return g.state !== Ghost.STATE_DEAD &&
-                   pacman.col === g.col &&
-                   pacman.row === g.row;
-        });
+        if (pacman.dead) {
 
-        if (colliding.length) {
-            if (Ghost.mode === Ghost.MODE_FRIGHTENED) {
-                colliding.forEach(function (g) {
-                    g.kill();
-                });
-            } else {
-                //debug('dead');
-                //state = STATE_DEAD;
-            }
         } else if (Maze.isEmpty()) {
             state = STATE_LEVELUP;
         }
