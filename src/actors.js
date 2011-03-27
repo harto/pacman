@@ -237,15 +237,11 @@ Ghost.prototype.calcExitPath = function () {
 };
 
 Ghost.prototype.update = function () {
-    if (this.state & Ghost.STATE_INSIDE) {
-        // FIXME: jostle
-        return;
-    }
-
     var speed = this.speed || Ghost.speed;
     var dx, dy;
-
-    if (this.state & (Ghost.STATE_ENTERING | Ghost.STATE_EXITING)) {
+    if (this.state & Ghost.STATE_INSIDE) {
+        // FIXME: jostle
+    } else if (this.state & (Ghost.STATE_ENTERING | Ghost.STATE_EXITING)) {
         // follow path into/out of house
         var point = this.path.shift();
         dx = point.x - this.cx;
@@ -266,7 +262,8 @@ Ghost.prototype.update = function () {
             }
         }
         return;
-    } else if (this.state & Ghost.STATE_DEAD && this.row === Maze.HOME_ROW &&
+    } else if (this.state & Ghost.STATE_DEAD &&
+               this.row === Maze.HOME_ROW &&
                Math.abs(this.cx - Maze.HOME_COL * TILE_SIZE) < speed) {
         debug('%s: entering house', this);
         this.state &= ~(Ghost.STATE_DEAD | Ghost.STATE_OUTSIDE);
@@ -276,29 +273,27 @@ Ghost.prototype.update = function () {
         entryPath.push({ x: this.startCx, y: this.startCy });
         this.path = entryPath;
         return;
-    }
-
-    this.moveBy(toDx(this.direction) * speed,
-                toDy(this.direction) * speed);
-
-    if (this.enteringTile()) {
-        this.setNextDirection(this.nextTileDirection);
-        // entering/exiting tunnel?
-        if (Maze.inTunnel(this.col, this.row)) {
-            // TODO: reduce speed
-            // FIXME: pull into main update routine
-            var reentryCol = Maze.reentryCol(this.col);
-            if (reentryCol) {
-                this.x = TILE_SIZE * reentryCol;
-            }
-        }
     } else {
-        // turn at tile centre, ensuring no overshoot at >1 speed
-        dx = this.lx - TILE_CENTRE;
-        dy = this.ly - TILE_CENTRE;
-        if (Math.abs(dx) < speed && Math.abs(dy) < speed) {
-            this.moveTo(this.x - dx, this.y - dy);
-            this.direction = this.currTileDirection;
+        this.moveBy(toDx(this.direction) * speed, toDy(this.direction) * speed);
+        if (this.enteringTile()) {
+            this.setNextDirection(this.nextTileDirection);
+            // entering/exiting tunnel?
+            if (Maze.inTunnel(this.col, this.row)) {
+                // TODO: reduce speed
+                // FIXME: pull into main update routine
+                var reentryCol = Maze.reentryCol(this.col);
+                if (reentryCol) {
+                    this.x = TILE_SIZE * reentryCol;
+                }
+            }
+        } else {
+            // turn at tile centre, ensuring no overshoot at >1 speed
+            dx = this.lx - TILE_CENTRE;
+            dy = this.ly - TILE_CENTRE;
+            if (Math.abs(dx) < speed && Math.abs(dy) < speed) {
+                this.moveTo(this.x - dx, this.y - dy);
+                this.direction = this.currTileDirection;
+            }
         }
     }
 };
