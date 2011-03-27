@@ -197,6 +197,17 @@ Ghost.STATE_DEAD       = 1 << 5;
 Ghost.STATE_CHASING    = 1 << 6;
 Ghost.STATE_SCATTERING = 1 << 7;
 
+Ghost.STATE_LABELS = (function () {
+    var labels = {},
+        k, m;
+    for (k in Ghost) {
+        if (Ghost.hasOwnProperty(k) && (m = /^STATE_(.+)$/.exec(k))) {
+            labels[Ghost[k]] = m[1];
+        }
+    }
+    return labels;
+}());
+
 Ghost.prototype = new Actor();
 
 Ghost.prototype.toString = function () {
@@ -526,21 +537,18 @@ Ghost.maybeRelease = function () {
 
 // maybe switch between modes
 Ghost.maybeUpdateMode = function () {
-    if (Ghost.frightened) {
-        if (--Ghost.frightenedTimer <= 0) {
-            Ghost.frightened = false;
-            Ghost.all.forEach(function (g) {
-                g.state &= ~Ghost.STATE_FRIGHTENED;
-            });
-            // debug('resuming %s mode for %t',
-            //       Ghost.mode,
-            //       Ghost.scatterChaseTimer);
-            Ghost.speed = Ghost.calcSpeed(level);
-        }
+    if (Ghost.frightened && --Ghost.frightenedTimer <= 0) {
+        Ghost.frightened = false;
+        Ghost.all.forEach(function (g) {
+            g.state &= ~Ghost.STATE_FRIGHTENED;
+        });
+        // debug('resuming %s mode for %t',
+        //       Ghost.mode,
+        //       Ghost.scatterChaseTimer);
+        Ghost.speed = Ghost.calcSpeed(level);
     } else if (Ghost.modeSwitches < 7 && --Ghost.scatterChaseTimer <= 0) {
-        ++Ghost.modeSwitches;
         var newState, oldState;
-        if (Ghost.modeSwitches % 2) {
+        if (++Ghost.modeSwitches % 2) {
             newState = Ghost.STATE_CHASING;
             oldState = Ghost.STATE_SCATTERING;
         } else {
@@ -561,9 +569,9 @@ Ghost.maybeUpdateMode = function () {
                                                 1037) :
             Ghost.modeSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
             null;
-        debug('mode switch (%s): entering mode %s for %t',
+        debug('mode switch (%s): %s for %t',
               Ghost.modeSwitches,
-              newState,
+              Ghost.STATE_LABELS[newState],
               Ghost.scatterChaseTimer);
         Ghost.reverseAll();
     }
@@ -591,7 +599,9 @@ Ghost.frightenAll = function () {
         return;
     }
 
-    debug('entering frightened mode for %ss', time);
+    debug('%s for %ss',
+          Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED],
+          time);
     Ghost.frightened = true;
     Ghost.frightenedTimer = toFrames(time);
     // TODO: flashing
