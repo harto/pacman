@@ -69,6 +69,9 @@ var Maze = {
     NNTZ_ROW_1: 14,
     NNTZ_ROW_2: 26,
 
+    TUNNEL_WEST_EXIT_COL: -2,
+    TUNNEL_EAST_EXIT_COL: COLS + 1,
+
     // collision map including dots and energisers
     layout: ['############################',
              '############################',
@@ -196,13 +199,6 @@ var Maze = {
 
     inTunnel: function (col, row) {
         return row === 17 && (col <= 4 || 23 <= col);
-    },
-
-    // return the tunnel reentry column corresponding to a given column (if any)
-    reentryCol: function (col) {
-        return col === -3 ? COLS + 1 :
-               col === COLS + 2 ? -2 :
-               null;
     },
 
     dotAt: function (col, row) {

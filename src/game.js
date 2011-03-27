@@ -9,7 +9,8 @@
  */
 
 /*global $, window, Image,
-         SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, NORTH, SOUTH, EAST, WEST,
+         SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
+         NORTH, SOUTH, EAST, WEST,
          invalidateScreen, invalidated: true, debug, score: true, lives: true, level: true,
          Ghost, Maze, pacman, blinky, inky, pinky, clyde */
 
@@ -80,10 +81,22 @@ function levelUp() {
     invalidateScreen();
 }
 
+var actors = Ghost.all.concat(pacman);
+
 function update() {
     if (state === STATE_RUNNING) {
-        entities.forEach(function (a) {
-            a.update();
+        entities.forEach(function (e) {
+            e.update();
+        });
+
+        actors.filter(function (a) {
+            return a.enteringTile();
+        }).forEach(function (a) {
+            if (a.col < Maze.TUNNEL_WEST_EXIT_COL) {
+                a.moveTo(Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE, a.y);
+            } else if (Maze.TUNNEL_EAST_EXIT_COL < a.col) {
+                a.moveTo(Maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE, a.y);
+            }
         });
 
         Ghost.maybeRelease();

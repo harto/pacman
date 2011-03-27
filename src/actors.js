@@ -119,13 +119,6 @@ pacman.update = function () {
     }
 
     // FIXME: most of this should live outside this method
-
-    var reentryCol = Maze.reentryCol(this.col);
-    if (reentryCol) {
-        this.x = TILE_SIZE * reentryCol;
-        return;
-    }
-
     var dot = Maze.dotAt(this.col, this.row);
     if (dot) {
         score += dot.value;
@@ -277,15 +270,6 @@ Ghost.prototype.update = function () {
         this.moveBy(toDx(this.direction) * speed, toDy(this.direction) * speed);
         if (this.enteringTile()) {
             this.setNextDirection(this.nextTileDirection);
-            // entering/exiting tunnel?
-            if (Maze.inTunnel(this.col, this.row)) {
-                // TODO: reduce speed
-                // FIXME: pull into main update routine
-                var reentryCol = Maze.reentryCol(this.col);
-                if (reentryCol) {
-                    this.x = TILE_SIZE * reentryCol;
-                }
-            }
         } else {
             // turn at tile centre, ensuring no overshoot at >1 speed
             dx = this.lx - TILE_CENTRE;
