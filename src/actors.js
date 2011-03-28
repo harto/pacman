@@ -21,7 +21,9 @@ Actor.prototype.place = function (col, row) {
 };
 
 Actor.prototype.moveTo = function (x, y) {
-    this.x = x;
+    var min = Maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
+    var max = Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
+    this.x = x < min ? max : max < x ? min : x;
     this.y = y;
     // centre x, y
     this.cx = x + this.w / 2;

@@ -89,16 +89,6 @@ function update() {
             e.update();
         });
 
-        actors.filter(function (a) {
-            return a.enteringTile();
-        }).forEach(function (a) {
-            if (a.col < Maze.TUNNEL_WEST_EXIT_COL) {
-                a.moveTo(Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE, a.y);
-            } else if (Maze.TUNNEL_EAST_EXIT_COL < a.col) {
-                a.moveTo(Maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE, a.y);
-            }
-        });
-
         Ghost.maybeRelease();
         Ghost.maybeUpdateMode();
         Ghost.processCollisions();
