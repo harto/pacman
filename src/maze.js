@@ -157,17 +157,24 @@ var Maze = {
 
     reset: function () {
         this.dots = [];
+        this.nDots = 0;
         this.energisers = [];
         for (var row = 0; row < this.layout.length; row++) {
+            this.dots[row] = [];
             for (var col = 0; col < this.layout[row].length; col++) {
                 var c = this.layout[row][col];
-                if (c === '.') {
-                    this.dots.push(new Dot(col, row));
-                } else if (c === 'o') {
-                    var e = new Energiser(col, row);
-                    this.dots.push(e);
-                    this.energisers.push(e);
+                if (c !== '.' && c !== 'o') {
+                    continue;
                 }
+                var dot;
+                if (c === '.') {
+                    dot = new Dot(col, row);
+                } else if (c === 'o') {
+                    dot = new Energiser(col, row);
+                    this.energisers.push(dot);
+                }
+                this.dots[row][col] = dot;
+                ++this.nDots;
             }
         }
     },
@@ -202,45 +209,72 @@ var Maze = {
     },
 
     dotAt: function (col, row) {
-        for (var i = 0; i < this.dots.length; i++) {
-            var dot = this.dots[i];
-            if (dot.col === col && dot.row === row) {
-                return dot;
-            }
-        }
-        return null;
+        var dots = this.dots[row];
+        return dots ? dots[col] : null;
     },
 
     remove: function (dot) {
-        dot.invalidate();
-        this.dots.remove(dot);
+        this.dots[dot.row][dot.col] = null;
         if (dot instanceof Energiser) {
             this.energisers.remove(dot);
         }
-
-        if (this.dots.length === 174 || this.dots.length === 74) {
+        --this.nDots;
+        if (this.nDots === 174 || this.nDots === 74) {
             // TODO: add fruit
         }
     },
 
     isEmpty: function () {
-        return this.dots.length === 0;
+        return this.nDots === 0;
     },
 
     repaint: function (g, invalidated) {
+        // track distinct dots affected by repaint
+        var dots = [];
+
         invalidated.forEach(function (r) {
-            // handle out-of-bounds indexes
+            // handle off-screen indexes
             var x = Math.max(0, r.x),
                 y = Math.max(0, r.y),
                 w = r.w - (x - r.x),
                 h = r.h - (y - r.y);
-            if (w > 0) {
-                g.drawImage(this.bg, x, y, w, h, x, y, w, h);
+            if (w <= 0 || h <= 0) {
+                return;
+            }
+            g.drawImage(this.bg, x, y, w, h, x, y, w, h);
+
+            // Track affected dots, using insertion sort to eliminate dupes.
+            // This is faster than doing an overlap check on all the dots,
+            // particularly near the start of a level.
+            var minCol = toCol(x),
+                maxCol = toCol(x + w),
+                minRow = toRow(y),
+                maxRow = toRow(y + h);
+            for (var row = minRow; row <= maxRow; row++) {
+                for (var col = minCol; col <= maxCol; col++) {
+                    var dot = this.dotAt(col, row);
+                    if (!dot) {
+                        continue;
+                    }
+                    var i = 0;
+                    var prev;
+                    while (i < dots.length) {
+                        prev = dots[i];
+                        if (prev.row < row || prev.col < col) {
+                            ++i;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (!(prev && prev.col === col && prev.row === row)) {
+                        dots.splice(i, 0, dot);
+                    }
+                }
             }
         }, this);
-        // FIXME: do faster check - tile-based?
-        this.dots.forEach(function (d) {
-            d.repaint(g, invalidated);
+
+        dots.forEach(function (d) {
+            d.draw(g);
         });
     },
 
