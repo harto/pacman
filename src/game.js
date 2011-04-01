@@ -18,6 +18,7 @@
 var scoreboard = {
     x: 6 * TILE_SIZE,
     y: TILE_SIZE,
+    w: 0, // updated when score changes
     h: TEXT_HEIGHT,
 
     update: function () {
