@@ -5,7 +5,7 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
          NORTH, SOUTH, EAST, WEST,
-         ScreenBuffer, Sprite,
+         ScreenBuffer, Sprite, toCol, toRow,
          blinky, inky, pinky, clyde */
 
 /// dots
@@ -247,7 +247,7 @@ var Maze = {
                         dots[r * COLS + c] = d;
                     }
                 }
-            };
+            }
         }
 
         invalidated.forEach(function (r) {

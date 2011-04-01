@@ -355,6 +355,17 @@ Ghost.prototype.resetDotCounter = function () {
     this.dotCounter = 0;
 };
 
+Ghost.prototype.killable = function () {
+    return this.state & Ghost.STATE_FRIGHTENED;
+};
+
+Ghost.prototype.kill = function () {
+    debug('%s: dead', this);
+    this.state &= ~Ghost.STATE_FRIGHTENED;
+    this.state |= Ghost.STATE_DEAD;
+    this.speed = 2;
+};
+
 /// blinky
 
 var blinky = new Ghost('blinky',
@@ -459,7 +470,6 @@ Ghost.resetAll = function () {
 // is eaten for some level-specific amount of time, the preferred ghost is
 // released.
 
-// get the ghosts currently inside the house
 Ghost.insiders = function () {
     return [blinky, pinky, inky, clyde].filter(function (g) {
         return g.state & Ghost.STATE_INSIDE;
@@ -588,6 +598,12 @@ Ghost.frightenAll = function () {
     });
 };
 
+Ghost.living = function () {
+    return Ghost.all.filter(function (g) {
+        return !(g.state & Ghost.STATE_DEAD);
+    });
+};
+
 Ghost.calcSpeed = function (level) {
     return level === 1 ? 0.75 :
            2 <= level && level <= 4 ? 0.85 :
@@ -607,19 +623,6 @@ Ghost.calcTunnelSpeed = function (level) {
 };
 
 Ghost.processCollisions = function () {
-    Ghost.all.filter(function (g) {
-        return !(g.state & Ghost.STATE_DEAD) &&
-               pacman.col === g.col &&
-               pacman.row === g.row;
-    }).forEach(function (g) {
-        if (g.state & Ghost.STATE_FRIGHTENED) {
-            debug('killing %s', g);
-            g.state &= ~Ghost.STATE_FRIGHTENED;
-            g.state |= Ghost.STATE_DEAD;
-            g.speed = 2;
-        } else {
-            pacman.dead = true;
-        }
-    });
+
 };
 

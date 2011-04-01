@@ -49,9 +49,11 @@ var entities = [Maze, scoreboard, pacman, blinky, pinky, inky, clyde],
     ctx,
 
     // game states
+    STATE_STARTING = 'STARTING',
     STATE_RUNNING  = 'RUNNING',
     STATE_LEVELUP  = 'LEVELUP',
     STATE_DEAD     = 'DEAD',
+    STATE_REVIVING = 'REVIVING',
     STATE_FINISHED = 'FINISHED',
 
     state,
@@ -167,13 +169,24 @@ function update() {
             }
         }
 
+        var dead;
+
         // collision check ghosts
+        Ghost.living().filter(function (g) {
+            return g.col === pacman.col && g.row === pacman.row;
+        }).forEach(function (g) {
+            if (g.killable()) {
+                g.kill();
+            } else {
+                //dead = true;
+            }
+        });
+
         Ghost.maybeRelease();
         Ghost.maybeUpdateMode();
-        Ghost.processCollisions();
 
-        if (pacman.dead) {
-
+        if (dead) {
+            state = STATE_DEAD;
         } else if (Maze.isEmpty()) {
             state = STATE_LEVELUP;
         }
