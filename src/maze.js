@@ -157,17 +157,24 @@ var Maze = {
 
     reset: function () {
         this.dots = [];
+        this.nDots = 0;
         this.energisers = [];
         for (var row = 0; row < this.layout.length; row++) {
+            this.dots[row] = [];
             for (var col = 0; col < this.layout[row].length; col++) {
                 var c = this.layout[row][col];
-                if (c === '.') {
-                    this.dots.push(new Dot(col, row));
-                } else if (c === 'o') {
-                    var e = new Energiser(col, row);
-                    this.dots.push(e);
-                    this.energisers.push(e);
+                if (c !== '.' && c !== 'o') {
+                    continue;
                 }
+                var dot;
+                if (c === '.') {
+                    dot = new Dot(col, row);
+                } else if (c === 'o') {
+                    dot = new Energiser(col, row);
+                    this.energisers.push(dot);
+                }
+                this.dots[row][col] = dot;
+                ++this.nDots;
             }
         }
     },
@@ -202,45 +209,67 @@ var Maze = {
     },
 
     dotAt: function (col, row) {
-        for (var i = 0; i < this.dots.length; i++) {
-            var dot = this.dots[i];
-            if (dot.col === col && dot.row === row) {
-                return dot;
-            }
-        }
-        return null;
+        var dots = this.dots[row];
+        return dots ? dots[col] : null;
     },
 
     remove: function (dot) {
-        dot.invalidate();
-        this.dots.remove(dot);
+        this.dots[dot.row][dot.col] = null;
         if (dot instanceof Energiser) {
             this.energisers.remove(dot);
         }
-
-        if (this.dots.length === 174 || this.dots.length === 74) {
+        --this.nDots;
+        if (this.nDots === 174 || this.nDots === 74) {
             // TODO: add fruit
         }
     },
 
     isEmpty: function () {
-        return this.dots.length === 0;
+        return this.nDots === 0;
     },
 
     repaint: function (g, invalidated) {
+        // Track distinct invalidated dots using a sparse array. This is faster
+        // than doing an overlap check on all the dots, particularly near the
+        // start of a level. (An average of 9 invalidated regions and ~200 dots
+        // equates to nearly 2000 calls to intersecting() per frame. This
+        // solution computes the tiles in each invalidated region, which is a
+        // maximum of about 50 per frame, then does a constant-time lookup on
+        // the 2D array of dots for each tile.)
+        // TODO: profile sparse/dense array
+        var dots = [];
+        var self = this;
+        function addInvalidatedDots(c1, r1, c2, r2) {
+            for (var r = r1; r <= r2; r++) {
+                for (var c = c1; c <= c2; c++) {
+                    var d = self.dotAt(c, r);
+                    if (d) {
+                        dots[r * COLS + c] = d;
+                    }
+                }
+            };
+        }
+
         invalidated.forEach(function (r) {
-            // handle out-of-bounds indexes
+            // clip negative regions
             var x = Math.max(0, r.x),
                 y = Math.max(0, r.y),
                 w = r.w - (x - r.x),
                 h = r.h - (y - r.y);
-            if (w > 0) {
-                g.drawImage(this.bg, x, y, w, h, x, y, w, h);
+            if (w <= 0 || h <= 0) {
+                return;
             }
+            g.drawImage(this.bg, x, y, w, h, x, y, w, h);
+
+            var c1 = toCol(x),
+                r1 = toRow(y),
+                c2 = toCol(x + w),
+                r2 = toRow(y + h);
+            addInvalidatedDots(c1, r1, c2, r2);
         }, this);
-        // FIXME: do faster check - tile-based?
-        this.dots.forEach(function (d) {
-            d.repaint(g, invalidated);
+
+        dots.forEach(function (d) {
+            d.draw(g);
         });
     },
 

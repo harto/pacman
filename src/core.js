@@ -47,11 +47,6 @@ function toDy(direction) {
     return direction === NORTH ? -1 : direction === SOUTH ? 1 : 0;
 }
 
-function intersecting(ax, ay, aw, ah, bx, by, bw, bh) {
-    // y-check first since game height > width
-    return !(ay > by + bh || by > ay + ah || ax > bx + bw || bx > ax + aw);
-}
-
 function distance(x1, y1, x2, y2) {
     return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
 }
@@ -169,17 +164,20 @@ function invalidateScreen() {
 function Sprite() {}
 
 Sprite.prototype = {
-    intersects: function (x, y, w, h) {
-        return intersecting(this.x, this.y, this.w, this.h, x, y, w, h);
-    },
     invalidate: function () {
         // cover antialiasing and sub-pixel artifacts
         invalidateRegion(this.x - 1, this.y - 1, this.w + 2, this.h + 2);
     },
     repaint: function (g, invalidated) {
-        var invalid = invalidated.some(function (r) {
-            return this.intersects(r.x, r.y, r.w, r.h);
-        }, this);
+        var x1 = this.x,
+            x2 = x1 + this.w,
+            y1 = this.y,
+            y2 = y1 + this.h,
+            invalid = invalidated.some(function (r) {
+                var rx = r.x,
+                    ry = r.y;
+                return !(y1 > ry + r.h || ry > y2 || x1 > rx + r.w || rx > x2);
+            });
         if (invalid) {
             this.draw(g);
         }
