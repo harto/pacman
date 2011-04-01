@@ -229,11 +229,29 @@ var Maze = {
     },
 
     repaint: function (g, invalidated) {
-        // track distinct dots affected by repaint
+        // Track distinct invalidated dots using a sparse array. This is faster
+        // than doing an overlap check on all the dots, particularly near the
+        // start of a level. (An average of 9 invalidated regions and ~200 dots
+        // equates to nearly 2000 calls to intersecting() per frame. This
+        // solution computes the tiles in each invalidated region, which is a
+        // maximum of about 50 per frame, then does a constant-time lookup on
+        // the 2D array of dots for each tile.)
+        // TODO: profile sparse/dense array
         var dots = [];
+        var self = this;
+        function addInvalidatedDots(c1, r1, c2, r2) {
+            for (var r = r1; r <= r2; r++) {
+                for (var c = c1; c <= c2; c++) {
+                    var d = self.dotAt(c, r);
+                    if (d) {
+                        dots[r * COLS + c] = d;
+                    }
+                }
+            };
+        }
 
         invalidated.forEach(function (r) {
-            // handle off-screen indexes
+            // clip negative regions
             var x = Math.max(0, r.x),
                 y = Math.max(0, r.y),
                 w = r.w - (x - r.x),
@@ -243,34 +261,11 @@ var Maze = {
             }
             g.drawImage(this.bg, x, y, w, h, x, y, w, h);
 
-            // Track affected dots, using insertion sort to eliminate dupes.
-            // This is faster than doing an overlap check on all the dots,
-            // particularly near the start of a level.
-            var minCol = toCol(x),
-                maxCol = toCol(x + w),
-                minRow = toRow(y),
-                maxRow = toRow(y + h);
-            for (var row = minRow; row <= maxRow; row++) {
-                for (var col = minCol; col <= maxCol; col++) {
-                    var dot = this.dotAt(col, row);
-                    if (!dot) {
-                        continue;
-                    }
-                    var i = 0;
-                    var prev;
-                    while (i < dots.length) {
-                        prev = dots[i];
-                        if (prev.row < row || prev.col < col) {
-                            ++i;
-                        } else {
-                            break;
-                        }
-                    }
-                    if (!(prev && prev.col === col && prev.row === row)) {
-                        dots.splice(i, 0, dot);
-                    }
-                }
-            }
+            var c1 = toCol(x),
+                r1 = toRow(y),
+                c2 = toCol(x + w),
+                r2 = toRow(y + h);
+            addInvalidatedDots(c1, r1, c2, r2);
         }, this);
 
         dots.forEach(function (d) {
