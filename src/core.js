@@ -72,20 +72,41 @@ function toSeconds(frames) {
 }
 
 // custom printf-style formatting
+function formatFloat(num, fmt) {
+    num += '';
+    if (!fmt) {
+        return num;
+    }
+    var numParts = num.split('.'), dec = numParts[0], frac = numParts[1] || '',
+        fmtParts = fmt.split('.'), nDec = fmtParts[0], nFrac = fmtParts[1];
+    if (nFrac === undefined) {
+        return dec.substring(0, nDec);
+    } else {
+        while (frac.length < nFrac) {
+            frac += '0';
+        }
+        return (nDec === undefined ?
+                    dec :
+                    dec.substring(0, nDec)) + '.' +
+               frac.substring(0, nFrac);
+    }
+}
 function format(msg/*, args*/) {
     var args = Array.prototype.slice.call(arguments, 1);
-    return msg.replace(/%([st])/g, function (_, code) {
+    return msg.replace(/%([st]|[0-9]?\.?[0-9]?f)/g, function (_, code) {
         var arg = args.shift();
-        switch (code) {
+        switch (code.charAt(code.length - 1)) {
         case 's':
             return arg;
         case 't':
             return toSeconds(arg) + 's';
-        // case 'f':
-        //     return toFrames(arg);
+        case 'f':
+            return formatFloat(arg, code.substring(0, code.length - 1));
         default:
             throw new Error('bad format code: ' + code);
         }
+
+
     });
 }
 
