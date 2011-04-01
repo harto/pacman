@@ -11,10 +11,40 @@
 /*global $, window, Image,
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
          NORTH, SOUTH, EAST, WEST,
-         invalidateScreen, invalidated: true, debug, score: true, lives: true, level: true,
-         Ghost, Maze, pacman, blinky, inky, pinky, clyde */
+         invalidateRegion, invalidateScreen, invalidated: true,
+         debug, format, lives: true, level: true,
+         Ghost, Maze, Energiser, pacman, blinky, inky, pinky, clyde */
 
-var entities = [Maze, pacman, blinky, pinky, inky, clyde],
+var scoreboard = {
+    x: 6 * TILE_SIZE,
+    y: TILE_SIZE,
+    h: TEXT_HEIGHT,
+
+    update: function () {
+        if (this.prevScore !== this.score) {
+            this.invalidated = true;
+            invalidateRegion(this.x, this.y, this.w, this.h);
+        }
+        this.prevScore = this.score;
+    },
+
+    repaint: function (g) {
+        if (this.invalidated) {
+            this.invalidated = false;
+            g.save();
+            g.fillStyle = 'white';
+            g.textAlign = 'left';
+            g.textBaseline = 'top';
+            g.setFontSize(TEXT_HEIGHT);
+            // track width to allow invalidation on next update
+            this.w = g.measureText(this.score).width;
+            g.fillText(this.score, this.x, this.y);
+            g.restore();
+        }
+    }
+};
+
+var entities = [Maze, scoreboard, pacman, blinky, pinky, inky, clyde],
     ctx,
 
     // game states
@@ -65,18 +95,18 @@ if (DEBUG) {
     entities.push(stats);
 }
 
-function drawText(g, txt, x, y, size) {
+function drawText(g, txt, x, y) {
     var padding = 2;
-    var height = size || TEXT_HEIGHT;
-    ctx.save();
-    ctx.setFontSize(height);
-    ctx.fillStyle = 'black';
-    ctx.fillRect(x, y, ctx.measureText(txt).width + 2 * padding, height + 2 * padding);
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(txt, x + padding, y + padding);
-    ctx.restore();
+    var height = TEXT_HEIGHT / 2;
+    g.save();
+    g.setFontSize(height);
+    g.fillStyle = 'black';
+    g.fillRect(x, y, g.measureText(txt).width + 2 * padding, height + 2 * padding);
+    g.fillStyle = 'white';
+    g.textAlign = 'center';
+    g.textBaseline = 'top';
+    g.fillText(txt, x + padding, y + padding);
+    g.restore();
 }
 
 function draw() {
@@ -124,6 +154,19 @@ function update() {
             e.update();
         });
 
+        // collision check dots, fruit
+        var dot = Maze.dotAt(pacman.col, pacman.row);
+        if (dot) {
+            scoreboard.score += dot.value;
+            Maze.remove(dot);
+            pacman.eat(dot);
+            Ghost.decrementDotCounter();
+            if (dot instanceof Energiser) {
+                Ghost.frightenAll();
+            }
+        }
+
+        // collision check ghosts
         Ghost.maybeRelease();
         Ghost.maybeUpdateMode();
         Ghost.processCollisions();
@@ -170,7 +213,7 @@ function loop() {
 function newGame() {
     window.clearTimeout(timer);
 
-    score = 0;
+    scoreboard.score = 0;
     level = 0;
     lives = 2;
     state = STATE_RUNNING;

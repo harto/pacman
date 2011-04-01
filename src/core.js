@@ -24,7 +24,6 @@ var TILE_SIZE = 8,
     WEST = 16,
 
     lives,
-    score,
     level,/*,
     lifeLost,
     dotsEaten,*/

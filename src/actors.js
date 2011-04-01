@@ -5,11 +5,16 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow
-         Sprite, Energiser, Maze, level, score: true, dotCounter: true */
+         Sprite, Energiser, Maze, level, dotCounter: true */
 
 function Actor() {}
 
 Actor.prototype = new Sprite();
+
+// Actor.prototype.repaint = function (g) {
+//     // Assume actors are nearly always moving
+//     this.draw(g);
+// };
 
 Actor.prototype.centreAt = function (x, y) {
     this.moveTo(x - this.w / 2, y - this.h / 2);
@@ -96,6 +101,11 @@ pacman.reset = function () {
     this.resetDotTimer();
 };
 
+pacman.eat = function (dot) {
+    this.wait = dot.delay;
+    this.resetDotTimer();
+};
+
 // reset timer that releases ghost when a dot hasn't been eaten for a while
 pacman.resetDotTimer = function () {
     this.dotTimer = toFrames(level < 5 ? 4 : 3);
@@ -114,23 +124,6 @@ pacman.update = function () {
         this.direction = newDirection;
     } else if (this.direction !== newDirection) {
         this.move(this.direction);
-    }
-
-    if (!this.enteringTile()) {
-        return;
-    }
-
-    // FIXME: most of this should live outside this method
-    var dot = Maze.dotAt(this.col, this.row);
-    if (dot) {
-        score += dot.value;
-        this.wait = dot.delay;
-        this.resetDotTimer();
-        if (dot instanceof Energiser) {
-            Ghost.frightenAll();
-        }
-        Maze.remove(dot);
-        Ghost.decrementDotCounter();
     }
 };
 
