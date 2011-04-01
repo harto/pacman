@@ -24,8 +24,46 @@ var entities = [Maze, pacman, blinky, pinky, inky, clyde],
     STATE_FINISHED = 'FINISHED',
 
     state,
-    paused,
-    fps = 0;
+    paused;
+
+var stats = {
+    UPDATE_INTERVAL_MS: 1000,
+
+    nFrames: 0,
+    totalFrameTime: 0,
+    totalInvalidated: 0,
+    prevUpdate: new Date().getTime(),
+
+    repaint: function () {},
+
+    update: function () {
+        var now = new Date().getTime();
+        if (now - this.prevUpdate >= this.UPDATE_INTERVAL_MS) {
+            this.prevUpdate = now;
+
+            var fps = this.nFrames;
+            this.nFrames = 0;
+
+            var avgFrameTime = this.totalFrameTime / fps;
+            this.totalFrameTime = 0;
+
+            var avgInvalidated = this.totalInvalidated / fps;
+            this.totalInvalidated = 0;
+
+            var title = $('title');
+            title.html(title.html().replace(
+                / \[.+|$/,
+                format(' [fps: %s, avgFrameTime: %3.2fms, avgInvalidated: %3.2f]',
+                       fps, avgFrameTime, avgInvalidated)));
+        } else {
+            ++this.nFrames;
+        }
+    }
+};
+
+if (DEBUG) {
+    entities.push(stats);
+}
 
 function drawText(g, txt, x, y, size) {
     var padding = 2;
@@ -42,14 +80,11 @@ function drawText(g, txt, x, y, size) {
 }
 
 function draw() {
+    stats.totalInvalidated += invalidated.length;
     entities.forEach(function (e) {
         e.repaint(ctx, invalidated);
     });
     invalidated = [];
-
-    if (DEBUG) {
-        drawText(ctx, fps + ' fps', 5, 5);
-    }
 
     if (paused || state === STATE_FINISHED) {
         // FIXME
@@ -123,16 +158,8 @@ function loop() {
     }
     draw();
 
-    if (DEBUG) {
-        if (now - lastFrameTime >= 1000) {
-            lastFrameTime = now;
-            fps = frameCount;
-            frameCount = 0;
-        }
-        ++frameCount;
-    }
-
     var elapsed = new Date() - now;
+    stats.totalFrameTime += elapsed;
     if (state !== STATE_FINISHED) {
         timer = window.setTimeout(loop, Math.max(0, UPDATE_DELAY - elapsed));
     }
