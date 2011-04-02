@@ -258,7 +258,10 @@ Ghost.prototype.update = function () {
         this.state |= Ghost.STATE_ENTERING;
         var entryPath = this.calcExitPath();
         entryPath.reverse();
-        entryPath.push({ x: this.startCx, y: this.startCy });
+        if (toRow(this.startCy) !== Maze.HOME_ROW) {
+            // return ghosts to start point within house
+            entryPath.push({ x: this.startCx, y: this.startCy });
+        }
         this.path = entryPath;
         return;
     } else {
