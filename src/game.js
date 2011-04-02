@@ -193,6 +193,7 @@ function update() {
     } else if (state === STATE_LEVELUP) {
         // FIXME: delay
         levelUp();
+        state = STATE_RUNNING;
     // } else if (state === State.REINSERT) {
     //     if (new Date() - timeOfDeath >= Ball.REINSERT_DELAY) {
     //         ball.reset();
