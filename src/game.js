@@ -67,11 +67,27 @@ var stats = {
     totalInvalidated: 0,
     prevUpdate: new Date().getTime(),
 
+    init: function () {
+        $('#cruft').append('<pre id="stats"></pre>');
+        this.panel = $('#stats');
+        this.inited = true;
+    },
+
+    display: function (fps, avgFrameTime, avgInvalidated) {
+        this.panel.html(format('fps: %s\n' +
+                               'avgFrameTime: %3.2fms\n' +
+                               'avgInvalidated: %3.2f',
+                               fps, avgFrameTime, avgInvalidated));
+    },
+
     repaint: function () {},
 
     update: function () {
         var now = new Date().getTime();
         if (now - this.prevUpdate >= this.UPDATE_INTERVAL_MS) {
+            if (!this.inited) {
+                this.init();
+            }
             this.prevUpdate = now;
 
             var fps = this.nFrames;
@@ -83,11 +99,7 @@ var stats = {
             var avgInvalidated = this.totalInvalidated / fps;
             this.totalInvalidated = 0;
 
-            var title = $('title');
-            title.html(title.html().replace(
-                / \[.+|$/,
-                format(' [fps: %s, avgFrameTime: %3.2fms, avgInvalidated: %3.2f]',
-                       fps, avgFrameTime, avgInvalidated)));
+            this.display(fps, avgFrameTime, avgInvalidated);
         } else {
             ++this.nFrames;
         }
