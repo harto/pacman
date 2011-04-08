@@ -251,11 +251,14 @@ var Maze = {
         }
 
         invalidated.forEach(function (r) {
-            // clip negative regions
+            // clip regions extending into negative coordinates
             var x = Math.max(0, r.x),
                 y = Math.max(0, r.y),
                 w = r.w - (x - r.x),
                 h = r.h - (y - r.y);
+            // clip regions extending into positive coordinates
+            w -= Math.max(0, x + w - COLS * TILE_SIZE);
+            h -= Math.max(0, y + h - ROWS * TILE_SIZE);
             if (w <= 0 || h <= 0) {
                 return;
             }
