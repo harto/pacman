@@ -45,20 +45,6 @@ var scoreboard = {
     }
 };
 
-var entities = [Maze, scoreboard, pacman, blinky, pinky, inky, clyde],
-    ctx,
-
-    // game states
-    STATE_STARTING = 'STARTING',
-    STATE_RUNNING  = 'RUNNING',
-    STATE_LEVELUP  = 'LEVELUP',
-    STATE_DEAD     = 'DEAD',
-    STATE_REVIVING = 'REVIVING',
-    STATE_FINISHED = 'FINISHED',
-
-    state,
-    paused;
-
 var stats = {
     UPDATE_INTERVAL_MS: 1000,
 
@@ -106,23 +92,101 @@ var stats = {
     }
 };
 
+var entities = [Maze, scoreboard, pacman, blinky, pinky, inky, clyde];
 if (DEBUG) {
     entities.push(stats);
 }
 
-function drawText(g, txt, x, y) {
-    var padding = 2;
-    var height = TEXT_HEIGHT / 2;
-    g.save();
-    g.setFontSize(height);
-    g.fillStyle = 'black';
-    g.fillRect(x, y, g.measureText(txt).width + 2 * padding, height + 2 * padding);
-    g.fillStyle = 'white';
-    g.textAlign = 'center';
-    g.textBaseline = 'top';
-    g.fillText(txt, x + padding, y + padding);
-    g.restore();
+function resetActors() {
+    pacman.reset();
+    Ghost.resetAll();
+    invalidateScreen();
 }
+
+function levelUp() {
+    ++level;
+    Maze.reset();
+    pacman.speed = (level === 1 ? 0.8 :
+                    level < 5 || level > 20 ? 0.9 :
+                    1);
+    resetActors();
+}
+
+var state, update;
+
+function enterState(s) {
+    state = update = s;
+}
+
+var State = {
+
+    STARTING: function () {
+        // TODO: music etc
+        enterState(State.RUNNING);
+    },
+
+    RUNNING: function () {
+        entities.forEach(function (e) {
+            e.update();
+        });
+
+        Ghost.maybeRelease();
+        Ghost.maybeUpdateMode();
+
+        // collision check edibles
+        var dot = Maze.dotAt(pacman.col, pacman.row);
+        if (dot) {
+            scoreboard.score += dot.value;
+            Maze.remove(dot);
+            pacman.eat(dot);
+            Ghost.decrementDotCounter();
+            if (dot instanceof Energiser) {
+                Ghost.frightenAll();
+            }
+        }
+
+        // collision check ghosts
+        Ghost.living().filter(function (g) {
+            return g.col === pacman.col && g.row === pacman.row;
+        }).forEach(function (g) {
+            (g.killable() ? g : pacman).kill();
+        });
+
+        if (Maze.isEmpty()) {
+            enterState(State.LEVELUP);
+        } else if (pacman.dying) {
+            enterState(State.DYING);
+        }
+    },
+
+    LEVELUP: function () {
+        // FIXME: flashing maze, delay
+        levelUp();
+        enterState(State.RUNNING);
+    },
+
+    DYING: function () {
+        if (!pacman.dead) {
+            // continue dying
+            // FIXME: separate method on pacman?
+            pacman.update();
+        } else {
+            if (--lives) {
+                resetActors();
+                Ghost.useGlobalCounter = true;
+            }
+            enterState(lives ? State.REVIVING : State.FINISHED);
+        }
+    },
+
+    REVIVING: function () {
+        // FIXME: is this any different from starting a level?
+        enterState(State.RUNNING);
+    }
+};
+
+var ctx,
+    paused;
 
 function draw() {
     stats.totalInvalidated += invalidated.length;
@@ -131,8 +195,8 @@ function draw() {
     });
     invalidated = [];
 
-    if (paused || state === STATE_FINISHED) {
-        // FIXME
+    // FIXME: this looks bad
+    if (paused || state === State.FINISHED) {
         var text = paused ? '<Paused>' : 'Press <N> to restart';
         var padding = TEXT_HEIGHT / 2;
         var w = ctx.measureText(text).width + 2 * padding;
@@ -147,70 +211,6 @@ function draw() {
         ctx.textAlign = 'left';
         ctx.verticalAlign = 'top';
         ctx.fillText(text, x + padding, y + padding);
-    }
-}
-
-function levelUp() {
-    ++level;
-    Maze.reset();
-    pacman.reset();
-    pacman.speed = (level === 1 ? 0.8 :
-                    level < 5 || level > 20 ? 0.9 :
-                    1);
-    Ghost.resetAll();
-    invalidateScreen();
-}
-
-var actors = Ghost.all.concat(pacman);
-
-function update() {
-    if (state === STATE_RUNNING) {
-        entities.forEach(function (e) {
-            e.update();
-        });
-
-        // collision check dots, fruit
-        var dot = Maze.dotAt(pacman.col, pacman.row);
-        if (dot) {
-            scoreboard.score += dot.value;
-            Maze.remove(dot);
-            pacman.eat(dot);
-            Ghost.decrementDotCounter();
-            if (dot instanceof Energiser) {
-                Ghost.frightenAll();
-            }
-        }
-
-        var dead;
-
-        // collision check ghosts
-        Ghost.living().filter(function (g) {
-            return g.col === pacman.col && g.row === pacman.row;
-        }).forEach(function (g) {
-            if (g.killable()) {
-                g.kill();
-            } else {
-                //dead = true;
-            }
-        });
-
-        Ghost.maybeRelease();
-        Ghost.maybeUpdateMode();
-
-        if (dead) {
-            state = STATE_DEAD;
-        } else if (Maze.isEmpty()) {
-            state = STATE_LEVELUP;
-        }
-    } else if (state === STATE_LEVELUP) {
-        // FIXME: delay
-        levelUp();
-        state = STATE_RUNNING;
-    // } else if (state === State.REINSERT) {
-    //     if (new Date() - timeOfDeath >= Ball.REINSERT_DELAY) {
-    //         ball.reset();
-    //         state = State.RUNNING;
-    //     }
     }
 }
 
@@ -230,7 +230,7 @@ function loop() {
 
     var elapsed = new Date() - now;
     stats.totalFrameTime += elapsed;
-    if (state !== STATE_FINISHED) {
+    if (state !== State.FINISHED) {
         timer = window.setTimeout(loop, Math.max(0, UPDATE_DELAY - elapsed));
     }
 }
@@ -242,11 +242,11 @@ function newGame() {
 
     scoreboard.score = 0;
     level = 0;
-    lives = 2;
-    state = STATE_RUNNING;
-    paused = false;
+    lives = 3;
 
     levelUp();
+    enterState(State.STARTING);
+    paused = false;
 
     loop();
 }

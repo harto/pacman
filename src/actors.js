@@ -96,6 +96,7 @@ pacman.w = pacman.h = 1.5 * TILE_SIZE;
 pacman.colour = 'yellow';
 
 pacman.reset = function () {
+    this.dying = this.dead = false;
     this.centreAt(Maze.HOME_COL * TILE_SIZE, 26 * TILE_SIZE + TILE_CENTRE);
     this.direction = WEST;
     this.resetDotTimer();
@@ -112,18 +113,23 @@ pacman.resetDotTimer = function () {
 };
 
 pacman.update = function () {
-    --this.dotTimer;
+    if (this.dying) {
+        // TODO: death sequence
+        this.dead = true;
+    } else {
+        --this.dotTimer;
 
-    if (this.wait) {
-        --this.wait;
-        return;
-    }
+        if (this.wait) {
+            --this.wait;
+            return;
+        }
 
-    var newDirection = this.turning || this.direction;
-    if (this.move(newDirection)) {
-        this.direction = newDirection;
-    } else if (this.direction !== newDirection) {
-        this.move(this.direction);
+        var newDirection = this.turning || this.direction;
+        if (this.move(newDirection)) {
+            this.direction = newDirection;
+        } else if (this.direction !== newDirection) {
+            this.move(this.direction);
+        }
     }
 };
 
@@ -156,6 +162,13 @@ pacman.move = function (direction) {
 
     this.moveBy(dx, dy);
     return true;
+};
+
+pacman.kill = function () {
+    if (!this.dead) {
+        debug('%s: dying', this);
+        this.dying = true;
+    }
 };
 
 pacman.toString = function () {
