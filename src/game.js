@@ -105,6 +105,7 @@ function resetActors() {
 
 function levelUp() {
     ++level;
+    debug('starting level %s', level);
     Maze.reset();
     pacman.speed = (level === 1 ? 0.8 :
                     level < 5 || level > 20 ? 0.9 :
