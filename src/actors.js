@@ -192,11 +192,10 @@ Ghost.SIZE = TILE_SIZE * 1.5;
 Ghost.STATE_ENTERING   = 1 << 0;
 Ghost.STATE_INSIDE     = 1 << 1;
 Ghost.STATE_EXITING    = 1 << 2;
-Ghost.STATE_OUTSIDE    = 1 << 3;
-Ghost.STATE_FRIGHTENED = 1 << 4;
-Ghost.STATE_DEAD       = 1 << 5;
-Ghost.STATE_CHASING    = 1 << 6;
-Ghost.STATE_SCATTERING = 1 << 7;
+Ghost.STATE_FRIGHTENED = 1 << 3;
+Ghost.STATE_DEAD       = 1 << 4;
+Ghost.STATE_CHASING    = 1 << 5;
+Ghost.STATE_SCATTERING = 1 << 6;
 
 Ghost.STATE_LABELS = (function () {
     var labels = {},
@@ -271,7 +270,6 @@ Ghost.prototype.update = function () {
                 this.speed = null;
             } else {
                 this.unset(Ghost.STATE_EXITING);
-                this.set(Ghost.STATE_OUTSIDE);
             }
         }
         return;
@@ -280,7 +278,6 @@ Ghost.prototype.update = function () {
                Math.abs(this.cx - Maze.HOME_COL * TILE_SIZE) < speed) {
         debug('%s: entering house', this);
         this.unset(Ghost.STATE_DEAD);
-        this.unset(Ghost.STATE_OUTSIDE);
         this.set(Ghost.STATE_ENTERING);
         var entryPath = this.calcExitPath();
         entryPath.reverse();
