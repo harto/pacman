@@ -459,6 +459,7 @@ Ghost.all = [blinky, inky, pinky, clyde];
 
 Ghost.resetAll = function () {
     Ghost.all.forEach(function (g) {
+        g.state = 0;
         g.set(Ghost.STATE_INSIDE);
         g.set(Ghost.STATE_SCATTERING);
         g.resetDotCounter();
