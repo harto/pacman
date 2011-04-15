@@ -206,11 +206,11 @@ Ghost.prototype.toString = function () {
 };
 
 Ghost.prototype.set = function (state) {
-    debug('%s: entering state %s', this, Ghost.STATE_LABELS[state]);
+    //debug('%s: entering state %s', this, Ghost.STATE_LABELS[state]);
     this.state |= state;
 };
 Ghost.prototype.unset = function (state) {
-    debug('%s: leaving state %s', this, Ghost.STATE_LABELS[state]);
+    //debug('%s: leaving state %s', this, Ghost.STATE_LABELS[state]);
     this.state &= ~state;
 };
 Ghost.prototype.is = function (state) {
