@@ -186,8 +186,7 @@ var Maze = {
     // Return a number that is the bitwise-OR of directions in which an actor
     // may exit a given tile.
     exitsFrom: function (col, row) {
-        if (col < 0 || COLS <= col) {
-            // in tunnel
+        if (this.inTunnel(col, row)) {
             return EAST | WEST;
         } else {
             return (this.enterable(col, row - 1) ? NORTH : 0) |
