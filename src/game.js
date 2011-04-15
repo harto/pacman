@@ -113,10 +113,14 @@ function levelUp() {
     resetActors();
 }
 
-var state, update;
+var state;
+
+function update() {
+    state();
+}
 
 function enterState(s) {
-    state = update = s;
+    state = s;
 }
 
 var State = {
@@ -149,8 +153,8 @@ var State = {
         // collision check ghosts
         Ghost.all.filter(function (g) {
             return !g.is(Ghost.STATE_DEAD) &&
-                    g.col === pacman.col &&
-                    g.row === pacman.row;
+                   g.col === pacman.col &&
+                   g.row === pacman.row;
         }).forEach(function (g) {
             (g.is(Ghost.STATE_FRIGHTENED) ? g : pacman).kill();
         });
