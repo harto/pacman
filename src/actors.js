@@ -248,8 +248,21 @@ Ghost.prototype.calcExitPath = function () {
     return [{ x: x, y: y + 3 * TILE_SIZE }, { x: x, y: y }];
 };
 
+Ghost.prototype.calcSpeed = function () {
+    return this.is(Ghost.STATE_DEAD) || this.is(Ghost.STATE_ENTERING) ? 2 :
+           Maze.inTunnel(this.col, this.row) ? (level === 1 ? 0.4 :
+                                                2 <= level && level <= 4 ? 0.45 :
+                                                0.5) :
+           this.is(Ghost.STATE_FRIGHTENED) ? (level === 1 ? 0.5 :
+                                              2 <= level && level <= 4 ? 0.55 :
+                                              0.6) :
+           (level === 1 ? 0.75 :
+            2 <= level && level <= 4 ? 0.85 :
+            0.95);
+};
+
 Ghost.prototype.update = function () {
-    var speed = this.speed || Ghost.speed;
+    var speed = this.calcSpeed();
     var dx, dy;
     if (this.is(Ghost.STATE_INSIDE)) {
         // FIXME: jostle
@@ -267,7 +280,6 @@ Ghost.prototype.update = function () {
                 this.unset(Ghost.STATE_ENTERING);
                 this.set(Ghost.STATE_INSIDE);
                 this.resetDotCounter();
-                this.speed = null;
             } else {
                 this.unset(Ghost.STATE_EXITING);
             }
@@ -386,7 +398,6 @@ Ghost.prototype.kill = function () {
     debug('%s: dying', this);
     this.unset(Ghost.STATE_FRIGHTENED);
     this.set(Ghost.STATE_DEAD);
-    this.speed = 2;
 };
 
 /// blinky
@@ -471,7 +482,6 @@ Ghost.resetAll = function () {
 
     Ghost.modeSwitches = 0;
     Ghost.scatterChaseTimer = toFrames(level < 5 ? 7 : 5);
-    Ghost.speed = Ghost.calcSpeed(level);
     Ghost.useGlobalCounter = false;
     Ghost.dotCounter = 0;
 };
@@ -555,7 +565,6 @@ Ghost.maybeUpdateMode = function () {
         // debug('resuming %s mode for %t',
         //       Ghost.mode,
         //       Ghost.scatterChaseTimer);
-        Ghost.speed = Ghost.calcSpeed(level);
     } else if (Ghost.modeSwitches < 7 && --Ghost.scatterChaseTimer <= 0) {
         var newState, oldState;
         if (++Ghost.modeSwitches % 2) {
@@ -613,34 +622,11 @@ Ghost.frightenAll = function () {
     Ghost.frightened = true;
     Ghost.frightenedTimer = toFrames(time);
     // TODO: flashing
-    Ghost.speed = Ghost.calcFrightenedSpeed(level);
     Ghost.all.forEach(function (g) {
         g.set(Ghost.STATE_FRIGHTENED);
         // ensure stationary ghosts are redrawn
         // FIXME: might be unnecessary
         g.invalidate();
     });
-};
-
-Ghost.calcSpeed = function (level) {
-    return level === 1 ? 0.75 :
-           2 <= level && level <= 4 ? 0.85 :
-           0.95;
-};
-
-Ghost.calcFrightenedSpeed = function (level) {
-    return level === 1 ? 0.5 :
-           2 <= level && level <= 4 ? 0.55 :
-           0.6;
-};
-
-Ghost.calcTunnelSpeed = function (level) {
-    return level === 1 ? 0.4 :
-           2 <= level && level <= 4 ? 0.45 :
-           0.5;
-};
-
-Ghost.processCollisions = function () {
-
 };
 
