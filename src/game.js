@@ -147,10 +147,12 @@ var State = {
         }
 
         // collision check ghosts
-        Ghost.living().filter(function (g) {
-            return g.col === pacman.col && g.row === pacman.row;
+        Ghost.all.filter(function (g) {
+            return !g.is(Ghost.STATE_DEAD) &&
+                    g.col === pacman.col &&
+                    g.row === pacman.row;
         }).forEach(function (g) {
-            (g.killable() ? g : pacman).kill();
+            (g.is(Ghost.STATE_FRIGHTENED) ? g : pacman).kill();
         });
 
         if (Maze.isEmpty()) {
