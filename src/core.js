@@ -187,6 +187,13 @@ Sprite.prototype = {
     },
     update: function () {
         // implemented by subclasses
+    },
+    moveTo: function (x, y) {
+        this.x = x;
+        this.y = y;
+    },
+    centreAt: function (x, y) {
+        this.moveTo(x - this.w / 2, y - this.h / 2);
     }
 };
 

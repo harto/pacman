@@ -16,15 +16,6 @@ Actor.prototype = new Sprite();
 //     this.draw(g);
 // };
 
-Actor.prototype.centreAt = function (x, y) {
-    this.moveTo(x - this.w / 2, y - this.h / 2);
-};
-
-Actor.prototype.place = function (col, row) {
-    this.moveTo(col * TILE_SIZE + (this.w - TILE_SIZE) / 2,
-                row * TILE_SIZE - (this.h - TILE_SIZE) / 2);
-};
-
 Actor.prototype.moveTo = function (x, y) {
     var min = Maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
     var max = Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
