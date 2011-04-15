@@ -54,8 +54,8 @@ var stats = {
     prevUpdate: new Date().getTime(),
 
     init: function () {
-        $('#cruft').append('<pre id="stats"></pre>');
-        this.panel = $('#stats');
+        this.panel = $('<pre id="stats"></pre>');
+        $('#cruft').append(this.panel);
         this.inited = true;
     },
 
