@@ -147,7 +147,7 @@ var State = {
             e.update();
         });
 
-        ghosts.maybeRelease();
+        ghosts.maybeReleaseOne();
         ghosts.maybeUpdateMode();
 
         // collision check edibles

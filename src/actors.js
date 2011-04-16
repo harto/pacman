@@ -519,7 +519,7 @@ var ghosts = {
     },
 
     // maybe release a ghost from the house
-    maybeRelease: function () {
+    maybeReleaseOne: function () {
         var insiders = this.insiders();
         if (!insiders.length) {
             // nobody home
