@@ -277,19 +277,14 @@ var Maze = {
         return dots ? dots[col] : null;
     },
 
-    remove: function (dot) {
-        this.dots[dot.row][dot.col] = null;
-        if (dot instanceof Energiser) {
-            this.energisers.remove(dot);
-        }
-        --this.nDots;
-        if (this.nDots === 174 || this.nDots === 74) {
-            // TODO: add fruit
-        }
+    energiserEaten: function (e) {
+        this.energisers.remove(e);
+        this.dotEaten(e);
     },
 
-    isEmpty: function () {
-        return this.nDots === 0;
+    dotEaten: function (d) {
+        this.dots[d.row][d.col] = null;
+        --this.nDots;
     },
 
     repaint: function (g, invalidated) {
@@ -348,4 +343,4 @@ var Maze = {
 };
 
 Maze.HOME_TILE = { col: Maze.HOME_COL, row: Maze.HOME_ROW };
-
+eventSubscribe(Maze);

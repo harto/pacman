@@ -159,6 +159,25 @@ function invalidateScreen() {
     invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
 }
 
+/// event management
+
+var events = [],
+    subscribers = [];
+
+function raiseEvent(e /*, args*/) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    subscribers.forEach(function (s) {
+        var handler = s[e];
+        if (handler) {
+            handler.apply(s, args);
+        }
+    });
+}
+
+function eventSubscribe(subscriber) {
+    subscribers.push(subscriber);
+}
+
 /// base class of most entities
 
 function Sprite() {}

@@ -5,7 +5,7 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow
-         Sprite, Energiser, Maze, level, dotCounter: true */
+         Sprite, Energiser, Maze, level, dotCounter: true, eventSubscribe */
 
 function Actor() {}
 
@@ -93,10 +93,11 @@ pacman.reset = function () {
     this.resetDotTimer();
 };
 
-pacman.eat = function (dot) {
+pacman.dotEaten = function (dot) {
     this.wait = dot.delay;
     this.resetDotTimer();
 };
+pacman.energiserEaten = pacman.dotEaten;
 
 // reset timer that releases ghost when a dot hasn't been eaten for a while
 pacman.resetDotTimer = function () {
@@ -502,7 +503,7 @@ Ghost.insiders = function () {
     });
 };
 
-Ghost.decrementDotCounter = function () {
+Ghost.dotEaten = function () {
     if (Ghost.useGlobalCounter) {
         if (++Ghost.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE)) {
             Ghost.useGlobalCounter = false;
@@ -600,7 +601,7 @@ Ghost.reverseAll = function () {
     });
 };
 
-Ghost.frightenAll = function () {
+Ghost.energiserEaten = function () {
     Ghost.reverseAll();
 
     var time = Ghost.FRIGHT_SEC[level];
@@ -621,3 +622,5 @@ Ghost.frightenAll = function () {
     });
 };
 
+eventSubscribe(pacman);
+eventSubscribe(Ghost);

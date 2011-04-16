@@ -10,10 +10,9 @@
 
 /*global $, window, Image,
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
-         NORTH, SOUTH, EAST, WEST,
-         invalidateRegion, invalidateScreen, invalidated: true,
-         debug, format, lives: true, level: true,
-         Ghost, Maze, Energiser, Bonus, bonusDisplay,
+         NORTH, SOUTH, EAST, WEST, invalidated: true, events: true, debug,
+         format, invalidateRegion, invalidateScreen, raiseEvent, eventSubscribe,
+         lives: true, level: true, Ghost, Maze, Energiser, Bonus, bonusDisplay,
          pacman, blinky, inky, pinky, clyde */
 
 var scoreboard = {
@@ -22,13 +21,7 @@ var scoreboard = {
     w: 0, // updated when score changes
     h: TEXT_HEIGHT,
 
-    update: function () {
-        if (this.prevScore !== this.score) {
-            this.invalidated = true;
-            invalidateRegion(this.x, this.y, this.w, this.h);
-        }
-        this.prevScore = this.score;
-    },
+    update: function () {},
 
     repaint: function (g) {
         if (this.invalidated) {
@@ -43,8 +36,18 @@ var scoreboard = {
             g.fillText(this.score, this.x, this.y);
             g.restore();
         }
+    },
+
+    objectEaten: function (o) {
+        this.score += o.value;
+        invalidateRegion(this.x, this.y, this.w, this.h);
+        this.invalidated = true;
     }
 };
+scoreboard.dotEaten = scoreboard.objectEaten;
+scoreboard.energiserEaten = scoreboard.objectEaten;
+scoreboard.bonusEaten = scoreboard.objectEaten;
+eventSubscribe(scoreboard);
 
 var stats = {
     UPDATE_INTERVAL_MS: 1000,
@@ -115,10 +118,16 @@ function levelUp() {
     resetActors();
 }
 
-var state;
+var state, paused;
 
 function update() {
-    state();
+    if (!paused) {
+        events.forEach(function (e) {
+
+        });
+        events = [];
+        state();
+    }
 }
 
 function enterState(s) {
@@ -143,13 +152,10 @@ var State = {
         // collision check edibles
         var dot = Maze.dotAt(pacman.col, pacman.row);
         if (dot) {
-            scoreboard.score += dot.value;
-            Maze.remove(dot);
-            pacman.eat(dot);
-            Ghost.decrementDotCounter();
-            if (dot instanceof Energiser) {
-                Ghost.frightenAll();
-            }
+            raiseEvent(dot instanceof Energiser ? 'energiserEaten' : 'dotEaten', dot);
+            // if (Maze.nDots === 74 || Maze.nDots === 174) {
+            //     entities.push(Bonus.forLevel(level));
+            // }
         }
 
         // collision check ghosts
@@ -161,7 +167,7 @@ var State = {
             (g.is(Ghost.STATE_FRIGHTENED) ? g : pacman).kill();
         });
 
-        if (Maze.isEmpty()) {
+        if (Maze.nDots === 0) {
             enterState(State.LEVELUP);
         } else if (pacman.dying) {
             enterState(State.DYING);
@@ -194,8 +200,7 @@ var State = {
     }
 };
 
-var ctx,
-    paused;
+var ctx;
 
 function draw() {
     stats.totalInvalidated += invalidated.length;
@@ -232,9 +237,7 @@ var UPDATE_DELAY = 1000 / UPDATE_HZ,
 function loop() {
     var now = new Date();
 
-    if (!paused) {
-        update();
-    }
+    update();
     draw();
 
     var elapsed = new Date() - now;
