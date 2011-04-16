@@ -1,5 +1,5 @@
 /*
- * Maze, dots and energisers
+ * maze, dots and energisers
  */
 
 /*jslint bitwise: false */
@@ -123,7 +123,7 @@ bonusDisplay.add = function (bonus) {
 
 /// maze
 
-var Maze = {
+var maze = {
     // house entry/exit tile
     HOME_COL: 14,
     HOME_ROW: 14,
@@ -342,5 +342,5 @@ var Maze = {
     }
 };
 
-Maze.HOME_TILE = { col: Maze.HOME_COL, row: Maze.HOME_ROW };
-eventSubscribe(Maze);
+maze.HOME_TILE = { col: maze.HOME_COL, row: maze.HOME_ROW };
+eventSubscribe(maze);

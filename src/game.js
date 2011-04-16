@@ -12,7 +12,7 @@
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
          NORTH, SOUTH, EAST, WEST, invalidated: true, events: true, debug,
          format, invalidateRegion, invalidateScreen, raiseEvent, eventSubscribe,
-         lives: true, level: true, Ghost, Maze, Energiser, Bonus, bonusDisplay,
+         lives: true, level: true, Ghost, maze, Energiser, Bonus, bonusDisplay,
          pacman, blinky, inky, pinky, clyde */
 
 var scoreboard = {
@@ -96,7 +96,7 @@ var stats = {
     }
 };
 
-var entities = [Maze, scoreboard, bonusDisplay, pacman, blinky, pinky, inky, clyde];
+var entities = [maze, scoreboard, bonusDisplay, pacman, blinky, pinky, inky, clyde];
 if (DEBUG) {
     entities.push(stats);
 }
@@ -110,7 +110,7 @@ function resetActors() {
 function levelUp() {
     ++level;
     debug('starting level %s', level);
-    Maze.reset();
+    maze.reset();
     pacman.speed = (level === 1 ? 0.8 :
                     level < 5 || level > 20 ? 0.9 :
                     1);
@@ -150,10 +150,10 @@ var State = {
         Ghost.maybeUpdateMode();
 
         // collision check edibles
-        var dot = Maze.dotAt(pacman.col, pacman.row);
+        var dot = maze.dotAt(pacman.col, pacman.row);
         if (dot) {
             raiseEvent(dot instanceof Energiser ? 'energiserEaten' : 'dotEaten', dot);
-            // if (Maze.nDots === 74 || Maze.nDots === 174) {
+            // if (maze.nDots === 74 || maze.nDots === 174) {
             //     entities.push(Bonus.forLevel(level));
             // }
         }
@@ -167,7 +167,7 @@ var State = {
             (g.is(Ghost.STATE_FRIGHTENED) ? g : pacman).kill();
         });
 
-        if (Maze.nDots === 0) {
+        if (maze.nDots === 0) {
             enterState(State.LEVELUP);
         } else if (pacman.dying) {
             enterState(State.DYING);
@@ -357,9 +357,9 @@ $(function () {
     // FIXME: include error handling, progress bar
     var img = new Image();
     img.onload = function () {
-        Maze.loaded(img);
+        maze.loaded(img);
         newGame();
     };
-    img.src = 'res/' + Maze.img;
+    img.src = 'res/' + maze.img;
 });
 
