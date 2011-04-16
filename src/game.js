@@ -103,7 +103,7 @@ if (DEBUG) {
 
 function resetActors() {
     pacman.reset();
-    Ghost.resetAll();
+    ghosts.reset();
     invalidateScreen();
 }
 
@@ -146,8 +146,8 @@ var State = {
             e.update();
         });
 
-        Ghost.maybeRelease();
-        Ghost.maybeUpdateMode();
+        ghosts.maybeRelease();
+        ghosts.maybeUpdateMode();
 
         // collision check edibles
         var dot = maze.dotAt(pacman.col, pacman.row);
@@ -159,7 +159,7 @@ var State = {
         }
 
         // collision check ghosts
-        Ghost.all.filter(function (g) {
+        ghosts.all.filter(function (g) {
             return !g.is(Ghost.STATE_DEAD) &&
                    g.col === pacman.col &&
                    g.row === pacman.row;
@@ -188,7 +188,7 @@ var State = {
         } else {
             if (--lives) {
                 resetActors();
-                Ghost.useGlobalCounter = true;
+                ghosts.useGlobalCounter = true;
             }
             enterState(lives ? State.REVIVING : State.FINISHED);
         }

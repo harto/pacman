@@ -458,169 +458,172 @@ clyde.resetDotCounter = function () {
 
 /// aggregate functions
 
-Ghost.all = [blinky, inky, pinky, clyde];
+var ghosts = {
 
-Ghost.resetAll = function () {
-    Ghost.all.forEach(function (g) {
-        g.state = 0;
-        g.set(Ghost.STATE_INSIDE);
-        g.set(Ghost.STATE_SCATTERING);
-        g.resetDotCounter();
-        g.centreAt(g.startCx, g.startCy);
-        g.setNextDirection(WEST);
-    });
+    all: [blinky, inky, pinky, clyde],
 
-    blinky.unset(Ghost.STATE_INSIDE);
-
-    Ghost.modeSwitches = 0;
-    Ghost.scatterChaseTimer = toFrames(level < 5 ? 7 : 5);
-    Ghost.useGlobalCounter = false;
-    Ghost.dotCounter = 0;
-};
-
-// Ghosts are individually released from the house according to the number of
-// dots eaten by Pac-Man and the time since a dot was last eaten.
-//
-// At the start of each level, each ghost is initialised with a personal dot
-// counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
-// eaten, the counter of the most preferred ghost within the house (in order:
-// Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
-// released.
-//
-// Whenever a life is lost, a global dot counter is used in place of the
-// individual counters. Ghosts are released according to the value of this
-// counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
-// when the counter reaches 32, the individual dot counters are used henceforth
-// as previously described. Otherwise, the global counter remains in effect.
-//
-// Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
-// is eaten for some level-specific amount of time, the preferred ghost is
-// released.
-
-Ghost.insiders = function () {
-    return [blinky, pinky, inky, clyde].filter(function (g) {
-        return g.is(Ghost.STATE_INSIDE);
-    });
-};
-
-Ghost.dotEaten = function () {
-    if (Ghost.useGlobalCounter) {
-        if (++Ghost.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE)) {
-            Ghost.useGlobalCounter = false;
-        }
-    } else {
-        var insiders = Ghost.insiders();
-        if (insiders.length) {
-            --insiders[0].dotCounter;
-        }
-    }
-};
-
-// maybe release a ghost from the house
-Ghost.maybeRelease = function () {
-    var insiders = Ghost.insiders();
-    if (!insiders.length) {
-        // nobody home
-        return;
-    }
-
-    var ghost;
-    if (pacman.dotTimer <= 0) {
-        pacman.resetDotTimer();
-        ghost = insiders[0];
-    } else {
-        ghost = insiders.first(function (g) {
-            return g.dotCounter <= 0;
+    reset: function () {
+        this.all.forEach(function (g) {
+            g.state = 0;
+            g.set(Ghost.STATE_INSIDE);
+            g.set(Ghost.STATE_SCATTERING);
+            g.resetDotCounter();
+            g.centreAt(g.startCx, g.startCy);
+            g.setNextDirection(WEST);
         });
-        ghost = ghost ||
-            // check global counter
-            (Ghost.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
-             Ghost.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
-             Ghost.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
-             null);
-    }
-    if (ghost) {
-        debug('%s: exiting', ghost);
-        ghost.unset(Ghost.STATE_INSIDE);
-        ghost.set(Ghost.STATE_EXITING);
-        ghost.path = ghost.calcExitPath();
-    }
-};
 
-// maybe switch between modes
-Ghost.maybeUpdateMode = function () {
-    if (Ghost.frightened && --Ghost.frightenedTimer <= 0) {
-        Ghost.frightened = false;
-        Ghost.all.forEach(function (g) {
-            g.unset(Ghost.STATE_FRIGHTENED);
+        blinky.unset(Ghost.STATE_INSIDE);
+
+        this.modeSwitches = 0;
+        this.scatterChaseTimer = toFrames(level < 5 ? 7 : 5);
+        this.useGlobalCounter = false;
+        this.dotCounter = 0;
+    },
+
+    // Ghosts are individually released from the house according to the number of
+    // dots eaten by Pac-Man and the time since a dot was last eaten.
+    //
+    // At the start of each level, each ghost is initialised with a personal dot
+    // counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
+    // eaten, the counter of the most preferred ghost within the house (in order:
+    // Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
+    // released.
+    //
+    // Whenever a life is lost, a global dot counter is used in place of the
+    // individual counters. Ghosts are released according to the value of this
+    // counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
+    // when the counter reaches 32, the individual dot counters are used henceforth
+    // as previously described. Otherwise, the global counter remains in effect.
+    //
+    // Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
+    // is eaten for some level-specific amount of time, the preferred ghost is
+    // released.
+
+    insiders: function () {
+        return [blinky, pinky, inky, clyde].filter(function (g) {
+            return g.is(Ghost.STATE_INSIDE);
         });
-        // debug('resuming %s mode for %t',
-        //       Ghost.mode,
-        //       Ghost.scatterChaseTimer);
-    } else if (Ghost.modeSwitches < 7 && --Ghost.scatterChaseTimer <= 0) {
-        var newState, oldState;
-        if (++Ghost.modeSwitches % 2) {
-            newState = Ghost.STATE_CHASING;
-            oldState = Ghost.STATE_SCATTERING;
+    },
+
+    dotEaten: function () {
+        if (this.useGlobalCounter) {
+            if (++this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE)) {
+                this.useGlobalCounter = false;
+            }
         } else {
-            newState = Ghost.STATE_SCATTERING;
-            oldState = Ghost.STATE_CHASING;
+            var insiders = this.insiders();
+            if (insiders.length) {
+                --insiders[0].dotCounter;
+            }
         }
-        Ghost.all.forEach(function (g) {
-            g.unset(oldState);
-            g.set(newState);
+    },
+
+    // maybe release a ghost from the house
+    maybeRelease: function () {
+        var insiders = this.insiders();
+        if (!insiders.length) {
+            // nobody home
+            return;
+        }
+
+        var ghost;
+        if (pacman.dotTimer <= 0) {
+            pacman.resetDotTimer();
+            ghost = insiders[0];
+        } else {
+            ghost = insiders.first(function (g) {
+                return g.dotCounter <= 0;
+            });
+            ghost = ghost ||
+                // check global counter
+                (this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
+                 this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
+                 this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
+                 null);
+        }
+        if (ghost) {
+            debug('%s: exiting', ghost);
+            ghost.unset(Ghost.STATE_INSIDE);
+            ghost.set(Ghost.STATE_EXITING);
+            ghost.path = ghost.calcExitPath();
+        }
+    },
+
+    // maybe switch between modes
+    maybeUpdateMode: function () {
+        if (this.frightened && --this.frightenedTimer <= 0) {
+            this.frightened = false;
+            this.all.forEach(function (g) {
+                g.unset(Ghost.STATE_FRIGHTENED);
+            });
+            // debug('resuming %s mode for %t',
+            //       Ghost.mode,
+            //       Ghost.scatterChaseTimer);
+        } else if (this.modeSwitches < 7 && --this.scatterChaseTimer <= 0) {
+            var newState, oldState;
+            if (++this.modeSwitches % 2) {
+                newState = Ghost.STATE_CHASING;
+                oldState = Ghost.STATE_SCATTERING;
+            } else {
+                newState = Ghost.STATE_SCATTERING;
+                oldState = Ghost.STATE_CHASING;
+            }
+            this.all.forEach(function (g) {
+                g.unset(oldState);
+                g.set(newState);
+            });
+            this.scatterChaseTimer =
+                this.modeSwitches === 1 ? toFrames(20) :
+                this.modeSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
+                this.modeSwitches === 3 ? toFrames(20) :
+                this.modeSwitches === 4 ? toFrames(5) :
+                this.modeSwitches === 5 ? toFrames(level === 1 ? 20 :
+                                                    level < 5 ? 1033 :
+                                                    1037) :
+                this.modeSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
+                null;
+            debug('mode switch (%s): %s for %t',
+                  this.modeSwitches,
+                  Ghost.STATE_LABELS[newState],
+                  this.scatterChaseTimer);
+            this.reverseAll();
+        }
+    },
+
+    // duration of frightened time in seconds, indexed by level
+    FRIGHT_SEC:     [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1],
+    // number of times to flash when becoming unfrightened, indexed by level
+    FRIGHT_FLASHES: [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3],
+
+    reverseAll: function () {
+        this.all.filter(function (g) {
+            return !g.is(Ghost.STATE_DEAD);
+        }).forEach(function (g) {
+            g.setNextDirection(reverse(g.direction));
         });
-        Ghost.scatterChaseTimer =
-            Ghost.modeSwitches === 1 ? toFrames(20) :
-            Ghost.modeSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
-            Ghost.modeSwitches === 3 ? toFrames(20) :
-            Ghost.modeSwitches === 4 ? toFrames(5) :
-            Ghost.modeSwitches === 5 ? toFrames(level === 1 ? 20 :
-                                                level < 5 ? 1033 :
-                                                1037) :
-            Ghost.modeSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
-            null;
-        debug('mode switch (%s): %s for %t',
-              Ghost.modeSwitches,
-              Ghost.STATE_LABELS[newState],
-              Ghost.scatterChaseTimer);
-        Ghost.reverseAll();
+    },
+
+    energiserEaten: function () {
+        this.reverseAll();
+
+        var time = this.FRIGHT_SEC[level];
+        //var flashes = this.FRIGHT_FLASHES[level];
+        if (!time) {
+            return;
+        }
+
+        debug('%s for %ss', Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED], time);
+        this.frightened = true;
+        this.frightenedTimer = toFrames(time);
+        // TODO: flashing
+        this.all.forEach(function (g) {
+            g.set(Ghost.STATE_FRIGHTENED);
+            // ensure stationary ghosts are redrawn
+            // FIXME: might be unnecessary
+            g.invalidate();
+        });
     }
-};
-
-// duration of frightened time in seconds, indexed by level
-Ghost.FRIGHT_SEC =     [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1];
-// number of times to flash when becoming unfrightened, indexed by level
-Ghost.FRIGHT_FLASHES = [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3];
-
-Ghost.reverseAll = function () {
-    Ghost.all.filter(function (g) {
-        return !g.is(Ghost.STATE_DEAD);
-    }).forEach(function (g) {
-        g.setNextDirection(reverse(g.direction));
-    });
-};
-
-Ghost.energiserEaten = function () {
-    Ghost.reverseAll();
-
-    var time = Ghost.FRIGHT_SEC[level];
-    //var flashes = Ghost.FRIGHT_FLASHES[level];
-    if (!time) {
-        return;
-    }
-
-    debug('%s for %ss', Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED], time);
-    Ghost.frightened = true;
-    Ghost.frightenedTimer = toFrames(time);
-    // TODO: flashing
-    Ghost.all.forEach(function (g) {
-        g.set(Ghost.STATE_FRIGHTENED);
-        // ensure stationary ghosts are redrawn
-        // FIXME: might be unnecessary
-        g.invalidate();
-    });
 };
 
 eventSubscribe(pacman);
-eventSubscribe(Ghost);
+eventSubscribe(ghosts);
