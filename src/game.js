@@ -13,7 +13,7 @@
          NORTH, SOUTH, EAST, WEST, invalidated: true, events: true, debug,
          format, invalidateRegion, invalidateScreen, raiseEvent, eventSubscribe,
          lives: true, level: true, Ghost, maze, Energiser, Bonus, bonusDisplay,
-         pacman, blinky, inky, pinky, clyde */
+         pacman, ghosts */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
@@ -96,7 +96,8 @@ var stats = {
     }
 };
 
-var entities = [maze, scoreboard, bonusDisplay, pacman, blinky, pinky, inky, clyde];
+var entities = [maze, scoreboard, bonusDisplay, pacman];
+entities.push.apply(entities, ghosts.all);
 if (DEBUG) {
     entities.push(stats);
 }
