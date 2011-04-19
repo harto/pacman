@@ -10,8 +10,8 @@
 
 /*global $, window, Image,
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
-         NORTH, SOUTH, EAST, WEST, invalidated: true, events: true, debug,
-         format, invalidateRegion, invalidateScreen, raiseEvent, eventSubscribe,
+         NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
+         invalidateRegion, invalidateScreen, eventRaise, eventSubscribe,
          lives: true, level: true, Ghost, maze, Energiser, Bonus, bonusDisplay,
          pacman, ghosts */
 
@@ -123,10 +123,6 @@ var state, paused;
 
 function update() {
     if (!paused) {
-        events.forEach(function (e) {
-
-        });
-        events = [];
         state();
     }
 }

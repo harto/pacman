@@ -161,10 +161,13 @@ function invalidateScreen() {
 
 /// event management
 
-var events = [],
-    subscribers = [];
+var subscribers = [];
 
-function raiseEvent(e /*, args*/) {
+function eventSubscribe(subscriber) {
+    subscribers.push(subscriber);
+}
+
+function eventRaise(e /*, args*/) {
     var args = Array.prototype.slice.call(arguments, 1);
     subscribers.forEach(function (s) {
         var handler = s[e];
@@ -172,10 +175,6 @@ function raiseEvent(e /*, args*/) {
             handler.apply(s, args);
         }
     });
-}
-
-function eventSubscribe(subscriber) {
-    subscribers.push(subscriber);
 }
 
 /// base class of most entities
