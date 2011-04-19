@@ -149,10 +149,7 @@ var State = {
         // collision check edibles
         var dot = maze.dotAt(pacman.col, pacman.row);
         if (dot) {
-            raiseEvent(dot instanceof Energiser ? 'energiserEaten' : 'dotEaten', dot);
-            // if (maze.nDots === 74 || maze.nDots === 174) {
-            //     entities.push(Bonus.forLevel(level));
-            // }
+            pacman.eat(dot);
         }
 
         // collision check ghosts
