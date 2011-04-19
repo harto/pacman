@@ -88,7 +88,7 @@ pacman.colour = 'yellow';
 
 pacman.reset = function () {
     this.dying = this.dead = false;
-    this.centreAt(maze.HOME_COL * TILE_SIZE, 26 * TILE_SIZE + TILE_CENTRE);
+    this.centreAt(maze.PACMAN_X, maze.PACMAN_Y);
     this.direction = WEST;
     this.resetDotTimer();
 };

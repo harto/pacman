@@ -1,10 +1,11 @@
 /*
- * maze, dots and energisers
+ * Maze, dots and energisers
  */
 
 /*jslint bitwise: false */
-/*global TILE_SIZE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG, NORTH, SOUTH, EAST, WEST,
-         ScreenBuffer, Sprite, toCol, toRow, debug, level */
+/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
+         NORTH, SOUTH, EAST, WEST, ScreenBuffer, Sprite, toCol, toRow, toFrames,
+         debug, level, eventSubscribe */
 
 /// edibles
 
@@ -61,11 +62,6 @@ function Bonus(symbol, value) {
     this.value = value;
 }
 Bonus.prototype = new Sprite();
-Bonus.prototype.update = function (g) {
-    if (--this.timer === 0) {
-        raiseEvent(Bonus.TIMEOUT);
-    }
-};
 Bonus.prototype.draw = function (g) {
     // FIXME
     g.save();
@@ -285,6 +281,11 @@ var maze = {
     dotEaten: function (d) {
         this.dots[d.row][d.col] = null;
         --this.nDots;
+        if (this.nDots === 74 || this.nDots === 174) {
+            this.bonus = Bonus.forLevel(level);
+            this.bonus.centreAt(this.BONUS_X, this.BONUS_Y);
+            this.bonus.timeout = Math.round(toFrames(9 + Math.random()));
+        }
     },
 
     repaint: function (g, invalidated) {
@@ -333,14 +334,26 @@ var maze = {
         dots.forEach(function (d) {
             d.draw(g);
         });
+
+        if (this.bonus) {
+            this.bonus.repaint(g, invalidated);
+        }
     },
 
     update: function () {
         this.energisers.forEach(function (e) {
             e.update();
         });
+        if (this.bonus && --this.bonus.timer === 0) {
+            debug('bonus timeout');
+            this.bonus.invalidate();
+            delete this.bonus;
+        }
     }
 };
 
 maze.HOME_TILE = { col: maze.HOME_COL, row: maze.HOME_ROW };
+maze.PACMAN_X = maze.BONUS_X = maze.HOME_COL * TILE_SIZE;
+maze.PACMAN_Y = maze.BONUS_Y = 26 * TILE_SIZE + TILE_CENTRE;
+
 eventSubscribe(maze);
