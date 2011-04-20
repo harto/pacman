@@ -284,7 +284,9 @@ var maze = {
         if (this.nDots === 74 || this.nDots === 174) {
             this.bonus = Bonus.forLevel(level);
             this.bonus.centreAt(this.BONUS_X, this.BONUS_Y);
-            this.bonus.timeout = Math.round(toFrames(9 + Math.random()));
+            var secs = 9 + Math.random();
+            debug('displaying bonus for %.3fs', secs);
+            this.bonus.timeout = Math.round(toFrames(secs));
         }
     },
 
@@ -344,7 +346,7 @@ var maze = {
         this.energisers.forEach(function (e) {
             e.update();
         });
-        if (this.bonus && --this.bonus.timer === 0) {
+        if (this.bonus && --this.bonus.timeout === 0) {
             debug('bonus timeout');
             this.bonus.invalidate();
             delete this.bonus;
