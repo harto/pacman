@@ -79,15 +79,13 @@ function formatFloat(num, fmt) {
         while (frac.length < nFrac) {
             frac += '0';
         }
-        return (nDec === undefined ?
-                    dec :
-                    dec.substring(0, nDec)) + '.' +
+        return (nDec === '' ? dec : dec.substring(0, nDec)) + '.' +
                frac.substring(0, nFrac);
     }
 }
 function format(msg/*, args*/) {
     var args = Array.prototype.slice.call(arguments, 1);
-    return msg.replace(/%([st]|[0-9]?\.?[0-9]?f)/g, function (_, code) {
+    return (msg + '').replace(/%([st]|[0-9]?\.?[0-9]?f)/g, function (_, code) {
         var arg = args.shift();
         switch (code.charAt(code.length - 1)) {
         case 's':
@@ -99,8 +97,6 @@ function format(msg/*, args*/) {
         default:
             throw new Error('bad format code: ' + code);
         }
-
-
     });
 }
 
