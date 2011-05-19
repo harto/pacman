@@ -147,9 +147,9 @@ var State = {
         ghosts.maybeUpdateMode();
 
         // collision check edibles
-        var dot = maze.dotAt(pacman.col, pacman.row);
-        if (dot) {
-            pacman.eat(dot);
+        var item = maze.itemAt(pacman.col, pacman.row);
+        if (item) {
+            eventRaise(item.eatenEvent, item);
         }
 
         // collision check ghosts

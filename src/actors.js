@@ -5,8 +5,8 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow
-         Sprite, Energiser, maze, level, dotCounter: true,
-         eventSubscribe, eventRaise */
+         Sprite, Dot, Energiser, Bonus, maze, level, dotCounter: true,
+         eventSubscribe */
 
 function Actor() {}
 
@@ -94,11 +94,11 @@ pacman.reset = function () {
     this.resetDotTimer();
 };
 
-pacman.eat = function (dot) {
-    this.wait = dot.delay;
+pacman.dotEaten = function (d) {
+    this.wait = d.delay;
     this.resetDotTimer();
-    eventRaise(dot instanceof Energiser ? 'energiserEaten' : 'dotEaten', dot);
 };
+pacman.energiserEaten = pacman.dotEaten;
 
 // reset timer that releases ghost when a dot hasn't been eaten for a while
 pacman.resetDotTimer = function () {
@@ -167,6 +167,8 @@ pacman.kill = function () {
 pacman.toString = function () {
     return 'pacman';
 };
+
+eventSubscribe(pacman);
 
 /// ghosts
 
@@ -626,5 +628,4 @@ var ghosts = {
     }
 };
 
-//eventSubscribe(pacman);
 eventSubscribe(ghosts);

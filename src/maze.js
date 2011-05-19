@@ -30,6 +30,7 @@ Dot.prototype.draw = function (g) {
 };
 Dot.prototype.value = 10;
 Dot.prototype.delay = 1;
+Dot.prototype.eatenEvent = 'dotEaten';
 
 function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
@@ -54,6 +55,7 @@ Energiser.prototype.update = function () {
 };
 Energiser.prototype.value = 50;
 Energiser.prototype.delay = 3;
+Energiser.prototype.eatenEvent = 'energiserEaten';
 
 function Bonus(symbol, value) {
     // FIXME: do something with symbol
@@ -69,6 +71,7 @@ Bonus.prototype.draw = function (g) {
     g.fillRect(this.x, this.y, this.w, this.h);
     g.restore();
 };
+Bonus.prototype.eatenEvent = 'bonusEaten';
 
 // Would've normally done this as a ternary conditional expression, but for some
 // reason, execution of the game slows by about 50% in Firefox when that code
@@ -268,6 +271,12 @@ var maze = {
         return row === 17 && (col <= 4 || 23 <= col);
     },
 
+    itemAt: function (col, row) {
+        var b = this.bonus;
+        return (b && row === toRow(b.y) && col === toCol(b.x)) ? b :
+            this.dotAt(col, row);
+    },
+
     dotAt: function (col, row) {
         var dots = this.dots[row];
         return dots ? dots[col] : null;
@@ -342,15 +351,24 @@ var maze = {
         }
     },
 
+    removeBonus: function () {
+        this.bonus.invalidate();
+        delete this.bonus;
+    },
+
     update: function () {
         this.energisers.forEach(function (e) {
             e.update();
         });
         if (this.bonus && --this.bonus.timeout === 0) {
             debug('bonus timeout');
-            this.bonus.invalidate();
-            delete this.bonus;
+            this.removeBonus();
         }
+    },
+
+    bonusEaten: function () {
+        debug('bonus eaten');
+        this.removeBonus();
     }
 };
 
