@@ -5,7 +5,7 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
          NORTH, SOUTH, EAST, WEST, ScreenBuffer, Sprite, toCol, toRow, toFrames,
-         debug, level, eventSubscribe */
+         debug, level, events */
 
 /// edibles
 
@@ -376,4 +376,4 @@ maze.HOME_TILE = { col: maze.HOME_COL, row: maze.HOME_ROW };
 maze.PACMAN_X = maze.BONUS_X = maze.HOME_COL * TILE_SIZE;
 maze.PACMAN_Y = maze.BONUS_Y = 26 * TILE_SIZE + TILE_CENTRE;
 
-eventSubscribe(maze);
+events.subscribe(maze);

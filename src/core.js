@@ -157,21 +157,24 @@ function invalidateScreen() {
 
 /// event management
 
-var subscribers = [];
+var events = {
 
-function eventSubscribe(subscriber) {
-    subscribers.push(subscriber);
-}
+    subscribers: [],
 
-function eventRaise(e /*, args*/) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    subscribers.forEach(function (s) {
-        var handler = s[e];
-        if (handler) {
-            handler.apply(s, args);
-        }
-    });
-}
+    subscribe: function (subscriber) {
+        this.subscribers.push(subscriber);
+    },
+
+    raise: function (id /*, args...*/) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        this.subscribers.forEach(function (s) {
+            var handler = s[id];
+            if (handler) {
+                handler.apply(s, args);
+            }
+        });
+    }
+};
 
 /// base class of most entities
 

@@ -11,9 +11,8 @@
 /*global $, window, Image,
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
          NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
-         invalidateRegion, invalidateScreen, eventRaise, eventSubscribe,
-         lives: true, level: true, Ghost, maze, Energiser, Bonus, bonusDisplay,
-         pacman, ghosts */
+         invalidateRegion, invalidateScreen, events, lives: true, level: true,
+         Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, ghosts */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
@@ -47,7 +46,7 @@ var scoreboard = {
 scoreboard.dotEaten = scoreboard.objectEaten;
 scoreboard.energiserEaten = scoreboard.objectEaten;
 scoreboard.bonusEaten = scoreboard.objectEaten;
-eventSubscribe(scoreboard);
+events.subscribe(scoreboard);
 
 var stats = {
     UPDATE_INTERVAL_MS: 1000,
@@ -149,7 +148,7 @@ var State = {
         // collision check edibles
         var item = maze.itemAt(pacman.col, pacman.row);
         if (item) {
-            eventRaise(item.eatenEvent, item);
+            events.raise(item.eatenEvent, item);
         }
 
         // collision check ghosts

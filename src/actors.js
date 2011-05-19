@@ -5,8 +5,7 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow
-         Sprite, Dot, Energiser, Bonus, maze, level, dotCounter: true,
-         eventSubscribe */
+         Sprite, Dot, Energiser, Bonus, maze, level, dotCounter: true, events */
 
 function Actor() {}
 
@@ -168,7 +167,7 @@ pacman.toString = function () {
     return 'pacman';
 };
 
-eventSubscribe(pacman);
+events.subscribe(pacman);
 
 /// ghosts
 
@@ -628,4 +627,4 @@ var ghosts = {
     }
 };
 
-eventSubscribe(ghosts);
+events.subscribe(ghosts);
