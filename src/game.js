@@ -122,6 +122,7 @@ var state, paused;
 
 function update() {
     if (!paused) {
+        events.update();
         state();
     }
 }
