@@ -353,13 +353,49 @@ $(function () {
         }
     });
 
+    loader.load({
+        update: function (completed) {
+            var g = ctx;
+
+            g.save();
+
+            g.fillStyle = 'black';
+            g.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+            var ox = SCREEN_W / 2;
+            var oy = SCREEN_H / 2;
+
+            g.fillStyle = 'white';
+            g.font = '6px Helvetica';
+            g.textAlign = 'center';
+            g.fillText(format('%.1f%', completed * 100), ox, SCREEN_H / 3);
+
+            var r = SCREEN_W / 8;
+            var a1 = Math.PI - completed * Math.PI;
+            var a2 = a1 === 0 ? 2 * Math.PI : -a1;
+
+            g.beginPath();
+            g.moveTo(ox, oy);
+            g.arc(ox, oy, r, a1, a2);
+            g.moveTo(ox, oy);
+            g.closePath();
+            g.fillStyle = 'yellow';
+            g.fill();
+
+            g.restore();
+        },
+        complete: function () {
+            // TODO: fade indicator
+            newGame();
+        }
+    });
+
     // FIXME: include error handling, progress bar
     pacman.init();
-    var img = new Image();
-    img.onload = function () {
-        maze.loaded(img);
-        newGame();
-    };
-    img.src = 'res/' + maze.img;
+    // var img = new Image();
+    // img.onload = function () {
+    //     maze.loaded(img);
+    //     newGame();
+    // };
+    // img.src = 'res/' + maze.img;
 });
-
