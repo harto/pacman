@@ -354,6 +354,7 @@ $(function () {
     });
 
     // FIXME: include error handling, progress bar
+    pacman.init();
     var img = new Image();
     img.onload = function () {
         maze.loaded(img);

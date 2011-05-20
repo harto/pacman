@@ -4,8 +4,9 @@
 
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
-         debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow
-         Sprite, Dot, Energiser, Bonus, maze, level, dotCounter: true, events */
+         debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow,
+         ScreenBuffer, Sprite, Dot, Energiser, Bonus, maze, level,
+         dotCounter: true, events */
 
 function Actor() {}
 
@@ -86,6 +87,35 @@ pacman.w = pacman.h = 1.5 * TILE_SIZE;
 // FIXME
 pacman.colour = 'yellow';
 
+pacman.init = function () {
+    // programmatically pre-render frames
+    var w = this.w, h = this.h,
+        steps = 30,
+        directions = [NORTH, EAST, SOUTH, WEST],
+        frames = this.frames = new ScreenBuffer(w * steps, h * directions.length),
+        g = frames.getContext('2d'),
+        radius = w / 2,
+        direction, angle, startAngle, x, y, col, row;
+    g.fillStyle = 'yellow';
+    for (row = 0; row < directions.length; row++) {
+        direction = directions[row];
+        startAngle = row * Math.PI / 2;
+        y = row * h + radius;
+        for (col = 0; col < steps; col++) {
+            x = col * w + radius;
+            angle = col / steps * Math.PI;
+            g.beginPath();
+            g.moveTo(x, y);
+            g.arc(x, y, radius,
+                  startAngle + angle,
+                  startAngle + angle === 0 ? 2 * Math.PI : -angle);
+            g.moveTo(x, y);
+            g.closePath();
+            g.fill();
+        }
+    }
+};
+
 pacman.reset = function () {
     this.dying = this.dead = false;
     this.centreAt(maze.PACMAN_X, maze.PACMAN_Y);
@@ -103,6 +133,15 @@ pacman.energiserEaten = pacman.dotEaten;
 pacman.resetDotTimer = function () {
     this.dotTimer = toFrames(level < 5 ? 4 : 3);
 };
+
+//pacman.draw = function (g) {
+    // FIXME
+//    var sprite = this.sprites[this.direction][10];
+    // g.save();
+    // g.globalCompositionOperator = 'source-atop';
+//    g.drawImage(sprite, this.x, this.y);
+    // g.restore();
+//};
 
 pacman.update = function () {
     if (this.dying) {
