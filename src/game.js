@@ -114,7 +114,7 @@ function levelUp() {
     pacman.speed = (level === 1 ? 0.8 :
                     level < 5 || level > 20 ? 0.9 :
                     1);
-    bonusDisplay.add(Bonus.forLevel(level));
+    bonusDisplay.reset(level);
     resetActors();
 }
 
@@ -246,7 +246,6 @@ function loop() {
 function newGame() {
     window.clearTimeout(timer);
 
-    bonusDisplay.reset();
     scoreboard.score = 0;
     level = 0;
     lives = 3;

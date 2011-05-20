@@ -73,50 +73,38 @@ Bonus.prototype.draw = function (g) {
 };
 Bonus.prototype.eatenEvent = 'bonusEaten';
 
-// Would've normally done this as a ternary conditional expression, but for some
-// reason, execution of the game slows by about 50% in Firefox when that code
-// is present in this file - even if it's not executed.
-
-Bonus.levelBonuses = [
-    new Bonus('cherry', 100),
-    new Bonus('strawberry', 300),
-    new Bonus('peach', 500),
-    new Bonus('peach', 500),
-    new Bonus('apple', 700),
-    new Bonus('apple', 700),
-    new Bonus('grape', 700),
-    new Bonus('grape', 700),
-    new Bonus('galaxian', 2000),
-    new Bonus('galaxian', 2000),
-    new Bonus('bell', 3000),
-    new Bonus('bell', 3000),
-    new Bonus('key', 5000)
-];
-
 Bonus.forLevel = function (level) {
-    return this.levelBonuses[Math.min(level, this.levelBonuses.length - 1)];
+    return level === 1 ? new Bonus('cherry', 100) :
+           level === 2 ? new Bonus('strawberry', 300) :
+           level <= 4 ? new Bonus('peach', 500) :
+           level <= 6 ? new Bonus('apple', 700) :
+           level <= 8 ? new Bonus('grape', 700) :
+           level <= 10 ? new Bonus('galaxian', 2000) :
+           level <= 12 ? new Bonus('bell', 3000) :
+           new Bonus('key', 5000);
 };
 
 var bonusDisplay = new Sprite();
-bonusDisplay.w = 6 * TILE_SIZE * 2;
+bonusDisplay.MAX_DISPLAY = 6;
+bonusDisplay.w = bonusDisplay.MAX_DISPLAY * TILE_SIZE * 2;
 bonusDisplay.h = TILE_SIZE * 2;
 bonusDisplay.x = SCREEN_W - bonusDisplay.w - 2 * TILE_SIZE;
 bonusDisplay.y = SCREEN_H - bonusDisplay.h;
-bonusDisplay.reset = function () {
+bonusDisplay.reset = function (level) {
+    // display bonus for current and previous 5(?) levels
+    var x2 = this.x + this.w;
+    var y = this.y + TILE_SIZE;
     this.bonuses = [];
+    var end = Math.max(1, level - this.MAX_DISPLAY + 1);
+    for (var l = level; l >= end; l--) {
+        var b = Bonus.forLevel(l);
+        this.bonuses.push(b);
+        b.centreAt(x2 - TILE_SIZE - (level - l) * TILE_SIZE, y);
+    }
 };
 bonusDisplay.draw = function (g) {
     this.bonuses.forEach(function (b) {
         b.draw(g);
-    });
-};
-bonusDisplay.add = function (bonus) {
-    this.bonuses.splice(0, 5);
-    this.bonuses.unshift(bonus);
-    var x2 = this.x + this.w;
-    var y = this.y + TILE_SIZE;
-    this.bonuses.forEach(function (b, i) {
-        b.centreAt(x2 - TILE_SIZE - i * TILE_SIZE, y);
     });
 };
 
