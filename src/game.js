@@ -353,7 +353,7 @@ $(function () {
         }
     });
 
-    loader.load({
+    var progressIndicator = {
         update: function (completed) {
             var g = ctx;
 
@@ -388,7 +388,10 @@ $(function () {
             // TODO: fade indicator
             newGame();
         }
-    });
+    };
+
+    //loader.load(progressIndicator);
+    progressIndicator.update(0.25);
 
     // FIXME: include error handling, progress bar
     pacman.init();
