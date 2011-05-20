@@ -83,15 +83,16 @@ Actor.exitingTile = function (direction, lx, ly) {
 /// pacman
 
 var pacman = new Actor();
+
 pacman.w = pacman.h = 1.5 * TILE_SIZE;
-// FIXME
-pacman.colour = 'yellow';
+pacman.animSteps = 20;
+pacman.maxAnimStep = Math.floor(pacman.animSteps * 3 / 8);
 
 pacman.init = function () {
     // programmatically pre-render frames
     var w = this.w, h = this.h,
-        steps = 30,
-        directions = [NORTH, EAST, SOUTH, WEST],
+        directions = [EAST, SOUTH, WEST, NORTH],
+        steps = this.animSteps,
         frames = this.frames = new ScreenBuffer(w * steps, h * directions.length),
         g = frames.getContext('2d'),
         radius = w / 2,
@@ -100,7 +101,7 @@ pacman.init = function () {
     for (row = 0; row < directions.length; row++) {
         direction = directions[row];
         startAngle = row * Math.PI / 2;
-        y = row * h + radius;
+        y = Math.log(direction) / Math.log(2) * h + radius;
         for (col = 0; col < steps; col++) {
             x = col * w + radius;
             angle = col / steps * Math.PI;
@@ -108,7 +109,7 @@ pacman.init = function () {
             g.moveTo(x, y);
             g.arc(x, y, radius,
                   startAngle + angle,
-                  startAngle + angle === 0 ? 2 * Math.PI : -angle);
+                  startAngle + (angle === 0 ? 2 * Math.PI : -angle));
             g.moveTo(x, y);
             g.closePath();
             g.fill();
@@ -121,6 +122,8 @@ pacman.reset = function () {
     this.centreAt(maze.PACMAN_X, maze.PACMAN_Y);
     this.direction = WEST;
     this.resetDotTimer();
+    this.currAnimStep = 0;
+    this.animStepInc = 1;
 };
 
 pacman.dotEaten = function (d) {
@@ -134,14 +137,13 @@ pacman.resetDotTimer = function () {
     this.dotTimer = toFrames(level < 5 ? 4 : 3);
 };
 
-//pacman.draw = function (g) {
-    // FIXME
-//    var sprite = this.sprites[this.direction][10];
-    // g.save();
-    // g.globalCompositionOperator = 'source-atop';
-//    g.drawImage(sprite, this.x, this.y);
-    // g.restore();
-//};
+pacman.draw = function (g) {
+    var w = this.w,
+        h = this.h,
+        sx = this.currAnimStep * w,
+        sy = Math.log(this.direction) / Math.log(2) * h;
+    g.drawImage(this.frames, sx, sy, w, h, this.x, this.y, w, h);
+};
 
 pacman.update = function () {
     if (this.dying) {
@@ -192,6 +194,11 @@ pacman.move = function (direction) {
     }
 
     this.moveBy(dx, dy);
+    // update animation cycle
+    this.currAnimStep += this.animStepInc;
+    if (this.currAnimStep === 0 || this.currAnimStep === this.maxAnimStep) {
+        this.animStepInc *= -1;
+    }
     return true;
 };
 
