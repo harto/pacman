@@ -287,7 +287,10 @@ $(function () {
 
         togglePause: charCode('P'),
         newGame:     charCode('N'),
-        kill:        charCode('K')
+
+        // development helpers
+        kill:        charCode('K'),
+        levelUp:     107  // +
     };
 
     // reverse-lookup
@@ -334,6 +337,9 @@ $(function () {
             break;
         case keys.kill:
             window.clearTimeout(timer);
+            break;
+        case keys.levelUp:
+            levelUp();
             break;
         default:
             throw new Error('unhandled: ' + keycodes[k]);
