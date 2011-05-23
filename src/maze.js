@@ -99,7 +99,7 @@ bonusDisplay.reset = function (level) {
     for (var l = level; l >= end; l--) {
         var b = Bonus.forLevel(l);
         this.bonuses.push(b);
-        b.centreAt(x2 - TILE_SIZE - (level - l) * TILE_SIZE, y);
+        b.centreAt(x2 - TILE_SIZE - (level - l) * 2 * TILE_SIZE, y);
     }
 };
 bonusDisplay.draw = function (g) {
