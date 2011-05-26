@@ -85,8 +85,8 @@ Actor.exitingTile = function (direction, lx, ly) {
 var pacman = new Actor();
 
 pacman.w = pacman.h = 1.5 * TILE_SIZE;
-pacman.animSteps = 20;
-pacman.maxAnimStep = Math.floor(pacman.animSteps * 3 / 8);
+pacman.animSteps = 12;
+pacman.maxAnimStep = Math.floor(pacman.animSteps * 1 / 3);
 
 pacman.init = function () {
     // programmatically pre-render frames
