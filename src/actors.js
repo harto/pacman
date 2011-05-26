@@ -88,6 +88,20 @@ pacman.w = pacman.h = 1.5 * TILE_SIZE;
 pacman.animSteps = 12;
 pacman.maxAnimStep = Math.floor(pacman.animSteps * 1 / 3);
 
+function drawPacman(g, x, y, radius, amount, startAngle) {
+    g.save();
+    g.beginPath();
+    g.moveTo(x, y);
+    var start = startAngle || 0;
+    var arc = Math.PI - amount * Math.PI;
+    g.arc(x, y, radius, start + arc, start + (arc === 0 ? 2 * Math.PI : -arc));
+    g.moveTo(x, y);
+    g.closePath();
+    g.fillStyle = 'yellow';
+    g.fill();
+    g.restore();
+}
+
 pacman.init = function () {
     // programmatically pre-render frames
     var w = this.w, h = this.h,
@@ -97,22 +111,13 @@ pacman.init = function () {
         g = frames.getContext('2d'),
         radius = w / 2,
         direction, angle, startAngle, x, y, col, row;
-    g.fillStyle = 'yellow';
     for (row = 0; row < directions.length; row++) {
         direction = directions[row];
         startAngle = row * Math.PI / 2;
         y = toOrdinal(direction) * h + radius;
         for (col = 0; col < steps; col++) {
-            x = col * w + radius;
-            angle = col / steps * Math.PI;
-            g.beginPath();
-            g.moveTo(x, y);
-            g.arc(x, y, radius,
-                  startAngle + angle,
-                  startAngle + (angle === 0 ? 2 * Math.PI : -angle));
-            g.moveTo(x, y);
-            g.closePath();
-            g.fill();
+            drawPacman(g, col * w + radius, y, radius,
+                       (steps - col) / steps, startAngle);
         }
     }
 };

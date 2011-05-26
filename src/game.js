@@ -12,7 +12,7 @@
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
          NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
          invalidateRegion, invalidateScreen, events, lives: true, level: true,
-         Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, ghosts */
+         Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
@@ -370,17 +370,7 @@ $(function () {
             g.textAlign = 'center';
             g.fillText(format('%.1f%', completed * 100), ox, SCREEN_H / 3);
 
-            var r = SCREEN_W / 8;
-            var a1 = Math.PI - completed * Math.PI;
-            var a2 = a1 === 0 ? 2 * Math.PI : -a1;
-
-            g.beginPath();
-            g.moveTo(ox, oy);
-            g.arc(ox, oy, r, a1, a2);
-            g.moveTo(ox, oy);
-            g.closePath();
-            g.fillStyle = 'yellow';
-            g.fill();
+            drawPacman(g, ox, oy, SCREEN_W / 8, completed);
 
             g.restore();
         },
