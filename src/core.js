@@ -65,6 +65,10 @@ function toSeconds(frames) {
     return frames / UPDATE_HZ;
 }
 
+function toOrdinal(direction) {
+    return Math.log(direction) / Math.log(2);
+}
+
 // custom printf-style formatting
 function formatFloat(num, fmt) {
     num += '';

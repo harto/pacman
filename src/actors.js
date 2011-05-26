@@ -5,7 +5,7 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow,
-         ScreenBuffer, Sprite, Dot, Energiser, Bonus, maze, level,
+         toOrdinal, ScreenBuffer, Sprite, Dot, Energiser, Bonus, maze, level,
          dotCounter: true, events */
 
 function Actor() {}
@@ -101,7 +101,7 @@ pacman.init = function () {
     for (row = 0; row < directions.length; row++) {
         direction = directions[row];
         startAngle = row * Math.PI / 2;
-        y = Math.log(direction) / Math.log(2) * h + radius;
+        y = toOrdinal(direction) * h + radius;
         for (col = 0; col < steps; col++) {
             x = col * w + radius;
             angle = col / steps * Math.PI;
@@ -141,7 +141,7 @@ pacman.draw = function (g) {
     var w = this.w,
         h = this.h,
         sx = this.currAnimStep * w,
-        sy = Math.log(this.direction) / Math.log(2) * h;
+        sy = toOrdinal(this.direction) * h;
     g.drawImage(this.frames, sx, sy, w, h, this.x, this.y, w, h);
 };
 
