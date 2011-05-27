@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise: false */
-/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
+/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG, loader,
          NORTH, SOUTH, EAST, WEST, ScreenBuffer, Sprite, toCol, toRow, toFrames,
          debug, level, events */
 
@@ -163,10 +163,16 @@ var maze = {
              '############################'],
 
     // FIXME: load remaining images
+    BG_IMG_PATH: 'bg.png',
 
-    img: 'bg.png',
+    init: function () {
+        var self = this;
+        loader.enqueue([self.BG_IMG_PATH], function (resources) {
+            self.initBg(resources[self.BG_IMG_PATH]);
+        });
+    },
 
-    loaded: function (img) {
+    initBg: function (img) {
         this.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
         var g = this.bg.getContext('2d');
         g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);

@@ -12,7 +12,8 @@
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
          NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
          invalidateRegion, invalidateScreen, events, lives: true, level: true,
-         Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts */
+         Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, drawPacman,
+         ghosts, loader */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
@@ -353,17 +354,19 @@ $(function () {
         }
     });
 
-    var progressIndicator = {
+    [pacman, maze].forEach(function (o) {
+        o.init();
+    });
+
+    loader.load({
         update: function (completed) {
             var g = ctx;
-
             g.save();
-
             g.fillStyle = 'black';
             g.fillRect(0, 0, SCREEN_W, SCREEN_H);
 
-            var ox = SCREEN_W / 2;
-            var oy = SCREEN_H / 2;
+            var ox = SCREEN_W / 2,
+                oy = SCREEN_H / 2;
 
             g.fillStyle = 'white';
             g.font = '6px Helvetica';
@@ -371,24 +374,11 @@ $(function () {
             g.fillText(format('%.1f%', completed * 100), ox, SCREEN_H / 3);
 
             drawPacman(g, ox, oy, SCREEN_W / 8, completed);
-
             g.restore();
         },
         complete: function () {
             // TODO: fade indicator
             newGame();
         }
-    };
-
-    //loader.load(progressIndicator);
-    progressIndicator.update(0.25);
-
-    // FIXME: include error handling, progress bar
-    pacman.init();
-    // var img = new Image();
-    // img.onload = function () {
-    //     maze.loaded(img);
-    //     newGame();
-    // };
-    // img.src = 'res/' + maze.img;
+    });
 });
