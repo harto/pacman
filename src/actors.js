@@ -4,9 +4,9 @@
 
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
-         debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow,
-         toOrdinal, ScreenBuffer, Entity, Dot, Energiser, Bonus, maze, level,
-         dotCounter: true, events, loader */
+         UPDATE_HZ, debug, distance, format, reverse, toCol, toDx, toDy,
+         toFrames, toRow, toOrdinal, ScreenBuffer, SpriteMap, Entity, Dot,
+         Energiser, Bonus, maze, level, dotCounter: true, events, loader */
 
 function Actor() {}
 
@@ -83,7 +83,6 @@ var pacman = new Actor();
 
 pacman.w = pacman.h = 1.5 * TILE_SIZE;
 pacman.animSteps = 12;
-pacman.maxAnimStep = Math.floor(pacman.animSteps * 1 / 3);
 
 function drawPacman(g, x, y, radius, fraction, startAngle) {
     g.save();
@@ -104,8 +103,8 @@ pacman.init = function () {
     var w = this.w, h = this.h,
         directions = [EAST, SOUTH, WEST, NORTH],
         steps = this.animSteps,
-        frames = this.frames = new ScreenBuffer(w * steps, h * directions.length),
-        g = frames.getContext('2d'),
+        buf = new ScreenBuffer(w * steps, h * directions.length),
+        g = buf.getContext('2d'),
         radius = w / 2,
         direction, angle, startAngle, x, y, col, row;
     for (row = 0; row < directions.length; row++) {
@@ -117,6 +116,8 @@ pacman.init = function () {
                        (steps - col) / steps, startAngle);
         }
     }
+    this.sprites = new SpriteMap(buf, w, h);
+    this.maxAnimStep = Math.floor(this.animSteps * 1 / 3);
 };
 
 pacman.reset = function () {
@@ -140,7 +141,7 @@ pacman.resetDotTimer = function () {
 };
 
 pacman.draw = function (g) {
-    this.drawFrame(g, this.frames, this.frameIndex, toOrdinal(this.direction));
+    this.sprites.draw(g, this.x, this.y, this.frameIndex, toOrdinal(this.direction));
 };
 
 pacman.update = function () {
@@ -219,14 +220,13 @@ function Ghost(name, startCol, startRow, scatterCol, scatterRow) {
     this.name = name;
     this.framesPath = name + '.png';
 
-    this.w = this.h = Ghost.SIZE;
+    this.w = this.h = 12;
+
     this.startCx = startCol * TILE_SIZE;
     this.startCy = startRow * TILE_SIZE + TILE_CENTRE;
 
     this.scatterTile = { col: scatterCol, row: scatterRow };
 }
-
-Ghost.SIZE = TILE_SIZE * 1.5;
 
 Ghost.STATE_ENTERING   = 1 << 0;
 Ghost.STATE_INSIDE     = 1 << 1;
@@ -265,6 +265,8 @@ Ghost.prototype.is = function (state) {
     return this.state & state;
 };
 
+Ghost.ANIM_FREQ = UPDATE_HZ / 4;
+
 Ghost.prototype.draw = function (g) {
     g.save();
     if (this.is(Ghost.STATE_DEAD)) {
@@ -276,7 +278,11 @@ Ghost.prototype.draw = function (g) {
         g.fillStyle = 'blue';
         g.fillRect(this.x, this.y, this.w, this.h);
     } else {
-        this.drawFrame(g, this.frames, 0, toOrdinal(this.direction));
+        var sprites = this.sprites,
+            nFrames = sprites.cols,
+            spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % nFrames,
+            spriteRow = toOrdinal(this.direction);
+        sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
     }
     g.restore();
 };
@@ -303,6 +309,7 @@ Ghost.prototype.calcSpeed = function () {
 Ghost.prototype.update = function () {
     var speed = this.calcSpeed();
     var dx, dy;
+    this.nTicks++;
     if (this.is(Ghost.STATE_INSIDE)) {
         // FIXME: jostle
     } else if (this.is(Ghost.STATE_ENTERING) || this.is(Ghost.STATE_EXITING)) {
@@ -519,13 +526,14 @@ var ghosts = {
         loader.enqueue(paths, function (resources) {
             debug('initing ghosts');
             all.forEach(function (g) {
-                g.frames = resources[g.framesPath];
+                g.sprites = new SpriteMap(resources[g.framesPath], g.w, g.h);
             });
         });
     },
 
     reset: function () {
         this.all.forEach(function (g) {
+            g.nTicks = 0;
             g.state = 0;
             g.set(Ghost.STATE_INSIDE);
             g.set(Ghost.STATE_SCATTERING);

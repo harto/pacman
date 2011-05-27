@@ -150,6 +150,18 @@ function ScreenBuffer(w, h) {
     return canvas.get(0);
 }
 
+function SpriteMap(img, fw, fh) {
+    this.img = img;
+    this.fw = fw;
+    this.fh = fh;
+    this.cols = img.width / fw;
+    this.rows = img.height / fh;
+}
+SpriteMap.prototype.draw = function (g, x, y, col, row) {
+    var w = this.fw, h = this.fh;
+    g.drawImage(this.img, col * w, row * h, w, h, x, y, w, h);
+};
+
 var invalidated = [];
 
 // mark some area of the screen as requiring a redraw
