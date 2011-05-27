@@ -6,7 +6,7 @@
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow,
          toOrdinal, ScreenBuffer, Sprite, Dot, Energiser, Bonus, maze, level,
-         dotCounter: true, events */
+         dotCounter: true, events, loader */
 
 function Actor() {}
 
@@ -65,12 +65,9 @@ Actor.prototype.enteringTile = function () {
     return this.col !== this.prevCol || this.row !== this.prevRow;
 };
 
-Actor.prototype.draw = function (g) {
-    g.save();
-    // FIXME
-    g.fillStyle = this.colour;
-    g.fillRect(this.x, this.y, this.w, this.h);
-    g.restore();
+Actor.prototype.drawFrame = function (g, frames, col, row) {
+    var w = this.w, h = this.h;
+    g.drawImage(frames, col * w, row * h, w, h, this.x, this.y, w, h);
 };
 
 Actor.exitingTile = function (direction, lx, ly) {
@@ -143,11 +140,7 @@ pacman.resetDotTimer = function () {
 };
 
 pacman.draw = function (g) {
-    var w = this.w,
-        h = this.h,
-        sx = this.currAnimStep * w,
-        sy = toOrdinal(this.direction) * h;
-    g.drawImage(this.frames, sx, sy, w, h, this.x, this.y, w, h);
+    this.drawFrame(g, this.frames, this.currAnimStep, toOrdinal(this.direction));
 };
 
 pacman.update = function () {
@@ -224,6 +217,7 @@ events.subscribe(pacman);
 
 function Ghost(name, startCol, startRow, scatterCol, scatterRow) {
     this.name = name;
+    this.framesPath = name + '.png';
 
     this.w = this.h = Ghost.SIZE;
     this.startCx = startCol * TILE_SIZE;
@@ -282,7 +276,7 @@ Ghost.prototype.draw = function (g) {
         g.fillStyle = 'blue';
         g.fillRect(this.x, this.y, this.w, this.h);
     } else {
-        Actor.prototype.draw.call(this, g);
+        this.drawFrame(g, this.frames, 0, toOrdinal(this.direction));
     }
     g.restore();
 };
@@ -514,6 +508,21 @@ clyde.resetDotCounter = function () {
 var ghosts = {
 
     all: [blinky, inky, pinky, clyde],
+
+    init: function () {
+        var all = this.all;
+        var paths = all.map(function (g) {
+            return g.framesPath;
+        });
+        //paths.push('frightened.png');
+        //paths.push('dead-ghost.png');
+        loader.enqueue(paths, function (resources) {
+            debug('initing ghosts');
+            all.forEach(function (g) {
+                g.frames = resources[g.framesPath];
+            });
+        });
+    },
 
     reset: function () {
         this.all.forEach(function (g) {

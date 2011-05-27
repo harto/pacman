@@ -354,7 +354,7 @@ $(function () {
         }
     });
 
-    [pacman, maze].forEach(function (o) {
+    [pacman, ghosts, maze].forEach(function (o) {
         o.init();
     });
 
