@@ -85,13 +85,13 @@ pacman.w = pacman.h = 1.5 * TILE_SIZE;
 pacman.animSteps = 12;
 pacman.maxAnimStep = Math.floor(pacman.animSteps * 1 / 3);
 
-function drawPacman(g, x, y, radius, amount, startAngle) {
+function drawPacman(g, x, y, radius, fraction, startAngle) {
     g.save();
     g.beginPath();
     g.moveTo(x, y);
     var start = startAngle || 0;
-    var arc = Math.PI - amount * Math.PI;
-    g.arc(x, y, radius, start + arc, start + (arc === 0 ? 2 * Math.PI : -arc));
+    var angle = Math.PI - fraction * Math.PI;
+    g.arc(x, y, radius, start + angle, start + (angle === 0 ? 2 * Math.PI : -angle));
     g.moveTo(x, y);
     g.closePath();
     g.fillStyle = 'yellow';
@@ -124,7 +124,7 @@ pacman.reset = function () {
     this.centreAt(maze.PACMAN_X, maze.PACMAN_Y);
     this.direction = WEST;
     this.resetDotTimer();
-    this.currAnimStep = 0;
+    this.frameIndex = 0;
     this.animStepInc = 1;
 };
 
@@ -140,7 +140,7 @@ pacman.resetDotTimer = function () {
 };
 
 pacman.draw = function (g) {
-    this.drawFrame(g, this.frames, this.currAnimStep, toOrdinal(this.direction));
+    this.drawFrame(g, this.frames, this.frameIndex, toOrdinal(this.direction));
 };
 
 pacman.update = function () {
@@ -193,8 +193,8 @@ pacman.move = function (direction) {
 
     this.moveBy(dx, dy);
     // update animation cycle
-    this.currAnimStep += this.animStepInc;
-    if (this.currAnimStep === 0 || this.currAnimStep === this.maxAnimStep) {
+    this.frameIndex += this.animStepInc;
+    if (this.frameIndex === 0 || this.frameIndex === this.maxAnimStep) {
         this.animStepInc *= -1;
     }
     return true;
