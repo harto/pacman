@@ -5,12 +5,12 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          debug, distance, format, reverse, toCol, toDx, toDy, toFrames, toRow,
-         toOrdinal, ScreenBuffer, Sprite, Dot, Energiser, Bonus, maze, level,
+         toOrdinal, ScreenBuffer, Entity, Dot, Energiser, Bonus, maze, level,
          dotCounter: true, events, loader */
 
 function Actor() {}
 
-Actor.prototype = new Sprite();
+Actor.prototype = new Entity();
 
 // Actor.prototype.repaint = function (g) {
 //     // Assume actors are nearly always moving

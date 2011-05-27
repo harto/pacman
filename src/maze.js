@@ -4,7 +4,7 @@
 
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG, loader,
-         NORTH, SOUTH, EAST, WEST, ScreenBuffer, Sprite, toCol, toRow, toFrames,
+         NORTH, SOUTH, EAST, WEST, ScreenBuffer, Entity, toCol, toRow, toFrames,
          debug, level, events */
 
 /// edibles
@@ -13,7 +13,7 @@ function Dot(col, row) {
     this.init(col, row, 3);
 }
 
-Dot.prototype = new Sprite();
+Dot.prototype = new Entity();
 Dot.prototype.init = function (col, row, size) {
     this.col = col;
     this.row = row;
@@ -63,7 +63,7 @@ function Bonus(symbol, value) {
     this.w = this.h = TILE_SIZE;
     this.value = value;
 }
-Bonus.prototype = new Sprite();
+Bonus.prototype = new Entity();
 Bonus.prototype.draw = function (g) {
     // FIXME
     g.save();
@@ -84,7 +84,7 @@ Bonus.forLevel = function (level) {
            new Bonus('key', 5000);
 };
 
-var bonusDisplay = new Sprite();
+var bonusDisplay = new Entity();
 bonusDisplay.MAX_DISPLAY = 6;
 bonusDisplay.w = bonusDisplay.MAX_DISPLAY * TILE_SIZE * 2;
 bonusDisplay.h = TILE_SIZE * 2;
