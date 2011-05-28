@@ -167,8 +167,8 @@ var maze = {
 
     init: function () {
         var self = this;
-        loader.enqueue([self.BG_IMG_PATH], function (resources) {
-            self.initBg(resources[self.BG_IMG_PATH]);
+        loader.enqueue(this.BG_IMG_PATH, function (img) {
+            self.initBg(img);
         });
     },
 

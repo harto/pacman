@@ -523,7 +523,7 @@ var ghosts = {
         });
         //paths.push('frightened.png');
         //paths.push('dead-ghost.png');
-        loader.enqueue(paths, function (resources) {
+        loader.enqueueGroup(paths, function (resources) {
             debug('initing ghosts');
             all.forEach(function (g) {
                 g.sprites = new SpriteMap(resources[g.framesPath], g.w, g.h);
