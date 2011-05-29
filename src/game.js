@@ -10,7 +10,7 @@
 
 /*global $, window, Image,
          SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
-         NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
+         NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format, toFrames,
          invalidateRegion, invalidateScreen, events, lives: true, level: true,
          Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, drawPacman,
          ghosts, loader */
@@ -132,7 +132,17 @@ function enterState(s) {
     state = s;
 }
 
-var State = {
+var State, nTicksRemaining, prevState;
+
+function wait(s) {
+    prevState = state;
+    enterState(State.WAITING);
+    events.delay(toFrames(s), function () {
+        enterState(prevState);
+    });
+}
+
+State = {
 
     STARTING: function () {
         // TODO: music etc
@@ -159,7 +169,12 @@ var State = {
                    g.col === pacman.col &&
                    g.row === pacman.row;
         }).forEach(function (g) {
-            (g.is(Ghost.STATE_FRIGHTENED) ? g : pacman).kill();
+            if (g.is(Ghost.STATE_FRIGHTENED)) {
+                g.kill();
+                wait(0.5);
+            } else {
+                pacman.kill();
+            }
         });
 
         if (maze.nDots === 0) {
@@ -192,6 +207,10 @@ var State = {
     REVIVING: function () {
         // FIXME: is this any different from starting a level?
         enterState(State.RUNNING);
+    },
+
+    WAITING: function () {
+        // noop
     }
 };
 

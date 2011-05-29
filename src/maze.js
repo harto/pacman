@@ -289,8 +289,23 @@ var maze = {
             this.bonus.centreAt(this.BONUS_X, this.BONUS_Y);
             var secs = 9 + Math.random();
             debug('displaying bonus for %.3fs', secs);
-            events.raiseDelayed(Math.round(toFrames(secs)), 'bonusTimedOut');
+            var self = this;
+            this.bonusTimeout = events.delay(toFrames(secs), function () {
+                debug('bonus timeout');
+                self.removeBonus();
+            });
         }
+    },
+
+    removeBonus: function () {
+        this.bonus.invalidate();
+        delete this.bonus;
+    },
+
+    bonusEaten: function () {
+        debug('bonus eaten');
+        events.cancelDelayed(this.bonusTimeout);
+        this.removeBonus();
     },
 
     repaint: function (g, invalidated) {
@@ -345,26 +360,10 @@ var maze = {
         }
     },
 
-    removeBonus: function () {
-        this.bonus.invalidate();
-        delete this.bonus;
-    },
-
     update: function () {
         this.energisers.forEach(function (e) {
             e.update();
         });
-    },
-
-    bonusEaten: function () {
-        debug('bonus eaten');
-        events.cancelDelayed('bonusTimedOut');
-        this.removeBonus();
-    },
-
-    bonusTimedOut: function () {
-        debug('bonus timeout');
-        this.removeBonus();
     }
 };
 

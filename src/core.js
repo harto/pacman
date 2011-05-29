@@ -59,7 +59,7 @@ function reverse(direction) {
 }
 
 function toFrames(seconds) {
-    return seconds * UPDATE_HZ;
+    return Math.round(seconds * UPDATE_HZ);
 }
 function toSeconds(frames) {
     return frames / UPDATE_HZ;
@@ -196,27 +196,29 @@ var events = {
 
     // delayed events
 
-    delayed: {},
+    delayeds: {},
+    nextDelayedId: 0,
 
-    raiseDelayed: function (frames, id /*, args...*/) {
-        this.delayed[id] = {
+    delay: function (frames, fn) {
+        var id = this.nextDelayedId++;
+        this.delayeds[id] = {
             frames: frames,
-            // let slice include id to allow easy apply to eventRaise
-            args: Array.prototype.slice.call(arguments, 1)
+            fn: fn
         };
+        return id;
     },
 
     cancelDelayed: function (id) {
-        delete this.delayed[id];
+        delete this.delayeds[id];
     },
 
     update: function () {
-        for (var id in this.delayed) {
-            if (this.delayed.hasOwnProperty(id)) {
-                var e = this.delayed[id];
-                if (--e.frames <= 0) {
-                    this.raise.apply(this, e.args);
-                    delete this.delayed[id];
+        for (var k in this.delayeds) {
+            if (this.delayeds.hasOwnProperty(k)) {
+                var delayed = this.delayeds[k];
+                if (--delayed.frames <= 0) {
+                    delayed.fn();
+                    this.cancelDelayed(k);
                 }
             }
         }
