@@ -6,7 +6,7 @@
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          UPDATE_HZ, debug, distance, format, reverse, toCol, toDx, toDy,
          toFrames, toRow, toOrdinal, ScreenBuffer, SpriteMap, Entity, Dot,
-         Energiser, Bonus, maze, level, dotCounter: true, events, loader */
+         Energiser, Bonus, maze, level, dotCounter: true, events */
 
 function Actor() {}
 
@@ -516,18 +516,9 @@ var ghosts = {
 
     all: [blinky, inky, pinky, clyde],
 
-    init: function () {
-        var all = this.all;
-        var paths = all.map(function (g) {
-            return g.framesPath;
-        });
-        //paths.push('frightened.png');
-        //paths.push('dead-ghost.png');
-        loader.enqueueGroup(paths, function (resources) {
-            debug('initing ghosts');
-            all.forEach(function (g) {
-                g.sprites = new SpriteMap(resources[g.framesPath], g.w, g.h);
-            });
+    init: function (resources) {
+        this.all.forEach(function (g) {
+            g.sprites = new SpriteMap(resources[g.name], g.w, g.h);
         });
     },
 

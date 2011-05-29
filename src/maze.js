@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise: false */
-/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG, loader,
+/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
          NORTH, SOUTH, EAST, WEST, ScreenBuffer, Entity, toCol, toRow, toFrames,
          debug, level, events */
 
@@ -162,14 +162,8 @@ var maze = {
              '############################',
              '############################'],
 
-    // FIXME: load remaining images
-    BG_IMG_PATH: 'bg.png',
-
-    init: function () {
-        var self = this;
-        loader.enqueue(this.BG_IMG_PATH, function (img) {
-            self.initBg(img);
-        });
+    init: function (resources) {
+        this.initBg(resources['bg']);
     },
 
     initBg: function (img) {

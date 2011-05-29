@@ -13,7 +13,7 @@
          NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format, toFrames,
          invalidateRegion, invalidateScreen, events, lives: true, level: true,
          Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, drawPacman,
-         ghosts, loader */
+         ghosts, Loader */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
@@ -373,10 +373,8 @@ $(function () {
         }
     });
 
-    [pacman, ghosts, maze].forEach(function (o) {
-        o.init();
-    });
-
+    var loader = new Loader();
+    loader.enqueueImages('bg', 'blinky', 'pinky', 'inky', 'clyde');
     loader.load({
         update: function (completed) {
             var g = ctx;
@@ -395,9 +393,14 @@ $(function () {
             drawPacman(g, ox, oy, SCREEN_W / 8, completed);
             g.restore();
         },
-        complete: function () {
+        complete: function (resources) {
             // TODO: fade indicator
+            events.raise('init', resources);
             newGame();
+        },
+        error: function (msg) {
+            alert(msg);
+            throw new Error(msg);
         }
     });
 });

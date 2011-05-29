@@ -4,84 +4,75 @@
 
 /*global alert, Image, $, debug */
 
-var loader = {
+function Loader() {
+    this.loaderFns = [];
+}
 
-    groups: [],
+Loader.prototype = {
 
-    enqueue: function (path, onLoad) {
-        this.enqueueGroup([path], function (resources) {
-            onLoad(resources[path]);
+    enqueueImage: function (name) {
+        this.loaderFns.push(function (onLoad, onError) {
+            var img = new Image();
+            img.onload = function () {
+                onLoad(name, img);
+            };
+            img.onerror = function () {
+                onError(name);
+            };
+            img.src = 'res/' + name + '.png';
         });
     },
 
-    enqueueGroup: function (paths, onLoad) {
-        this.groups.push({ paths: paths, onLoad: onLoad });
+    enqueueSound: function (name) {
+        // XXX
+        this.loaderFns.push(function (onLoad, onError) {
+            var aud = new Audio();
+            $(aud).bind('canplaythrough', function () {
+                onLoad(name, aud);
+            });
+            aud.src = 'res/' + name + '.ogg';
+        });
+    },
+
+    enqueueMultiple: function (enqueueFn, names) {
+        Array.prototype.forEach.call(names, function (name) {
+            enqueueFn.call(this, name);
+        }, this);
+    },
+
+    enqueueImages: function (/*names...*/) {
+        this.enqueueMultiple(this.enqueueImage, arguments);
+    },
+
+    enqueueSounds: function (/*names...*/) {
+        this.enqueueMultiple(this.enqueueSound, arguments);
     },
 
     load: function (handler) {
         handler.update(0);
 
-        var nTotalPaths = this.groups.map(function (group) {
-            return group.paths.length;
-        }).reduce(function (a, b) {
-            return a + b;
-        });
-        var nTotalRemaining = nTotalPaths;
-        var self = this;
+        var nResources = this.loaderFns.length,
+            nRemaining = nResources,
+            resources = {},
+            aborted = false;
 
-        this.groups.forEach(function (group) {
-            var nGroupPathsRemaining = group.paths.length,
-                resources = {};
-
-            group.paths.forEach(function (p) {
-                self.loadResource(p, function (resource) {
-                    resources[p] = resource;
-                    if (--nGroupPathsRemaining === 0) {
-                        group.onLoad(resources);
+        this.loaderFns.forEach(function (loaderFn) {
+            loaderFn(
+                function (name, resource) {
+                    resources[name] = resource;
+                    --nRemaining;
+                    handler.update((nResources - nRemaining) / nResources);
+                    if (nRemaining === 0) {
+                        handler.complete(resources);
                     }
-
-                    --nTotalRemaining;
-                    handler.update((nTotalPaths - nTotalRemaining) / nTotalPaths);
-                    if (nTotalRemaining === 0) {
-                        handler.complete();
+                },
+                function (name) {
+                    if (!aborted) {
+                        aborted = true;
+                        handler.error('Unable to load resource: ' + name);
                     }
-                });
-            });
-        });
-    },
-
-    loadImage: function (path, onLoad, onError) {
-        var img = new Image();
-        img.onload = function () {
-            debug('loaded %s', path);
-            onLoad(img);
-        };
-        img.onerror = onError;
-        img.src = path;
-    },
-
-    getLoader: function (path) {
-        // FIXME: HTTP HEAD & MIME type?
-        switch (path.replace(/^.+\.([^.]+)$/, '$1').toLowerCase()) {
-        case 'png':
-            return this.loadImage;
-        default:
-            return null;
-        }
-    },
-
-    loadResource: function (path, onLoad, onError) {
-        // FIXME
-        path = 'res/' + path;
-        debug('loading %s', path);
-        var loader = this.getLoader(path);
-        var self = this;
-        loader(path, onLoad, onError || function () {
-            if (!self.aborted) {
-                self.aborted = true;
-                alert('Failed to load resource: ' + path);
-                throw new Error('Failed to load ' + path + ' - aborting');
-            }
+                }
+            );
         });
     }
 };
