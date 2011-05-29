@@ -20,8 +20,10 @@ Actor.prototype = new Entity();
 Actor.prototype.moveTo = function (x, y) {
     var min = maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
     var max = maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
-    this.x = x < min ? max : max < x ? min : x;
-    this.y = y;
+    x = x < min ? max : max < x ? min : x;
+
+    Entity.prototype.moveTo.call(this, x, y);
+
     // centre x, y
     this.cx = x + this.w / 2;
     this.cy = y + this.h / 2;
@@ -36,8 +38,6 @@ Actor.prototype.moveTo = function (x, y) {
 };
 
 Actor.prototype.moveBy = function (dx, dy) {
-    this.invalidate();
-
     // Actors can only move in whole-pixel offsets. This avoids dealing with
     // sub-pixel values when rendering and calculating in-tile locations. To
     // allow for variable speeds, any fractional amount of movement is

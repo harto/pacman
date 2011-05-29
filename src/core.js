@@ -231,21 +231,27 @@ function Entity() {}
 
 Entity.prototype = {
     invalidate: function () {
-        // cover antialiasing and sub-pixel artifacts
-        invalidateRegion(this.x - 1, this.y - 1, this.w + 2, this.h + 2);
+        this.invalidated = true;
+        if (this.x !== undefined && this.y !== undefined) {
+            // cover antialiasing and sub-pixel artifacts
+            invalidateRegion(this.x - 1, this.y - 1, this.w + 2, this.h + 2);
+        }
     },
-    repaint: function (g, invalidated) {
-        var x1 = this.x,
-            x2 = x1 + this.w,
-            y1 = this.y,
-            y2 = y1 + this.h,
-            invalid = invalidated.some(function (r) {
-                var rx = r.x,
-                    ry = r.y;
-                return !(y1 > ry + r.h || ry > y2 || x1 > rx + r.w || rx > x2);
-            });
-        if (invalid) {
+    repaint: function (g, regions) {
+        if (this.invalidated) {
             this.draw(g);
+            this.invalidated = false;
+        } else {
+            var x1 = this.x, x2 = x1 + this.w,
+                y1 = this.y, y2 = y1 + this.h,
+                invalid = regions.some(function (r) {
+                    var rx = r.x, ry = r.y;
+                    return !(y1 > ry + r.h || ry > y2 ||
+                             x1 > rx + r.w || rx > x2);
+                });
+            if (invalid) {
+                this.draw(g);
+            }
         }
     },
     draw: function (g) {
@@ -255,8 +261,11 @@ Entity.prototype = {
         // implemented by subclasses
     },
     moveTo: function (x, y) {
-        this.x = x;
-        this.y = y;
+        if (x !== this.x || y !== this.y) {
+            this.invalidate();
+            this.x = x;
+            this.y = y;
+        }
     },
     centreAt: function (x, y) {
         this.moveTo(x - this.w / 2, y - this.h / 2);
