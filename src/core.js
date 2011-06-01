@@ -230,6 +230,14 @@ var events = {
 function Entity() {}
 
 Entity.prototype = {
+
+    visible: true,
+
+    setVisible: function (visible) {
+        this.visible = visible;
+        this.invalidate();
+    },
+
     invalidate: function () {
         this.invalidated = true;
         if (this.x !== undefined && this.y !== undefined) {
@@ -237,7 +245,11 @@ Entity.prototype = {
             invalidateRegion(this.x - 1, this.y - 1, this.w + 2, this.h + 2);
         }
     },
+
     repaint: function (g, regions) {
+        if (!this.visible) {
+            return;
+        }
         if (this.invalidated) {
             this.draw(g);
             this.invalidated = false;
@@ -254,12 +266,15 @@ Entity.prototype = {
             }
         }
     },
+
     draw: function (g) {
         // implemented by subclasses
     },
+
     update: function () {
         // implemented by subclasses
     },
+
     moveTo: function (x, y) {
         if (x !== this.x || y !== this.y) {
             this.invalidate();
@@ -267,6 +282,7 @@ Entity.prototype = {
             this.y = y;
         }
     },
+
     centreAt: function (x, y) {
         this.moveTo(x - this.w / 2, y - this.h / 2);
     }

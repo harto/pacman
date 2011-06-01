@@ -8,12 +8,11 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, window, Image,
-         SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG, TILE_SIZE,
-         NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format, toFrames,
-         invalidateRegion, invalidateScreen, events, lives: true, level: true,
-         Ghost, maze, Energiser, Bonus, bonusDisplay, pacman, drawPacman,
-         ghosts, Loader */
+/*global $, window, alert, SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG,
+         TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
+         toFrames, invalidateRegion, invalidateScreen, events, lives: true,
+         level: true, Ghost, maze, Energiser, Bonus, bonusDisplay, pacman,
+         drawPacman, ghosts, Loader */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
@@ -134,11 +133,36 @@ function enterState(s) {
 
 var State, nTicksRemaining, prevState;
 
-function wait(s) {
+function InlineText(txt, cx, cy) {
+    this.txt = txt;
+    this.cx = cx;
+    this.cy = cy;
+}
+InlineText.prototype = new Entity();
+InlineText.prototype.h = 5;
+InlineText.prototype.draw = function (g) {
+    g.save();
+    g.setFontSize(this.h);
+    if (this.x === undefined || this.y === undefined) {
+        // can't position until we know text width
+        this.w = g.measureText(this.txt).width;
+        this.centreAt(this.cx, this.cy);
+    }
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = 'white';
+    g.fillText(this.txt, this.cx, this.cy);
+    g.restore();
+};
+
+function wait(s, fn) {
     prevState = state;
     enterState(State.WAITING);
     events.delay(toFrames(s), function () {
         enterState(prevState);
+        if (fn) {
+            fn();
+        }
     });
 }
 
@@ -170,8 +194,16 @@ State = {
                    g.row === pacman.row;
         }).forEach(function (g) {
             if (g.is(Ghost.STATE_FRIGHTENED)) {
-                g.kill();
-                wait(0.5);
+                var score = new InlineText(200, g.cx, g.cy);
+                entities.push(score);
+                pacman.setVisible(false);
+                g.setVisible(false);
+                wait(0.5, function () {
+                    entities.remove(score);
+                    g.kill();
+                    pacman.setVisible(true);
+                    g.setVisible(true);
+                });
             } else {
                 pacman.kill();
             }
