@@ -2,7 +2,7 @@
  * Resource loader
  */
 
-/*global alert, Image, $, debug */
+/*global Audio, Image, $, debug */
 
 function Loader() {
     this.loaderFns = [];
