@@ -35,7 +35,7 @@ Dot.prototype.eatenEvent = 'dotEaten';
 function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
     this.blinkFrames = Energiser.BLINK_FRAMES;
-    this.visible = true;
+    this.setVisible(true);
 }
 
 Energiser.BLINK_FRAMES = 30;
@@ -48,8 +48,7 @@ Energiser.prototype.draw = function (g) {
 };
 Energiser.prototype.update = function () {
     if (--this.blinkFrames === 0) {
-        this.visible = !this.visible;
-        this.invalidate();
+        this.setVisible(!this.visible);
         this.blinkFrames = Energiser.BLINK_FRAMES;
     }
 };
