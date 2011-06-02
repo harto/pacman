@@ -184,7 +184,7 @@ State = {
         // collision check edibles
         var item = maze.itemAt(pacman.col, pacman.row);
         if (item) {
-            events.raise(item.eatenEvent, item);
+            events.broadcast(item.eatenEvent, item);
         }
 
         // collision check ghosts
@@ -427,7 +427,7 @@ $(function () {
         },
         complete: function (resources) {
             // TODO: fade indicator
-            events.raise('init', resources);
+            events.broadcast('init', resources);
             newGame();
         },
         error: function (msg) {
