@@ -2,6 +2,7 @@
  * Base classes, constants, globals and utility functions.
  */
 
+/*jslint bitwise: false */
 /*global $, console */
 
 var TILE_SIZE = 8,
@@ -166,7 +167,17 @@ var invalidated = [];
 
 // mark some area of the screen as requiring a redraw
 function invalidateRegion(x, y, w, h) {
-    invalidated.push({ x: x, y: y, w: w, h: h });
+    // normalise negative overflow
+    var nx = Math.max(0, x),
+        ny = Math.max(0, y),
+        nw = w - (nx - x),
+        nh = h - (ny - y);
+    // normalise positive overflow
+    nw -= Math.max(0, nx + nw - SCREEN_W);
+    nh -= Math.max(0, ny + nh - SCREEN_H);
+    if (nw > 0 && nh > 0) {
+        invalidated.push({ x: nx, y: ny, w: nw, h: nh });
+    }
 }
 
 // force redraw of entire screen
