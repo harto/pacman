@@ -240,7 +240,7 @@ Entity.prototype = {
 
     invalidate: function () {
         this.invalidated = true;
-        if (this.x !== undefined && this.y !== undefined) {
+        if (this.x !== undefined && this.y !== undefined && this.w && this.h) {
             // cover antialiasing and sub-pixel artifacts
             invalidateRegion(this.x - 1, this.y - 1, this.w + 2, this.h + 2);
         }
