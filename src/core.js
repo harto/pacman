@@ -121,13 +121,13 @@ function keys(o) {
         }
     }
     return ks;
-};
+}
 
 function values(o) {
     return keys(o).map(function (k) {
         return o[k];
     }, this);
-};
+}
 
 /// native object extensions
 

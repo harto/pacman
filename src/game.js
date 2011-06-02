@@ -12,7 +12,7 @@
          TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
          toFrames, invalidateRegion, invalidateScreen, events, lives: true,
          level: true, Ghost, maze, Energiser, Bonus, bonusDisplay, pacman,
-         drawPacman, ghosts, Loader */
+         drawPacman, ghosts, Loader, Entity */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
