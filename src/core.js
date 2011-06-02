@@ -111,6 +111,24 @@ function debug(/*msg, args*/) {
     }
 }
 
+// Would be nice to extend Object with these, but it breaks jQuery
+
+function keys(o) {
+    var ks = [];
+    for (var k in o) {
+        if (o.hasOwnProperty(k)) {
+            ks.push(k);
+        }
+    }
+    return ks;
+};
+
+function values(o) {
+    return keys(o).map(function (k) {
+        return o[k];
+    }, this);
+};
+
 /// native object extensions
 
 // remove element from array in linear time
@@ -210,29 +228,65 @@ var events = {
     delayeds: {},
     nextDelayedId: 0,
 
-    delay: function (frames, fn) {
-        var id = this.nextDelayedId++;
-        this.delayeds[id] = {
-            frames: frames,
-            fn: fn
-        };
-        return id;
+    delay: function (frames, fn, repeats) {
+        var id = this.nextDelayedId++,
+            self = this,
+            delayed = new this.Delayed(frames, fn, repeats);
+        delayed.id = id;
+        this.delayeds[id] = delayed;
+        return delayed;
     },
 
-    cancelDelayed: function (id) {
-        delete this.delayeds[id];
+    repeat: function (frames, fn) {
+        return this.delay(frames, fn, Infinity);
+    },
+
+    cancel: function (delayed) {
+        if (delayed) {
+            delete this.delayeds[delayed.id];
+        }
     },
 
     update: function () {
-        for (var k in this.delayeds) {
-            if (this.delayeds.hasOwnProperty(k)) {
-                var delayed = this.delayeds[k];
-                if (--delayed.frames <= 0) {
-                    delayed.fn();
-                    this.cancelDelayed(k);
+        values(this.delayeds).filter(function (d) {
+            return d.running;
+        }).forEach(function (d) {
+            if (d.remaining) {
+                --d.remaining;
+            } else {
+                d.fn();
+                if (d.repeats) {
+                    --d.repeats;
+                    d.reset();
+                }
+                if (!d.remaining) {
+                    // auto or manual reset
+                    this.cancel(d);
                 }
             }
-        }
+        }, this);
+    },
+
+    Delayed: function (ticks, fn, repeats) {
+        this.remaining = this.ticks = ticks;
+        this.fn = fn;
+        this.repeats = repeats;
+        this.running = true;
+    }
+};
+
+events.Delayed.prototype = {
+
+    reset: function (ticks) {
+        this.remaining = ticks || this.ticks;
+    },
+
+    suspend: function () {
+        this.running = false;
+    },
+
+    resume: function () {
+        this.running = true;
     }
 };
 

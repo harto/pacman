@@ -121,24 +121,21 @@ pacman.init = function () {
 };
 
 pacman.reset = function () {
-    this.dying = this.dead = false;
+    this.dying = this.dead = this.waiting = false;
     this.centreAt(maze.PACMAN_X, maze.PACMAN_Y);
     this.direction = WEST;
-    this.resetDotTimer();
     this.frameIndex = 0;
     this.animStepInc = 1;
 };
 
 pacman.dotEaten = function (d) {
-    this.wait = d.delay;
-    this.resetDotTimer();
+    this.waiting = true;
+    var self = this;
+    events.delay(d.delay, function () {
+        self.waiting = false;
+    });
 };
 pacman.energiserEaten = pacman.dotEaten;
-
-// reset timer that releases ghost when a dot hasn't been eaten for a while
-pacman.resetDotTimer = function () {
-    this.dotTimer = toFrames(level < 5 ? 4 : 3);
-};
 
 pacman.draw = function (g) {
     this.sprites.draw(g, this.x, this.y, this.frameIndex, toOrdinal(this.direction));
@@ -149,10 +146,7 @@ pacman.update = function () {
         // TODO: death sequence
         this.dead = true;
     } else {
-        --this.dotTimer;
-
-        if (this.wait) {
-            --this.wait;
+        if (this.waiting) {
             return;
         }
 
@@ -285,6 +279,13 @@ Ghost.prototype.draw = function (g) {
         sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
     }
     g.restore();
+};
+
+Ghost.prototype.release = function () {
+    debug('%s: exiting', this);
+    this.unset(Ghost.STATE_INSIDE);
+    this.set(Ghost.STATE_EXITING);
+    this.path = this.calcExitPath();
 };
 
 Ghost.prototype.calcExitPath = function () {
@@ -535,10 +536,54 @@ var ghosts = {
 
         blinky.unset(Ghost.STATE_INSIDE);
 
+        events.cancel(this.releaseTimer);
+        var self = this;
+        this.releaseTimer = events.repeat(toFrames(level < 5 ? 4 : 3), function () {
+            var ghost = self.firstWaiting();
+            if (ghost) {
+                debug('dot-eaten timeout');
+                ghost.release();
+            }
+        });
         this.modeSwitches = 0;
         this.scatterChaseTimer = toFrames(level < 5 ? 7 : 5);
         this.useGlobalCounter = false;
         this.dotCounter = 0;
+
+        events.cancel(this.scatterChaseTimer);
+        this.scatterChaseTimer = events.delay(toFrames(level < 5 ? 7 : 5), function () {
+            var nSwitches = ++self.modeSwitches;
+            var newState, oldState;
+            if (nSwitches % 2) {
+                newState = Ghost.STATE_CHASING;
+                oldState = Ghost.STATE_SCATTERING;
+            } else {
+                newState = Ghost.STATE_SCATTERING;
+                oldState = Ghost.STATE_CHASING;
+            }
+            self.all.forEach(function (g) {
+                g.unset(oldState);
+                g.set(newState);
+            });
+            self.reverseAll();
+            var nTicks =
+                nSwitches === 1 ? toFrames(20) :
+                nSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
+                nSwitches === 3 ? toFrames(20) :
+                nSwitches === 4 ? toFrames(5) :
+                nSwitches === 5 ? toFrames(level === 1 ? 20 :
+                                                    level < 5 ? 1033 :
+                                                    1037) :
+                nSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
+                null;
+            if (nTicks) {
+                debug('mode switch (%s): %s for %t',
+                      nSwitches,
+                      Ghost.STATE_LABELS[newState],
+                      nTicks);
+                this.reset(nTicks);
+            }
+        });
     },
 
     // Ghosts are individually released from the house according to the number of
@@ -566,88 +611,44 @@ var ghosts = {
         });
     },
 
-    dotEaten: function () {
-        if (this.useGlobalCounter) {
-            if (++this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE)) {
-                this.useGlobalCounter = false;
-            }
-        } else {
-            var insiders = this.insiders();
-            if (insiders.length) {
-                --insiders[0].dotCounter;
-            }
-        }
+    firstWaiting: function () {
+        var insiders = this.insiders();
+        return insiders.length ? insiders[0] : null;
     },
 
-    // maybe release a ghost from the house
-    maybeReleaseOne: function () {
+    dotEaten: function () {
+        // reset dot-eaten timer
+        this.releaseTimer.reset();
+
+        // update dot counter(s)
+        if (this.useGlobalCounter &&
+            ++this.dotCounter === 32 &&
+            clyde.is(Ghost.STATE_INSIDE)) {
+            this.useGlobalCounter = false;
+        } else {
+            var firstWaiting = this.firstWaiting();
+            if (firstWaiting) {
+                --firstWaiting.dotCounter;
+            }
+        }
+
+        // check counters and maybe release
         var insiders = this.insiders();
         if (!insiders.length) {
             // nobody home
             return;
         }
 
-        var ghost;
-        if (pacman.dotTimer <= 0) {
-            pacman.resetDotTimer();
-            ghost = insiders[0];
-        } else {
-            ghost = insiders.first(function (g) {
-                return g.dotCounter <= 0;
-            });
-            ghost = ghost ||
-                // check global counter
-                (this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
-                 this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
-                 this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
-                 null);
-        }
+        var ghost = insiders.first(function (g) {
+            return g.dotCounter <= 0;
+        }) ||
+            // check global counter
+            (this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
+             this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
+             this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
+             null);
         if (ghost) {
-            debug('%s: exiting', ghost);
-            ghost.unset(Ghost.STATE_INSIDE);
-            ghost.set(Ghost.STATE_EXITING);
-            ghost.path = ghost.calcExitPath();
-        }
-    },
-
-    // maybe switch between modes
-    maybeUpdateMode: function () {
-        if (this.frightened && --this.frightenedTimer <= 0) {
-            this.frightened = false;
-            this.all.forEach(function (g) {
-                g.unset(Ghost.STATE_FRIGHTENED);
-            });
-            // debug('resuming %s mode for %t',
-            //       Ghost.mode,
-            //       Ghost.scatterChaseTimer);
-        } else if (this.modeSwitches < 7 && --this.scatterChaseTimer <= 0) {
-            var newState, oldState;
-            if (++this.modeSwitches % 2) {
-                newState = Ghost.STATE_CHASING;
-                oldState = Ghost.STATE_SCATTERING;
-            } else {
-                newState = Ghost.STATE_SCATTERING;
-                oldState = Ghost.STATE_CHASING;
-            }
-            this.all.forEach(function (g) {
-                g.unset(oldState);
-                g.set(newState);
-            });
-            this.scatterChaseTimer =
-                this.modeSwitches === 1 ? toFrames(20) :
-                this.modeSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
-                this.modeSwitches === 3 ? toFrames(20) :
-                this.modeSwitches === 4 ? toFrames(5) :
-                this.modeSwitches === 5 ? toFrames(level === 1 ? 20 :
-                                                    level < 5 ? 1033 :
-                                                    1037) :
-                this.modeSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
-                null;
-            debug('mode switch (%s): %s for %t',
-                  this.modeSwitches,
-                  Ghost.STATE_LABELS[newState],
-                  this.scatterChaseTimer);
-            this.reverseAll();
+            ghost.release();
         }
     },
 
@@ -665,6 +666,7 @@ var ghosts = {
     },
 
     energiserEaten: function () {
+        events.cancel(this.frightenedTimer);
         this.reverseAll();
 
         var time = this.FRIGHT_SEC[level];
@@ -674,15 +676,23 @@ var ghosts = {
         }
 
         debug('%s for %ss', Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED], time);
-        this.frightened = true;
-        this.frightenedTimer = toFrames(time);
-        // TODO: flashing
+        this.scatterChaseTimer.suspend();
         this.all.forEach(function (g) {
             g.set(Ghost.STATE_FRIGHTENED);
             // ensure stationary ghosts are redrawn
             // FIXME: might be unnecessary
             g.invalidate();
         });
+
+        var self = this;
+        events.delay(toFrames(time), function () {
+            self.scatterChaseTimer.resume();
+            self.all.forEach(function (g) {
+                g.unset(Ghost.STATE_FRIGHTENED);
+            });
+        });
+
+        // TODO: flashing
     }
 };
 

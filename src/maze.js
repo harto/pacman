@@ -34,24 +34,16 @@ Dot.prototype.eatenEvent = 'dotEaten';
 
 function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
-    this.blinkFrames = Energiser.BLINK_FRAMES;
     this.setVisible(true);
+    var self = this;
+    events.repeat(Energiser.BLINK_FRAMES, function () {
+        self.setVisible(!self.visible);
+    });
 }
 
 Energiser.BLINK_FRAMES = 30;
 
 Energiser.prototype = new Dot();
-Energiser.prototype.draw = function (g) {
-    if (this.visible) {
-        Dot.prototype.draw.apply(this, arguments);
-    }
-};
-Energiser.prototype.update = function () {
-    if (--this.blinkFrames === 0) {
-        this.setVisible(!this.visible);
-        this.blinkFrames = Energiser.BLINK_FRAMES;
-    }
-};
 Energiser.prototype.value = 50;
 Energiser.prototype.delay = 3;
 Energiser.prototype.eatenEvent = 'energiserEaten';
@@ -228,6 +220,10 @@ var maze = {
                 ++this.nDots;
             }
         }
+        if (this.bonus) {
+            this.removeBonus();
+            events.cancel(this.bonusTimeout);
+        }
     },
 
     enterable: function (col, row) {
@@ -297,7 +293,7 @@ var maze = {
 
     bonusEaten: function () {
         debug('bonus eaten');
-        events.cancelDelayed(this.bonusTimeout);
+        events.cancel(this.bonusTimeout);
         this.removeBonus();
     },
 
@@ -316,7 +312,7 @@ var maze = {
             for (var r = r1; r <= r2; r++) {
                 for (var c = c1; c <= c2; c++) {
                     var d = self.dotAt(c, r);
-                    if (d) {
+                    if (d && d.visible) {
                         dots[r * COLS + c] = d;
                     }
                 }

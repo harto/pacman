@@ -178,9 +178,6 @@ State = {
             e.update();
         });
 
-        ghosts.maybeReleaseOne();
-        ghosts.maybeUpdateMode();
-
         // collision check edibles
         var item = maze.itemAt(pacman.col, pacman.row);
         if (item) {
