@@ -154,7 +154,7 @@ var maze = {
              '############################'],
 
     init: function (resources) {
-        this.initBg(resources['bg']);
+        this.initBg(resources.bg);
     },
 
     initBg: function (img) {
