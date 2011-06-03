@@ -12,7 +12,7 @@
          TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
          toFrames, invalidateRegion, invalidateScreen, events, lives: true,
          level: true, Ghost, maze, Energiser, Bonus, bonusDisplay, pacman,
-         drawPacman, ghosts, Loader, Entity */
+         drawPacman, ghosts, Loader, Entity, Delay */
 
 var scoreboard = {
     x: 6 * TILE_SIZE,
@@ -122,7 +122,6 @@ var state, paused;
 
 function update() {
     if (!paused) {
-        events.update();
         state();
     }
 }
@@ -155,10 +154,12 @@ InlineText.prototype.draw = function (g) {
     g.restore();
 };
 
-function wait(s, fn) {
+var waitTimer;
+
+function wait(ticks, fn) {
     prevState = state;
     enterState(State.WAITING);
-    events.delay(toFrames(s), function () {
+    waitTimer = new Delay(ticks, function () {
         enterState(prevState);
         if (fn) {
             fn();
@@ -174,6 +175,7 @@ State = {
     },
 
     RUNNING: function () {
+        events.update();
         entities.forEach(function (e) {
             e.update();
         });
@@ -195,7 +197,7 @@ State = {
                 entities.push(score);
                 pacman.setVisible(false);
                 g.setVisible(false);
-                wait(0.5, function () {
+                wait(toFrames(0.5), function () {
                     entities.remove(score);
                     g.kill();
                     pacman.setVisible(true);
@@ -239,7 +241,7 @@ State = {
     },
 
     WAITING: function () {
-        // noop
+        waitTimer.update();
     }
 };
 

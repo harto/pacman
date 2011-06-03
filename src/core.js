@@ -203,6 +203,35 @@ function invalidateScreen() {
 
 /// event management
 
+function Delay(ticks, fn) {
+    this.ticks = this.remaining = ticks;
+    this.fn = fn;
+    this.running = true;
+}
+
+Delay.prototype = {
+
+    suspend: function () {
+        this.running = false;
+    },
+
+    resume: function () {
+        this.running = true;
+    },
+
+    reset: function (ticks) {
+        this.remaining = ticks || this.ticks;
+    },
+
+    update: function () {
+        if (this.remaining) {
+            --this.remaining;
+        } else {
+            this.fn();
+        }
+    }
+};
+
 var events = {
 
     subscribers: [],
@@ -223,68 +252,45 @@ var events = {
 
     // delayed events
 
-    delayeds: {},
-    nextDelayedId: 0,
+    delays: {},
+    nextDelayId: 0,
 
-    delay: function (frames, fn, repeats) {
-        var id = this.nextDelayedId++,
-            self = this,
-            delayed = new this.Delayed(frames, fn, repeats);
-        delayed.id = id;
-        this.delayeds[id] = delayed;
-        return delayed;
+    delay: function (ticks, fn, repeats) {
+        var manager = this,
+            delay = new Delay(ticks, function () {
+                fn.call(this);
+                if (!this.remaining) {
+                    if (this.repeats) {
+                        --this.repeats;
+                        this.reset();
+                    } else {
+                        manager.cancel(this);
+                    }
+                }
+            }),
+            id = this.nextDelayId++;
+        delay.id = id;
+        delay.repeats = repeats;
+        this.delays[id] = delay;
+        return delay;
     },
 
-    repeat: function (frames, fn) {
-        return this.delay(frames, fn, Infinity);
+    repeat: function (ticks, fn, repeats) {
+        return this.delay(ticks, fn, repeats || Infinity);
     },
 
-    cancel: function (delayed) {
-        if (delayed) {
-            delete this.delayeds[delayed.id];
+    cancel: function (delay) {
+        if (delay) {
+            delete this.delays[delay.id];
         }
     },
 
     update: function () {
-        values(this.delayeds).filter(function (d) {
+        values(this.delays).filter(function (d) {
             return d.running;
         }).forEach(function (d) {
-            if (d.remaining) {
-                --d.remaining;
-            } else {
-                d.fn();
-                if (d.repeats) {
-                    --d.repeats;
-                    d.reset();
-                }
-                if (!d.remaining) {
-                    // auto or manual reset
-                    this.cancel(d);
-                }
-            }
-        }, this);
-    },
-
-    Delayed: function (ticks, fn, repeats) {
-        this.remaining = this.ticks = ticks;
-        this.fn = fn;
-        this.repeats = repeats;
-        this.running = true;
-    }
-};
-
-events.Delayed.prototype = {
-
-    reset: function (ticks) {
-        this.remaining = ticks || this.ticks;
-    },
-
-    suspend: function () {
-        this.running = false;
-    },
-
-    resume: function () {
-        this.running = true;
+            d.update();
+        });
     }
 };
 
