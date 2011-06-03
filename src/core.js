@@ -259,12 +259,12 @@ var events = {
         var manager = this,
             delay = new Delay(ticks, function () {
                 fn.call(this);
+                // fn might modify this.remaining, so check again
                 if (!this.remaining) {
-                    if (this.repeats) {
-                        --this.repeats;
-                        this.reset();
-                    } else {
+                    if (this.repeats === undefined || --this.repeats === 0) {
                         manager.cancel(this);
+                    } else {
+                        this.reset();
                     }
                 }
             }),

@@ -409,7 +409,8 @@ $(function () {
     });
 
     var loader = new Loader('res');
-    loader.enqueueImages('bg', 'blinky', 'pinky', 'inky', 'clyde');
+    loader.enqueueImages('bg', 'blinky', 'pinky', 'inky', 'clyde',
+                         'frightened', 'flashing', 'dead');
     loader.enqueueSounds('intro');
     loader.load({
         update: function (completed) {

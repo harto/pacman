@@ -6,7 +6,7 @@
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          UPDATE_HZ, debug, distance, format, reverse, toCol, toDx, toDy,
          toFrames, toRow, toOrdinal, ScreenBuffer, SpriteMap, Entity, Dot,
-         Energiser, Bonus, maze, level, dotCounter: true, events */
+         Energiser, Bonus, maze, level, dotCounter: true, events, toSeconds */
 
 function Actor() {}
 
@@ -212,9 +212,6 @@ events.subscribe(pacman);
 
 function Ghost(name, startCol, startRow, scatterCol, scatterRow) {
     this.name = name;
-    this.framesPath = name + '.png';
-
-    this.w = this.h = 12;
 
     this.startCx = startCol * TILE_SIZE;
     this.startCy = startRow * TILE_SIZE + TILE_CENTRE;
@@ -243,6 +240,8 @@ Ghost.STATE_LABELS = (function () {
 
 Ghost.prototype = new Actor();
 
+Ghost.prototype.w = Ghost.prototype.h = 12;
+
 Ghost.prototype.toString = function () {
     return this.name;
 };
@@ -263,21 +262,17 @@ Ghost.ANIM_FREQ = UPDATE_HZ / 4;
 
 Ghost.prototype.draw = function (g) {
     g.save();
-    if (this.is(Ghost.STATE_DEAD)) {
-        // FIXME
-        g.strokeStyle = 'blue';
-        g.strokeRect(this.x, this.y, this.w, this.h);
-    } else if (this.is(Ghost.STATE_FRIGHTENED)) {
-        // FIXME
-        g.fillStyle = 'blue';
-        g.fillRect(this.x, this.y, this.w, this.h);
-    } else {
-        var sprites = this.sprites,
-            nFrames = sprites.cols,
-            spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % nFrames,
-            spriteRow = toOrdinal(this.direction);
-        sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
-    }
+
+    var sprites =
+            this.is(Ghost.STATE_DEAD) ? this.sprites.dead :
+            this.is(Ghost.STATE_FRIGHTENED) ? (this.flashing ? this.sprites.flashing :
+                                               this.sprites.frightened) :
+            this.sprites.normal,
+        nFrames = sprites.cols,
+        spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % nFrames,
+        spriteRow = toOrdinal(this.direction);
+    sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
+
     g.restore();
 };
 
@@ -444,6 +439,7 @@ Ghost.prototype.resetDotCounter = function () {
 Ghost.prototype.kill = function () {
     debug('%s: dying', this);
     this.unset(Ghost.STATE_FRIGHTENED);
+    events.cancel(this.flashTimer);
     this.set(Ghost.STATE_DEAD);
 };
 
@@ -518,10 +514,38 @@ var ghosts = {
     all: [blinky, inky, pinky, clyde],
 
     init: function (resources) {
+        var w = Ghost.prototype.w, h = Ghost.prototype.h,
+            frightened = new SpriteMap(resources.frightened, w, h),
+            flashing = new SpriteMap(resources.flashing, w, h),
+            dead = new SpriteMap(resources.dead, w, h);
         this.all.forEach(function (g) {
-            g.sprites = new SpriteMap(resources[g.name], g.w, g.h);
+            g.sprites = {
+                normal: new SpriteMap(resources[g.name], w, h),
+                frightened: frightened,
+                flashing: flashing,
+                dead: dead
+            };
         });
     },
+
+    // Ghosts are individually released from the house according to the number of
+    // dots eaten by Pac-Man and the time since a dot was last eaten.
+    //
+    // At the start of each level, each ghost is initialised with a personal dot
+    // counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
+    // eaten, the counter of the most preferred ghost within the house (in order:
+    // Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
+    // released.
+    //
+    // Whenever a life is lost, a global dot counter is used in place of the
+    // individual counters. Ghosts are released according to the value of this
+    // counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
+    // when the counter reaches 32, the individual dot counters are used henceforth
+    // as previously described. Otherwise, the global counter remains in effect.
+    //
+    // Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
+    // is eaten for some level-specific amount of time, the preferred ghost is
+    // released.
 
     reset: function () {
         this.all.forEach(function (g) {
@@ -572,8 +596,8 @@ var ghosts = {
                 nSwitches === 3 ? toFrames(20) :
                 nSwitches === 4 ? toFrames(5) :
                 nSwitches === 5 ? toFrames(level === 1 ? 20 :
-                                                    level < 5 ? 1033 :
-                                                    1037) :
+                                           level < 5 ? 1033 :
+                                           1037) :
                 nSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
                 null;
             debug('mode switch (%s): %s %s',
@@ -582,25 +606,6 @@ var ghosts = {
                   this.ticks ? format('for %ns', toSeconds(this.ticks)) : 'indefinitely');
         }, modeSwitches);
     },
-
-    // Ghosts are individually released from the house according to the number of
-    // dots eaten by Pac-Man and the time since a dot was last eaten.
-    //
-    // At the start of each level, each ghost is initialised with a personal dot
-    // counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
-    // eaten, the counter of the most preferred ghost within the house (in order:
-    // Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
-    // released.
-    //
-    // Whenever a life is lost, a global dot counter is used in place of the
-    // individual counters. Ghosts are released according to the value of this
-    // counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
-    // when the counter reaches 32, the individual dot counters are used henceforth
-    // as previously described. Otherwise, the global counter remains in effect.
-    //
-    // Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
-    // is eaten for some level-specific amount of time, the preferred ghost is
-    // released.
 
     insiders: function () {
         return [blinky, pinky, inky, clyde].filter(function (g) {
@@ -663,33 +668,43 @@ var ghosts = {
     },
 
     energiserEaten: function () {
-        events.cancel(this.frightenedTimer);
         this.reverseAll();
 
-        var time = this.FRIGHT_SEC[level];
-        //var flashes = this.FRIGHT_FLASHES[level];
-        if (!time) {
+        var frightSec = this.FRIGHT_SEC[level];
+        if (!frightSec) {
             return;
         }
 
-        debug('%s for %ss', Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED], time);
+        debug('%s for %ss', Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED], frightSec);
         this.scatterChaseTimer.suspend();
+
+        var frightTicks = toFrames(frightSec),
+            flashes = 2 * this.FRIGHT_FLASHES[level],
+            // FIXME: won't work for later levels
+            flashDuration = toFrames(0.25),
+            flashStart = frightTicks - (flashes + 1) * flashDuration,
+            self = this;
+
         this.all.forEach(function (g) {
             g.set(Ghost.STATE_FRIGHTENED);
             // ensure stationary ghosts are redrawn
             // FIXME: might be unnecessary
             g.invalidate();
+
+            g.flashing = false;
+            g.flashTimer = events.repeat(flashStart, function () {
+                debug('flashing; %n remaining', this.repeats);
+                g.flashing = !g.flashing;
+                this.ticks = flashDuration;
+            }, flashes);
         });
 
-        var self = this;
-        events.delay(toFrames(time), function () {
+        events.delay(frightTicks, function () {
             self.scatterChaseTimer.resume();
             self.all.forEach(function (g) {
                 g.unset(Ghost.STATE_FRIGHTENED);
             });
         });
-
-        // TODO: flashing
     }
 };
 
