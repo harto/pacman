@@ -104,7 +104,6 @@ if (DEBUG) {
 function resetActors() {
     pacman.reset();
     ghosts.reset();
-    invalidateScreen();
 }
 
 function levelUp() {
@@ -116,6 +115,7 @@ function levelUp() {
                     1);
     bonusDisplay.reset(level);
     resetActors();
+    invalidateScreen();
 }
 
 var state, paused;
@@ -169,10 +169,10 @@ function wait(ticks, fn) {
 
 State = {
 
-    STARTING: function () {
-        // TODO: music etc
-        enterState(State.RUNNING);
-    },
+    // STARTING: function () {
+    //     // TODO: music etc
+    //     enterState(State.RUNNING);
+    // },
 
     RUNNING: function () {
         events.update();
@@ -294,17 +294,21 @@ function loop() {
 
 /// initialisation
 
+var introMusic;
+
 function newGame() {
     window.clearTimeout(timer);
 
     scoreboard.score = 0;
     level = 0;
     lives = 3;
-
-    levelUp();
-    enterState(State.STARTING);
     paused = false;
 
+    levelUp();
+    introMusic.play();
+    wait(toFrames(4), function () {
+        enterState(State.RUNNING);
+    });
     loop();
 }
 
@@ -404,8 +408,9 @@ $(function () {
         }
     });
 
-    var loader = new Loader();
+    var loader = new Loader('res');
     loader.enqueueImages('bg', 'blinky', 'pinky', 'inky', 'clyde');
+    loader.enqueueSounds('intro');
     loader.load({
         update: function (completed) {
             var g = ctx;
@@ -427,6 +432,7 @@ $(function () {
         complete: function (resources) {
             // TODO: fade indicator
             events.broadcast('init', resources);
+            introMusic = resources.intro;
             newGame();
         },
         error: function (msg) {

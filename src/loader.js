@@ -4,7 +4,8 @@
 
 /*global Audio, Image, $, debug */
 
-function Loader() {
+function Loader(base) {
+    this.base = base.replace(/\/?$/, '/');
     this.loaderFns = [];
 }
 
@@ -14,23 +15,31 @@ Loader.prototype = {
         this.loaderFns.push(function (onLoad, onError) {
             var img = new Image();
             img.onload = function () {
+                debug('loaded image: %s', this.src);
                 onLoad(name, img);
             };
             img.onerror = function () {
-                onError(name);
+                debug('error loading image: %s', this.src);
+                onError(name, this.src);
             };
-            img.src = 'res/' + name + '.png';
+            img.src = this.base + name + '.png';
         });
     },
 
     enqueueSound: function (name) {
-        // XXX
         this.loaderFns.push(function (onLoad, onError) {
             var aud = new Audio();
+            var loaded;
             $(aud).bind('canplaythrough', function () {
-                onLoad(name, aud);
+                if (!loaded) {
+                    debug('loaded audio: %s', this.src);
+                    onLoad(name, aud);
+                    loaded = true;
+                }
             });
-            aud.src = 'res/' + name + '.ogg';
+            aud.src = this.base + name + '.ogg';
+            // FIXME: error handler
+            aud.load();
         });
     },
 
@@ -57,7 +66,8 @@ Loader.prototype = {
             aborted = false;
 
         this.loaderFns.forEach(function (loaderFn) {
-            loaderFn(
+            loaderFn.call(
+                this,
                 function (name, resource) {
                     resources[name] = resource;
                     --nRemaining;
@@ -66,13 +76,14 @@ Loader.prototype = {
                         handler.complete(resources);
                     }
                 },
-                function (name) {
+                function (name, src) {
                     if (!aborted) {
                         aborted = true;
-                        handler.error('Unable to load resource: ' + name);
+                        handler.error(format('Unable to load resource: %s (%s)',
+                                             name, src));
                     }
                 }
             );
-        });
+        }, this);
     }
 };
