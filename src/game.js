@@ -64,8 +64,8 @@ var stats = {
 
     display: function (fps, avgFrameTime, avgInvalidated) {
         this.panel.html(format('fps: %s\n' +
-                               'avgFrameTime: %3.2fms\n' +
-                               'avgInvalidated: %3.2f',
+                               'avgFrameTime: %3.2nms\n' +
+                               'avgInvalidated: %3.2n',
                                fps, avgFrameTime, avgInvalidated));
     },
 
@@ -417,7 +417,7 @@ $(function () {
             g.fillStyle = 'white';
             g.font = '6px Helvetica';
             g.textAlign = 'center';
-            g.fillText(format('%.1f%', completed * 100), ox, SCREEN_H / 3);
+            g.fillText(format('%.1n%', completed * 100), ox, SCREEN_H / 3);
 
             drawPacman(g, ox, oy, SCREEN_W / 8, completed);
             g.restore();

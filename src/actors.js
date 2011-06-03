@@ -577,10 +577,10 @@ var ghosts = {
                 nSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
                 null;
             if (nTicks) {
-                debug('mode switch (%s): %s for %t',
+                debug('mode switch (%s): %s for %ns',
                       nSwitches,
                       Ghost.STATE_LABELS[newState],
-                      nTicks);
+                      toSeconds(nTicks);
                 this.reset(nTicks);
             }
         });

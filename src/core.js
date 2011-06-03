@@ -71,7 +71,7 @@ function toOrdinal(direction) {
 }
 
 // custom printf-style formatting
-function formatFloat(num, fmt) {
+function formatNumber(num, fmt) {
     num += '';
     if (!fmt) {
         return num;
@@ -90,15 +90,13 @@ function formatFloat(num, fmt) {
 }
 function format(msg/*, args*/) {
     var args = Array.prototype.slice.call(arguments, 1);
-    return (msg + '').replace(/%([st]|[0-9]?\.?[0-9]?f)/g, function (_, code) {
+    return (msg + '').replace(/%(s|[0-9]?\.?[0-9]?n)/g, function (_, code) {
         var arg = args.shift();
         switch (code.charAt(code.length - 1)) {
         case 's':
             return arg;
-        case 't':
-            return toSeconds(arg) + 's';
-        case 'f':
-            return formatFloat(arg, code.substring(0, code.length - 1));
+        case 'n':
+            return formatNumber(arg, code.substring(0, code.length - 1));
         default:
             throw new Error('bad format code: ' + code);
         }
