@@ -545,14 +545,14 @@ var ghosts = {
                 ghost.release();
             }
         });
-        this.modeSwitches = 0;
-        this.scatterChaseTimer = toFrames(level < 5 ? 7 : 5);
+
         this.useGlobalCounter = false;
         this.dotCounter = 0;
 
+        var modeSwitches = 6;
         events.cancel(this.scatterChaseTimer);
         this.scatterChaseTimer = events.delay(toFrames(level < 5 ? 7 : 5), function () {
-            var nSwitches = ++self.modeSwitches;
+            var nSwitches = modeSwitches - this.repeats + 1;
             var newState, oldState;
             if (nSwitches % 2) {
                 newState = Ghost.STATE_CHASING;
@@ -566,7 +566,7 @@ var ghosts = {
                 g.set(newState);
             });
             self.reverseAll();
-            var nTicks =
+            this.ticks =
                 nSwitches === 1 ? toFrames(20) :
                 nSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
                 nSwitches === 3 ? toFrames(20) :
@@ -576,14 +576,11 @@ var ghosts = {
                                                     1037) :
                 nSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
                 null;
-            if (nTicks) {
-                debug('mode switch (%s): %s for %ns',
-                      nSwitches,
-                      Ghost.STATE_LABELS[newState],
-                      toSeconds(nTicks);
-                this.reset(nTicks);
-            }
-        });
+            debug('mode switch (%s): %s %s',
+                  nSwitches,
+                  Ghost.STATE_LABELS[newState],
+                  this.ticks ? format('for %ns', toSeconds(this.ticks)) : 'indefinitely');
+        }, modeSwitches);
     },
 
     // Ghosts are individually released from the house according to the number of
