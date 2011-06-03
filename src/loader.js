@@ -2,7 +2,7 @@
  * Resource loader
  */
 
-/*global Audio, Image, $, debug */
+/*global Audio, Image, $, debug, format */
 
 function Loader(base) {
     this.base = base.replace(/\/?$/, '/');
