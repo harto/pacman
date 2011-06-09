@@ -36,6 +36,8 @@ var TILE_SIZE = 8,
 
 /// miscellany
 
+function noop() {}
+
 function toCol(x) {
     return Math.floor(x / TILE_SIZE);
 }
@@ -127,6 +129,12 @@ function values(o) {
     }, this);
 }
 
+function copy(from, to) {
+    keys(from).forEach(function (k) {
+        to[k] = from[k];
+    });
+}
+
 /// native object extensions
 
 // remove element from array in linear time
@@ -178,28 +186,6 @@ SpriteMap.prototype.draw = function (g, x, y, col, row) {
     var w = this.fw, h = this.fh;
     g.drawImage(this.img, col * w, row * h, w, h, x, y, w, h);
 };
-
-var invalidated = [];
-
-// mark some area of the screen as requiring a redraw
-function invalidateRegion(x, y, w, h) {
-    // normalise negative overflow
-    var nx = Math.max(0, x),
-        ny = Math.max(0, y),
-        nw = w - (nx - x),
-        nh = h - (ny - y);
-    // normalise positive overflow
-    nw -= Math.max(0, nx + nw - SCREEN_W);
-    nh -= Math.max(0, ny + nh - SCREEN_H);
-    if (nw > 0 && nh > 0) {
-        invalidated.push({ x: nx, y: ny, w: nw, h: nh });
-    }
-}
-
-// force redraw of entire screen
-function invalidateScreen() {
-    invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
-}
 
 /// event management
 
@@ -294,9 +280,23 @@ var events = {
     }
 };
 
-/// base class of most entities
+/// entities
 
-function Entity() {}
+var entities = [];
+
+function addEntity(e) {
+    entities.push(e);
+    e.invalidate();
+}
+
+function removeEntity(e) {
+    entities.remove(e);
+    e.invalidate();
+}
+
+function Entity(props) {
+    copy(props, this);
+}
 
 Entity.prototype = {
 
@@ -311,38 +311,45 @@ Entity.prototype = {
         this.invalidated = true;
         if (this.x !== undefined && this.y !== undefined && this.w && this.h) {
             // cover antialiasing and sub-pixel artifacts
-            invalidateRegion(this.x - 1, this.y - 1, this.w + 2, this.h + 2);
-        }
-    },
-
-    repaint: function (g, regions) {
-        if (!this.visible) {
-            return;
-        }
-        if (this.invalidated) {
-            this.draw(g);
-            this.invalidated = false;
-        } else {
-            var x1 = this.x, x2 = x1 + this.w,
-                y1 = this.y, y2 = y1 + this.h,
-                invalid = regions.some(function (r) {
-                    var rx = r.x, ry = r.y;
-                    return !(y1 > ry + r.h || ry > y2 ||
-                             x1 > rx + r.w || rx > x2);
+            var x = this.x - 1, y = this.y - 1, w = this.w + 2, h = this.h + 2;
+            // normalise negative overflow
+            var nx = Math.max(0, x),
+                ny = Math.max(0, y),
+                nw = w - (nx - x),
+                nh = h - (ny - y);
+            // normalise positive overflow
+            nw -= Math.max(0, nx + nw - SCREEN_W);
+            nh -= Math.max(0, ny + nh - SCREEN_H);
+            if (nw > 0 && nh > 0) {
+                // invalidate entities in affected region
+                entities.forEach(function (e) {
+                    e.invalidateRegion(nx, ny, nw, nh);
                 });
-            if (invalid) {
-                this.draw(g);
             }
         }
     },
 
-    draw: function (g) {
-        // implemented by subclasses
+    invalidateRegion: function (x, y, w, h) {
+        if (this.visible && !this.invalidated && this.intersects(x, y, w, h)) {
+            this.invalidate();
+        }
     },
 
-    update: function () {
-        // implemented by subclasses
+    intersects: function (x, y, w, h) {
+        return !(this.y > y + h || y > this.y + this.h ||
+                 this.x > x + w || x > this.x + this.w);
     },
+
+    repaint: function (g, regions) {
+        if (this.visible && this.invalidated) {
+            this.draw(g);
+            this.invalidated = false;
+        }
+    },
+
+    // subclasses may implement these
+    draw: noop,
+    update: noop,
 
     moveTo: function (x, y) {
         if (x !== this.x || y !== this.y) {

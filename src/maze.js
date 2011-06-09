@@ -13,24 +13,25 @@ function Dot(col, row) {
     this.init(col, row, 3);
 }
 
-Dot.prototype = new Entity();
-Dot.prototype.init = function (col, row, size) {
-    this.col = col;
-    this.row = row;
-    this.x = col * TILE_SIZE + (TILE_SIZE - size) / 2;
-    this.y = row * TILE_SIZE + (TILE_SIZE - size) / 2;
-    this.w = this.h = size;
-};
-Dot.prototype.draw = function (g) {
-    g.save();
-    // FIXME
-    g.fillStyle = 'white';
-    g.fillRect(this.x, this.y, this.w, this.h);
-    g.restore();
-};
-Dot.prototype.value = 10;
-Dot.prototype.delay = 1;
-Dot.prototype.eatenEvent = 'dotEaten';
+Dot.prototype = new Entity({
+    value: 10,
+    delay: 1,
+    eatenEvent: 'dotEaten',
+    init: function (col, row, size) {
+        this.col = col;
+        this.row = row;
+        this.x = col * TILE_SIZE + (TILE_SIZE - size) / 2;
+        this.y = row * TILE_SIZE + (TILE_SIZE - size) / 2;
+        this.w = this.h = size;
+    },
+    draw: function (g) {
+        g.save();
+        // FIXME
+        g.fillStyle = 'white';
+        g.fillRect(this.x, this.y, this.w, this.h);
+        g.restore();
+    }
+});
 
 function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
@@ -54,15 +55,16 @@ function Bonus(symbol, value) {
     this.w = this.h = TILE_SIZE;
     this.value = value;
 }
-Bonus.prototype = new Entity();
-Bonus.prototype.draw = function (g) {
-    // FIXME
-    g.save();
-    g.fillStyle = 'white';
-    g.fillRect(this.x, this.y, this.w, this.h);
-    g.restore();
-};
-Bonus.prototype.eatenEvent = 'bonusEaten';
+Bonus.prototype = new Entity({
+    eatenEvent: 'bonusEaten',
+    draw: function (g) {
+        // FIXME
+        g.save();
+        g.fillStyle = 'white';
+        g.fillRect(this.x, this.y, this.w, this.h);
+        g.restore();
+    }
+});
 
 Bonus.forLevel = function (level) {
     return level === 1 ? new Bonus('cherry', 100) :
@@ -277,7 +279,7 @@ var maze = {
             this.bonus = Bonus.forLevel(level);
             this.bonus.centreAt(this.BONUS_X, this.BONUS_Y);
             var secs = 9 + Math.random();
-            debug('displaying bonus for %.3fs', secs);
+            debug('displaying bonus for %.3ns', secs);
             var self = this;
             this.bonusTimeout = events.delay(toFrames(secs), function () {
                 debug('bonus timeout');
@@ -297,7 +299,16 @@ var maze = {
         this.removeBonus();
     },
 
-    repaint: function (g, invalidated) {
+    invalidate: function () {
+        // redraw everything
+        this.invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
+    },
+
+    invalidatedRegions: [],
+    invalidatedDots: [],
+
+    invalidateRegion: function (x, y, w, h) {
+        this.invalidatedRegions.push({ x: x, y: y, w: w, h: h });
         // Track distinct invalidated dots using a sparse array. This is faster
         // than doing an overlap check on all the dots, particularly near the
         // start of a level. (An average of 9 invalidated regions and ~200 dots
@@ -306,36 +317,38 @@ var maze = {
         // maximum of about 50 per frame, then does a constant-time lookup on
         // the 2D array of dots for each tile.)
         // TODO: profile sparse/dense array
-        var dots = [];
-        var self = this;
-        function addInvalidatedDots(c1, r1, c2, r2) {
-            for (var r = r1; r <= r2; r++) {
-                for (var c = c1; c <= c2; c++) {
-                    var d = self.dotAt(c, r);
-                    if (d && d.visible) {
-                        dots[r * COLS + c] = d;
-                    }
+        var c1 = toCol(x),
+            r1 = toRow(y),
+            c2 = toCol(x + w),
+            r2 = toRow(y + h);
+        for (var r = r1; r <= r2; r++) {
+            for (var c = c1; c <= c2; c++) {
+                var d = this.dotAt(c, r);
+                if (d && d.visible) {
+                    this.invalidatedDots[r * COLS + c] = d;
                 }
             }
         }
 
-        invalidated.forEach(function (r) {
+        if (this.bonus) {
+            this.bonus.invalidateRegion(x, y, w, h);
+        }
+    },
+
+    repaint: function (g) {
+        this.invalidatedRegions.forEach(function (r) {
             var x = r.x, y = r.y, w = r.w, h = r.h;
             g.drawImage(this.bg, x, y, w, h, x, y, w, h);
-
-            var c1 = toCol(x),
-                r1 = toRow(y),
-                c2 = toCol(x + w),
-                r2 = toRow(y + h);
-            addInvalidatedDots(c1, r1, c2, r2);
         }, this);
+        this.invalidatedRegions = [];
 
-        dots.forEach(function (d) {
+        this.invalidatedDots.forEach(function (d) {
             d.draw(g);
         });
+        this.invalidatedDots = [];
 
         if (this.bonus) {
-            this.bonus.repaint(g, invalidated);
+            this.bonus.repaint(g);
         }
     },
 

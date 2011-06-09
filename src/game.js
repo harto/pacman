@@ -10,42 +10,36 @@
 
 /*global $, window, alert, SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG,
          TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
-         toFrames, invalidateRegion, invalidateScreen, events, lives: true,
+         toFrames, entities: true, addEntity, removeEntity, events, lives: true,
          level: true, Ghost, maze, Energiser, Bonus, bonusDisplay, pacman,
-         drawPacman, ghosts, Loader, Entity, Delay */
+         drawPacman, ghosts, Loader, Entity, Delay, noop */
 
-var scoreboard = {
+var scoreboard = new Entity({
     x: 6 * TILE_SIZE,
     y: TILE_SIZE,
     w: 0, // updated when score changes
     h: TEXT_HEIGHT,
 
-    update: function () {},
+    update: noop,
 
-    repaint: function (g) {
-        if (this.invalidated) {
-            this.invalidated = false;
-            g.save();
-            g.fillStyle = 'white';
-            g.textAlign = 'left';
-            g.textBaseline = 'top';
-            g.setFontSize(TEXT_HEIGHT);
-            // track width to allow invalidation on next update
-            this.w = g.measureText(this.score).width;
-            g.fillText(this.score, this.x, this.y);
-            g.restore();
-        }
+    draw: function (g) {
+        g.save();
+        g.fillStyle = 'white';
+        g.textAlign = 'left';
+        g.textBaseline = 'top';
+        g.setFontSize(TEXT_HEIGHT);
+        // track width to allow invalidation on next update
+        this.w = g.measureText(this.score).width;
+        g.fillText(this.score, this.x, this.y);
+        g.restore();
     },
 
     objectEaten: function (o) {
         this.score += o.value;
-        invalidateRegion(this.x, this.y, this.w, this.h);
-        this.invalidated = true;
+        this.invalidate();
     }
-};
-scoreboard.dotEaten = scoreboard.objectEaten;
-scoreboard.energiserEaten = scoreboard.objectEaten;
-scoreboard.bonusEaten = scoreboard.objectEaten;
+});
+scoreboard.dotEaten = scoreboard.energiserEaten = scoreboard.bonusEaten = scoreboard.objectEaten;
 events.subscribe(scoreboard);
 
 var stats = {
@@ -62,14 +56,9 @@ var stats = {
         this.inited = true;
     },
 
-    display: function (fps, avgFrameTime, avgInvalidated) {
-        this.panel.html(format('fps: %s\n' +
-                               'avgFrameTime: %3.2nms\n' +
-                               'avgInvalidated: %3.2n',
-                               fps, avgFrameTime, avgInvalidated));
-    },
-
-    repaint: function () {},
+    repaint: noop,
+    invalidate: noop,
+    invalidateRegion: noop,
 
     update: function () {
         var now = new Date().getTime();
@@ -85,18 +74,16 @@ var stats = {
             var avgFrameTime = this.totalFrameTime / fps;
             this.totalFrameTime = 0;
 
-            var avgInvalidated = this.totalInvalidated / fps;
-            this.totalInvalidated = 0;
+            this.panel.html(format('fps: %n\navgFrameTime: %3.2nms',
+                                   fps, avgFrameTime));
 
-            this.display(fps, avgFrameTime, avgInvalidated);
         } else {
             ++this.nFrames;
         }
     }
 };
 
-var entities = [maze, scoreboard, bonusDisplay, pacman];
-entities.push.apply(entities, ghosts.all);
+entities = [maze, scoreboard, bonusDisplay, pacman].concat(ghosts.all);
 if (DEBUG) {
     entities.push(stats);
 }
@@ -115,7 +102,7 @@ function levelUp() {
                     1);
     bonusDisplay.reset(level);
     resetActors();
-    invalidateScreen();
+    maze.invalidate();
 }
 
 var state, paused;
@@ -137,22 +124,49 @@ function InlineText(txt, cx, cy) {
     this.cx = cx;
     this.cy = cy;
 }
-InlineText.prototype = new Entity();
-InlineText.prototype.h = 5;
-InlineText.prototype.draw = function (g) {
-    g.save();
-    g.setFontSize(this.h);
-    if (this.x === undefined || this.y === undefined) {
-        // can't position until we know text width
-        this.w = g.measureText(this.txt).width;
-        this.centreAt(this.cx, this.cy);
+InlineText.prototype = new Entity({
+    h: 5,
+    draw: function (g) {
+        g.save();
+        g.setFontSize(this.h);
+        if (this.x === undefined) {
+            // can't position until we know text width
+            this.w = g.measureText(this.txt).width;
+            this.centreAt(this.cx, this.cy);
+        }
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillStyle = 'white';
+        g.fillText(this.txt, this.cx, this.cy);
+        g.restore();
     }
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillStyle = 'white';
-    g.fillText(this.txt, this.cx, this.cy);
-    g.restore();
-};
+});
+
+function InfoText(txt) {
+    this.txt = txt;
+}
+InfoText.prototype = new Entity({
+    pad: TEXT_HEIGHT / 2,
+    draw: function (g) {
+        g.save();
+        g.setFontSize(TEXT_HEIGHT);
+        if (this.x === undefined) {
+            this.w = g.measureText(this.txt).width + 2 * this.pad;
+            this.x = (SCREEN_W - this.w) / 2;
+        }
+        // frame
+        g.fillStyle = 'white';
+        g.fillRect(this.x, this.y, this.w, this.h);
+        // text
+        g.fillStyle = 'black';
+        g.textAlign = 'left';
+        g.textBaseline = 'top';
+        g.fillText(this.txt, this.x + this.pad, this.y + this.pad);
+        g.restore();
+    }
+});
+InfoText.prototype.h = TEXT_HEIGHT + 2 * InfoText.prototype.pad;
+InfoText.prototype.y = (SCREEN_H - InfoText.prototype.h) / 2;
 
 var waitTimer;
 
@@ -174,11 +188,6 @@ function wait(ticks, fn) {
 
 State = {
 
-    // STARTING: function () {
-    //     // TODO: music etc
-    //     enterState(State.RUNNING);
-    // },
-
     RUNNING: function () {
         events.update();
         entities.forEach(function (e) {
@@ -199,11 +208,11 @@ State = {
         }).forEach(function (g) {
             if (g.is(Ghost.STATE_FRIGHTENED)) {
                 var score = new InlineText(200, g.cx, g.cy);
-                entities.push(score);
+                addEntity(score);
                 pacman.setVisible(false);
                 g.setVisible(false);
                 wait(toFrames(0.5), function () {
-                    entities.remove(score);
+                    removeEntity(score);
                     g.kill();
                     pacman.setVisible(true);
                     g.setVisible(true);
@@ -253,29 +262,9 @@ State = {
 var ctx;
 
 function draw() {
-    stats.totalInvalidated += invalidated.length;
     entities.forEach(function (e) {
-        e.repaint(ctx, invalidated);
+        e.repaint(ctx);
     });
-    invalidated = [];
-
-    // FIXME: this looks bad
-    if (paused || state === State.FINISHED) {
-        var text = paused ? '<Paused>' : 'Press <N> to restart';
-        var padding = TEXT_HEIGHT / 2;
-        var w = ctx.measureText(text).width + 2 * padding;
-        var h = TEXT_HEIGHT + 2 * padding;
-        var x = (SCREEN_W - w) / 2;
-        var y = (SCREEN_H - h) / 1.5;
-
-        ctx.fillStyle = 'white';
-        ctx.fillRect(x, y, w, h);
-
-        ctx.fillStyle = 'black';
-        ctx.textAlign = 'left';
-        ctx.verticalAlign = 'top';
-        ctx.fillText(text, x + padding, y + padding);
-    }
 }
 
 var UPDATE_DELAY = 1000 / UPDATE_HZ,
@@ -317,10 +306,14 @@ function newGame() {
     loop();
 }
 
+var pauseText = new InfoText('Paused');
+
 function togglePause() {
     paused = !paused;
-    if (!paused) {
-        invalidateScreen();
+    if (paused) {
+        addEntity(pauseText);
+    } else {
+        removeEntity(pauseText);
     }
 }
 
