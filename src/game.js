@@ -157,6 +157,10 @@ InlineText.prototype.draw = function (g) {
 var waitTimer;
 
 function wait(ticks, fn) {
+    if (waitTimer) {
+        // prevent deadlock
+        return;
+    }
     prevState = state;
     enterState(State.WAITING);
     waitTimer = new Delay(ticks, function () {
@@ -164,6 +168,7 @@ function wait(ticks, fn) {
         if (fn) {
             fn();
         }
+        waitTimer = null;
     });
 }
 
