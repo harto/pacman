@@ -9,37 +9,60 @@ function Loader(base) {
     this.loaderFns = [];
 }
 
+function loadImage(id, path, onLoad, onError) {
+    var img = new Image();
+    img.onload = function () {
+        debug('loaded image: %s', this.src);
+        onLoad(img);
+    };
+    img.onerror = function () {
+        debug('error loading image: %s', this.src);
+        onError(this.src);
+    };
+    img.src = path + id + '.png';
+}
+
+function loadSound(id, path, onLoad, onError) {
+    var aud = new Audio();
+    // guard against multiple loads, which appears to happen in Firefox
+    var loaded;
+    $(aud).bind('canplaythrough', function () {
+        if (!loaded) {
+            loaded = true;
+            debug('loaded audio: %s', this.src);
+            onLoad(aud);
+        }
+    });
+    // FIXME: error handler
+    aud.src = path + id + '.ogg';
+    aud.load();
+}
+
 Loader.prototype = {
 
     enqueueImage: function (name) {
+        var path = this.base;
         this.loaderFns.push(function (onLoad, onError) {
-            var img = new Image();
-            img.onload = function () {
-                debug('loaded image: %s', this.src);
-                onLoad(name, img);
-            };
-            img.onerror = function () {
-                debug('error loading image: %s', this.src);
-                onError(name, this.src);
-            };
-            img.src = this.base + name + '.png';
+            loadImage(
+                name,
+                path,
+                function (image) {
+                    onLoad(name, image, 'image');
+                },
+                onError);
         });
     },
 
     enqueueSound: function (name) {
+        var path = this.base;
         this.loaderFns.push(function (onLoad, onError) {
-            var aud = new Audio();
-            var loaded;
-            $(aud).bind('canplaythrough', function () {
-                if (!loaded) {
-                    debug('loaded audio: %s', this.src);
-                    onLoad(name, aud);
-                    loaded = true;
-                }
-            });
-            aud.src = this.base + name + '.ogg';
-            // FIXME: error handler
-            aud.load();
+            loadSound(
+                name,
+                path,
+                function (sound) {
+                    onLoad(name, sound, 'sound');
+                },
+                onError);
         });
     },
 
@@ -62,21 +85,24 @@ Loader.prototype = {
 
         var nResources = this.loaderFns.length,
             nRemaining = nResources,
-            resources = {},
+            resources = {
+                images: {},
+                sounds: {}
+            },
             aborted = false;
 
         this.loaderFns.forEach(function (loaderFn) {
             loaderFn.call(
                 this,
-                function (name, resource) {
-                    resources[name] = resource;
+                function onLoad(name, resource, type) {
+                    resources[type + 's'][name] = resource;
                     --nRemaining;
                     handler.update((nResources - nRemaining) / nResources);
                     if (nRemaining === 0) {
                         handler.complete(resources);
                     }
                 },
-                function (name, src) {
+                function onError(name, src) {
                     if (!aborted) {
                         aborted = true;
                         handler.error(format('Unable to load resource: %s (%s)',

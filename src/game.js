@@ -12,7 +12,7 @@
          TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
          toTicks, entityManager, events, lives: true, level: true, Ghost, maze,
          Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts, Loader,
-         Entity, Delay */
+         Entity, Delay, soundManager */
 
 var scoreboard = new Entity({
     x: 6 * TILE_SIZE,
@@ -277,8 +277,6 @@ function loop() {
 
 /// initialisation
 
-var introMusic;
-
 function newGame() {
     window.clearTimeout(timer);
 
@@ -288,7 +286,7 @@ function newGame() {
     paused = false;
 
     levelUp();
-    introMusic.play();
+    soundManager.play('intro');
     wait(toTicks(4), function () {
         enterState(State.RUNNING);
     });
@@ -299,6 +297,7 @@ var pauseText = new InfoText('Paused');
 
 function togglePause() {
     paused = !paused;
+    soundManager.togglePause(paused);
     if (paused) {
         entityManager.register(pauseText);
     } else {
@@ -419,8 +418,8 @@ $(function () {
         },
         complete: function (resources) {
             // TODO: fade indicator
-            events.broadcast('init', resources);
-            introMusic = resources.intro;
+            events.broadcast('init', resources.images);
+            soundManager.init(resources.sounds);
             newGame();
         },
         error: function (msg) {
