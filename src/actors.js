@@ -132,7 +132,7 @@ pacman.dotEaten = function (d) {
 };
 pacman.energiserEaten = pacman.dotEaten;
 
-pacman.draw = function (g) {
+pacman.repaint = function (g) {
     this.sprites.draw(g, this.x, this.y, this.frameIndex, toOrdinal(this.direction));
 };
 
@@ -255,7 +255,7 @@ Ghost.prototype.is = function (state) {
 
 Ghost.ANIM_FREQ = UPDATE_HZ / 4;
 
-Ghost.prototype.draw = function (g) {
+Ghost.prototype.repaint = function (g) {
     g.save();
 
     var sprites =

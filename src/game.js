@@ -20,7 +20,7 @@ var scoreboard = new Entity({
     w: 0, // updated when score changes
     h: TEXT_HEIGHT,
 
-    draw: function (g) {
+    repaint: function (g) {
         g.save();
         g.fillStyle = 'white';
         g.textAlign = 'left';
@@ -120,7 +120,7 @@ function InlineText(txt, cx, cy) {
 }
 InlineText.prototype = new Entity({
     h: 5,
-    draw: function (g) {
+    repaint: function (g) {
         g.save();
         g.setFontSize(this.h);
         if (this.x === undefined) {
@@ -141,7 +141,7 @@ function InfoText(txt) {
 }
 InfoText.prototype = new Entity({
     pad: TEXT_HEIGHT / 2,
-    draw: function (g) {
+    repaint: function (g) {
         g.save();
         g.setFontSize(TEXT_HEIGHT);
         if (this.x === undefined) {

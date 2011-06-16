@@ -24,7 +24,7 @@ Dot.prototype = new Entity({
         this.y = row * TILE_SIZE + (TILE_SIZE - size) / 2;
         this.w = this.h = size;
     },
-    draw: function (g) {
+    repaint: function (g) {
         g.save();
         // FIXME
         g.fillStyle = 'white';
@@ -57,7 +57,7 @@ function Bonus(symbol, value) {
 }
 Bonus.prototype = new Entity({
     eatenEvent: 'bonusEaten',
-    draw: function (g) {
+    repaint: function (g) {
         // FIXME
         g.save();
         g.fillStyle = 'white';
@@ -95,9 +95,9 @@ bonusDisplay.reset = function (level) {
         b.centreAt(x2 - TILE_SIZE - (level - l) * 2 * TILE_SIZE, y);
     }
 };
-bonusDisplay.draw = function (g) {
+bonusDisplay.repaint = function (g) {
     this.bonuses.forEach(function (b) {
-        b.draw(g);
+        b.repaint(g);
     });
 };
 
@@ -335,7 +335,7 @@ var maze = {
         }
     },
 
-    repaint: function (g) {
+    draw: function (g) {
         this.invalidatedRegions.forEach(function (r) {
             var x = r.x, y = r.y, w = r.w, h = r.h;
             g.drawImage(this.bg, x, y, w, h, x, y, w, h);
@@ -343,12 +343,12 @@ var maze = {
         this.invalidatedRegions = [];
 
         this.invalidatedDots.forEach(function (d) {
-            d.draw(g);
+            d.repaint(g);
         });
         this.invalidatedDots = [];
 
         if (this.bonus) {
-            this.bonus.repaint(g);
+            this.bonus.draw(g);
         }
     }
 };

@@ -312,7 +312,7 @@ var entityManager = {
     },
 
     drawAll: function (g) {
-        this.dotoAll('repaint', g);
+        this.dotoAll('draw', g);
     },
 
     updateAll: function () {
@@ -370,15 +370,15 @@ Entity.prototype = {
                  this.x > x + w || x > this.x + this.w);
     },
 
-    repaint: function (g, regions) {
+    draw: function (g, regions) {
         if (this.visible && this.invalidated) {
-            this.draw(g);
+            this.repaint(g);
             this.invalidated = false;
         }
     },
 
-    // subclasses may implement this
-    draw: noop,
+    // subclasses should implement this
+    repaint: noop,
 
     moveTo: function (x, y) {
         if (x !== this.x || y !== this.y) {
