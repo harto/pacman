@@ -61,11 +61,11 @@ function reverse(direction) {
            EAST;
 }
 
-function toFrames(seconds) {
+function toTicks(seconds) {
     return Math.round(seconds * UPDATE_HZ);
 }
-function toSeconds(frames) {
-    return frames / UPDATE_HZ;
+function toSeconds(ticks) {
+    return ticks / UPDATE_HZ;
 }
 
 function toOrdinal(direction) {

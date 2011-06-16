@@ -10,7 +10,7 @@
 
 /*global $, window, alert, SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG,
          TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
-         toFrames, entityManager, events, lives: true, level: true, Ghost, maze,
+         toTicks, entityManager, events, lives: true, level: true, Ghost, maze,
          Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts, Loader,
          Entity, Delay */
 
@@ -43,8 +43,8 @@ events.subscribe(scoreboard);
 var stats = {
 
     UPDATE_INTERVAL_MS: 1000,
-    nFrames: 0,
-    totalFrameTime: 0,
+    nTicks: 0,
+    totalTickTime: 0,
     totalInvalidated: 0,
     prevUpdate: new Date().getTime(),
 
@@ -62,17 +62,17 @@ var stats = {
             }
             this.prevUpdate = now;
 
-            var fps = this.nFrames;
-            this.nFrames = 0;
+            var fps = this.nTicks;
+            this.nTicks = 0;
 
-            var avgFrameTime = this.totalFrameTime / fps;
-            this.totalFrameTime = 0;
+            var avgTick = this.totalTickTime / fps;
+            this.totalTickTime = 0;
 
-            this.panel.html(format('fps: %n\navgFrameTime: %3.2nms',
-                                   fps, avgFrameTime));
+            this.panel.html(format('fps: %n\navgTick: %3.2nms',
+                                   fps, avgTick));
 
         } else {
-            ++this.nFrames;
+            ++this.nTicks;
         }
     }
 };
@@ -203,7 +203,7 @@ State = {
                 entityManager.register(score);
                 pacman.setVisible(false);
                 g.setVisible(false);
-                wait(toFrames(0.5), function () {
+                wait(toTicks(0.5), function () {
                     entityManager.unregister(score);
                     g.kill();
                     pacman.setVisible(true);
@@ -260,7 +260,6 @@ function draw() {
 var UPDATE_DELAY = 1000 / UPDATE_HZ,
     timer,
     lastLoopTime = new Date(),
-    frameCount = 0,
     lastFrameTime = new Date();
 
 function loop() {
@@ -270,7 +269,7 @@ function loop() {
     draw();
 
     var elapsed = new Date() - now;
-    stats.totalFrameTime += elapsed;
+    stats.totalTickTime += elapsed;
     if (state !== State.FINISHED) {
         timer = window.setTimeout(loop, Math.max(0, UPDATE_DELAY - elapsed));
     }
@@ -290,7 +289,7 @@ function newGame() {
 
     levelUp();
     introMusic.play();
-    wait(toFrames(4), function () {
+    wait(toTicks(4), function () {
         enterState(State.RUNNING);
     });
     loop();

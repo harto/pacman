@@ -4,7 +4,7 @@
 
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
-         NORTH, SOUTH, EAST, WEST, ScreenBuffer, Entity, toCol, toRow, toFrames,
+         NORTH, SOUTH, EAST, WEST, ScreenBuffer, Entity, toCol, toRow, toTicks,
          debug, level, events */
 
 /// edibles
@@ -37,12 +37,12 @@ function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
     this.setVisible(true);
     var self = this;
-    events.repeat(Energiser.BLINK_FRAMES, function () {
+    events.repeat(Energiser.BLINK_DURATION, function () {
         self.setVisible(!self.visible);
     });
 }
 
-Energiser.BLINK_FRAMES = 30;
+Energiser.BLINK_DURATION = toTicks(0.25);
 
 Energiser.prototype = new Dot();
 Energiser.prototype.value = 50;
@@ -281,7 +281,7 @@ var maze = {
             var secs = 9 + Math.random();
             debug('displaying bonus for %.3ns', secs);
             var self = this;
-            this.bonusTimeout = events.delay(toFrames(secs), function () {
+            this.bonusTimeout = events.delay(toTicks(secs), function () {
                 debug('bonus timeout');
                 self.removeBonus();
             });

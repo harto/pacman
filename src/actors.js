@@ -5,7 +5,7 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
          UPDATE_HZ, debug, distance, format, reverse, toCol, toDx, toDy,
-         toFrames, toRow, toOrdinal, ScreenBuffer, SpriteMap, Entity, Dot,
+         toTicks, toRow, toOrdinal, ScreenBuffer, SpriteMap, Entity, Dot,
          Energiser, Bonus, maze, level, dotCounter: true, events, toSeconds */
 
 function Actor() {}
@@ -263,8 +263,7 @@ Ghost.prototype.repaint = function (g) {
             this.is(Ghost.STATE_FRIGHTENED) ? (this.flashing ? this.sprites.flashing :
                                                this.sprites.frightened) :
             this.sprites.normal,
-        nFrames = sprites.cols,
-        spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % nFrames,
+        spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % sprites.cols,
         spriteRow = toOrdinal(this.direction);
     sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
 
@@ -557,7 +556,7 @@ var ghosts = {
 
         events.cancel(this.releaseTimer);
         var self = this;
-        this.releaseTimer = events.repeat(toFrames(level < 5 ? 4 : 3), function () {
+        this.releaseTimer = events.repeat(toTicks(level < 5 ? 4 : 3), function () {
             var ghost = self.firstWaiting();
             if (ghost) {
                 debug('dot-eaten timeout');
@@ -570,7 +569,7 @@ var ghosts = {
 
         var modeSwitches = 6;
         events.cancel(this.scatterChaseTimer);
-        this.scatterChaseTimer = events.delay(toFrames(level < 5 ? 7 : 5), function () {
+        this.scatterChaseTimer = events.delay(toTicks(level < 5 ? 7 : 5), function () {
             var nSwitches = modeSwitches - this.repeats + 1;
             var newState, oldState;
             if (nSwitches % 2) {
@@ -586,14 +585,14 @@ var ghosts = {
             });
             self.reverseAll();
             this.ticks =
-                nSwitches === 1 ? toFrames(20) :
-                nSwitches === 2 ? toFrames(level < 5 ? 7 : 5) :
-                nSwitches === 3 ? toFrames(20) :
-                nSwitches === 4 ? toFrames(5) :
-                nSwitches === 5 ? toFrames(level === 1 ? 20 :
-                                           level < 5 ? 1033 :
-                                           1037) :
-                nSwitches === 6 ? (level === 1 ? toFrames(5) : 1) :
+                nSwitches === 1 ? toTicks(20) :
+                nSwitches === 2 ? toTicks(level < 5 ? 7 : 5) :
+                nSwitches === 3 ? toTicks(20) :
+                nSwitches === 4 ? toTicks(5) :
+                nSwitches === 5 ? toTicks(level === 1 ? 20 :
+                                          level < 5 ? 1033 :
+                                          1037) :
+                nSwitches === 6 ? (level === 1 ? toTicks(5) : 1) :
                 null;
             debug('mode switch (%s): %s %s',
                   nSwitches,
@@ -673,10 +672,10 @@ var ghosts = {
         debug('%s for %ss', Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED], frightSec);
         this.scatterChaseTimer.suspend();
 
-        var frightTicks = toFrames(frightSec),
+        var frightTicks = toTicks(frightSec),
             flashes = 2 * this.FRIGHT_FLASHES[level],
             // FIXME: won't work for later levels
-            flashDuration = toFrames(0.25),
+            flashDuration = toTicks(0.25),
             flashStart = frightTicks - (flashes + 1) * flashDuration,
             self = this;
 
