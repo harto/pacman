@@ -12,11 +12,6 @@ function Actor() {}
 
 Actor.prototype = new Entity();
 
-// Actor.prototype.repaint = function (g) {
-//     // Assume actors are nearly always moving
-//     this.draw(g);
-// };
-
 Actor.prototype.moveTo = function (x, y) {
     var min = maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
     var max = maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
@@ -693,7 +688,6 @@ var ghosts = {
 
             g.flashing = false;
             g.flashTimer = events.repeat(flashStart, function () {
-                debug('flashing; %n remaining', this.repeats);
                 g.flashing = !g.flashing;
                 this.ticks = flashDuration;
             }, flashes);
