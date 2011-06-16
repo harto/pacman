@@ -350,12 +350,6 @@ var maze = {
         if (this.bonus) {
             this.bonus.repaint(g);
         }
-    },
-
-    update: function () {
-        this.energisers.forEach(function (e) {
-            e.update();
-        });
     }
 };
 

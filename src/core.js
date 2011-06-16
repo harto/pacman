@@ -280,19 +280,51 @@ var events = {
     }
 };
 
-/// entities
+/// entity manager
 
-var entities = [];
+var entityManager = {
 
-function addEntity(e) {
-    entities.push(e);
-    e.invalidate();
-}
+    entities: [],
 
-function removeEntity(e) {
-    entities.remove(e);
-    e.invalidate();
-}
+    register: function (/*entities...*/) {
+        var entities = this.entities;
+        Array.prototype.forEach.call(arguments, function (e) {
+            if (e instanceof Array) {
+                entities.push.apply(entities, e);
+            } else {
+                entities.push(e);
+            }
+        });
+    },
+
+    unregister: function (e) {
+        this.entities.remove(e);
+    },
+
+    dotoAll: function (m /*, args...*/) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        this.entities.forEach(function (e) {
+            var f = e[m];
+            if (f) {
+                f.apply(e, args);
+            }
+        });
+    },
+
+    drawAll: function (g) {
+        this.dotoAll('repaint', g);
+    },
+
+    updateAll: function () {
+        this.dotoAll('update');
+    },
+
+    invalidateRegion: function (x, y, w, h) {
+        this.dotoAll('invalidateRegion', x, y, w, h);
+    }
+};
+
+// standard drawable entity
 
 function Entity(props) {
     copy(props, this);
@@ -322,9 +354,7 @@ Entity.prototype = {
             nh -= Math.max(0, ny + nh - SCREEN_H);
             if (nw > 0 && nh > 0) {
                 // invalidate entities in affected region
-                entities.forEach(function (e) {
-                    e.invalidateRegion(nx, ny, nw, nh);
-                });
+                entityManager.invalidateRegion(nx, ny, nw, nh);
             }
         }
     },
@@ -347,9 +377,8 @@ Entity.prototype = {
         }
     },
 
-    // subclasses may implement these
+    // subclasses may implement this
     draw: noop,
-    update: noop,
 
     moveTo: function (x, y) {
         if (x !== this.x || y !== this.y) {
