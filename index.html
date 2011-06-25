@@ -4,28 +4,14 @@
 <head>
   <title>Pac-Man</title>
 
-  <link rel="stylesheet" type="text/css" href="../styles/game.css" />
-  <script src="../jquery-1.4.2.js"></script>
+  <link rel="stylesheet" type="text/css" href="../../styles/games.css" />
 
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
   <script src="src/core.js"></script>
   <script src="src/loader.js"></script>
   <script src="src/maze.js"></script>
   <script src="src/actors.js"></script>
   <script src="src/game.js"></script>
-
-  <script type="text/javascript">
-    if (/harto\.org$/.test(window.location.hostname)) {    
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-19519355-2']);
-      _gaq.push(['_trackPageview']);
-
-      (function() {
-        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-      })();
-    }
-  </script>
 </head>
 
 <body>
@@ -77,4 +63,5 @@
  </div>
 </body>
 
+<script src="../../scripts/analytics.js"></script>
 </html>
