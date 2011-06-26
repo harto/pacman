@@ -93,12 +93,8 @@ function levelUp() {
     ++level;
     debug('starting level %s', level);
     maze.reset();
-    pacman.speed = (level === 1 ? 0.8 :
-                    level < 5 || level > 20 ? 0.9 :
-                    1);
     bonusDisplay.reset(level);
     resetActors();
-    maze.invalidate();
 }
 
 var state, paused;

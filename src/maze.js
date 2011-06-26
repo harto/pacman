@@ -226,6 +226,7 @@ var maze = {
             this.removeBonus();
             events.cancel(this.bonusTimeout);
         }
+        this.invalidate();
     },
 
     enterable: function (col, row) {

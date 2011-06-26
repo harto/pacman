@@ -121,6 +121,9 @@ pacman.reset = function () {
     this.direction = WEST;
     this.frameIndex = 0;
     this.animStepInc = 1;
+    this.speed = (level === 1 ? 0.8 :
+                  level < 5 || level > 20 ? 0.9 :
+                  1);
 };
 
 pacman.dotEaten = function (d) {
