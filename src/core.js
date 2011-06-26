@@ -147,6 +147,16 @@ Array.prototype.first = function (pred) {
     }
 };
 
+// invoked named function on members iff it exists
+Array.prototype.doAll = function (fName /*, args...*/) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    this.filter(function (e) {
+        return fName in e;
+    }).forEach(function (e) {
+        e[fName].apply(e, args);
+    });
+};
+
 Math.sign = function (x) {
     return x < 0 ? -1 : x > 0 ? 1 : 0;
 };
@@ -325,26 +335,16 @@ var entityManager = {
         this.entities.remove(e);
     },
 
-    dotoAll: function (m /*, args...*/) {
-        var args = Array.prototype.slice.call(arguments, 1);
-        this.entities.forEach(function (e) {
-            var f = e[m];
-            if (f) {
-                f.apply(e, args);
-            }
-        });
-    },
-
     drawAll: function (g) {
-        this.dotoAll('draw', g);
+        this.entities.doAll('draw', g);
     },
 
     updateAll: function () {
-        this.dotoAll('update');
+        this.entities.doAll('update');
     },
 
     invalidateRegion: function (x, y, w, h) {
-        this.dotoAll('invalidateRegion', x, y, w, h);
+        this.entities.doAll('invalidateRegion', x, y, w, h);
     }
 };
 
