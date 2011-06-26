@@ -13,7 +13,6 @@ var TILE_SIZE = 8,
 
     SCREEN_W = COLS * TILE_SIZE,
     SCREEN_H = ROWS * TILE_SIZE,
-    TEXT_HEIGHT = TILE_SIZE,
 
     MAX_SPEED = 1,
 
@@ -25,14 +24,7 @@ var TILE_SIZE = 8,
     WEST =  1 << 3,
 
     lives,
-    level,/*,
-    lifeLost,
-    dotsEaten,*/
-
-    blinky,
-    inky,
-    pinky,
-    clyde;
+    level;
 
 /// miscellany
 

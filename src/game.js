@@ -8,11 +8,13 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, window, alert, SCREEN_W, SCREEN_H, UPDATE_HZ, TEXT_HEIGHT, DEBUG,
+/*global $, window, alert, SCREEN_W, SCREEN_H, UPDATE_HZ, DEBUG,
          TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
          toTicks, entityManager, events, lives: true, level: true, Ghost, maze,
          Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts, Loader,
          Entity, Delay, soundManager */
+
+var TEXT_HEIGHT = TILE_SIZE;
 
 var scoreboard = new Entity({
     x: 6 * TILE_SIZE,
