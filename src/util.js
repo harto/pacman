@@ -72,7 +72,7 @@ function copy(from, to) {
     });
 }
 
-// unobtrusive Math extensions
+// Math extensions
 
 Math.sign = function (x) {
     return x < 0 ? -1 : x > 0 ? 1 : 0;
@@ -83,20 +83,20 @@ Math.trunc = function (x) {
     return Math.sign(x) * Math.floor(Math.abs(x));
 };
 
-// Array helpers
+// Array extensions
 
 // remove element from array in linear time
-function remove(array, o) {
-    var i = array.indexOf(o);
+Array.prototype.remove = function (o) {
+    var i = this.indexOf(o);
     if (i !== -1) {
-        array.splice(i, 1);
+        this.splice(i, 1);
     }
 }
 
 // return first element matching pred in linear time
-function first(array, pred) {
-    for (var i = 0; i < array.length; i++) {
-        var x = array[i];
+Array.prototype.first = function (pred) {
+    for (var i = 0; i < this.length; i++) {
+        var x = this[i];
         if (pred(x)) {
             return x;
         }

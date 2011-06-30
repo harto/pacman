@@ -74,35 +74,6 @@ function debug(/*msg, args*/) {
     }
 }
 
-/// native object extensions
-
-// remove element from array in linear time
-Array.prototype.remove = function (o) {
-    var i = this.indexOf(o);
-    if (i !== -1) {
-        this.splice(i, 1);
-    }
-};
-
-// return first element matching pred in linear time
-Array.prototype.first = function (pred) {
-    for (var i = 0; i < this.length; i++) {
-        var x = this[i];
-        if (pred(x)) {
-            return x;
-        }
-    }
-};
-
-// invoked named function on members iff it exists
-Array.prototype.doAll = function (fName /*, args...*/) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    this.filter(function (e) {
-        return fName in e;
-    }).forEach(function (e) {
-        e[fName].apply(e, args);
-    });
-};
 /// graphics
 
 function ScreenBuffer(w, h) {
