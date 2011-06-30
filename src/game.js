@@ -418,7 +418,7 @@ $(function () {
         onComplete: function (resourceManager) {
             // TODO: fade indicator
             resources = resourceManager;
-            events.broadcast('init');
+            broadcast('init');
             newGame();
         },
 
