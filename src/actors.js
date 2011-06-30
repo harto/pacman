@@ -204,7 +204,6 @@ pacman.toString = function () {
     return 'pacman';
 };
 
-events.subscribe(pacman);
 
 /// ghosts
 
@@ -506,16 +505,14 @@ clyde.resetDotCounter = function () {
 
 /// aggregate functions
 
-var ghosts = {
-
-    all: [blinky, inky, pinky, clyde],
+var ghosts = new EntityGroup({
 
     init: function () {
         var w = Ghost.prototype.w, h = Ghost.prototype.h,
             frightened = new SpriteMap(resources.getImage('frightened'), w, h),
             flashing = new SpriteMap(resources.getImage('flashing'), w, h),
             dead = new SpriteMap(resources.getImage('dead'), w, h);
-        this.all.forEach(function (g) {
+        this.members.forEach(function (g) {
             g.sprites = {
                 normal: new SpriteMap(resources.getImage(g.name), w, h),
                 frightened: frightened,
@@ -545,7 +542,7 @@ var ghosts = {
     // released.
 
     reset: function () {
-        this.all.forEach(function (g) {
+        this.members.forEach(function (g) {
             g.nTicks = 0;
             g.state = 0;
             g.set(Ghost.STATE_INSIDE);
@@ -582,7 +579,7 @@ var ghosts = {
                 newState = Ghost.STATE_SCATTERING;
                 oldState = Ghost.STATE_CHASING;
             }
-            self.all.forEach(function (g) {
+            self.members.forEach(function (g) {
                 g.unset(oldState);
                 g.set(newState);
             });
@@ -657,7 +654,7 @@ var ghosts = {
     FRIGHT_FLASHES: [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3],
 
     reverseAll: function () {
-        this.all.filter(function (g) {
+        this.members.filter(function (g) {
             return !g.is(Ghost.STATE_DEAD);
         }).forEach(function (g) {
             g.setNextDirection(reverse(g.direction));
@@ -682,7 +679,7 @@ var ghosts = {
             flashStart = frightTicks - (flashes + 1) * flashDuration,
             self = this;
 
-        this.all.forEach(function (g) {
+        this.members.forEach(function (g) {
             g.set(Ghost.STATE_FRIGHTENED);
             // ensure stationary ghosts are redrawn
             // FIXME: might be unnecessary
@@ -697,11 +694,11 @@ var ghosts = {
 
         events.delay(frightTicks, function () {
             self.scatterChaseTimer.resume();
-            self.all.forEach(function (g) {
+            self.members.forEach(function (g) {
                 g.unset(Ghost.STATE_FRIGHTENED);
             });
         });
     }
-};
+});
 
-events.subscribe(ghosts);
+ghosts.add(blinky, inky, pinky, clyde);

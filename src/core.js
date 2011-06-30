@@ -23,6 +23,9 @@ var TILE_SIZE = 8,
     EAST =  1 << 2,
     WEST =  1 << 3,
 
+    // top-level entity group
+    all,
+
     // resource manager
     resources,
 
@@ -92,12 +95,17 @@ function SpriteMap(img, fw, fh) {
     this.cols = img.width / fw;
     this.rows = img.height / fh;
 }
+
 SpriteMap.prototype.draw = function (g, x, y, col, row) {
     var w = this.fw, h = this.fh;
     g.drawImage(this.img, col * w, row * h, w, h, x, y, w, h);
 };
 
 /// event management
+
+function broadcast(/*event, args...*/) {
+    all.notify.apply(all, arguments);
+}
 
 function Delay(ticks, fn) {
     this.ticks = this.remaining = ticks;
@@ -129,24 +137,6 @@ Delay.prototype = {
 };
 
 var events = {
-
-    subscribers: [],
-
-    subscribe: function (subscriber) {
-        this.subscribers.push(subscriber);
-    },
-
-    broadcast: function (id /*, args...*/) {
-        var args = Array.prototype.slice.call(arguments, 1);
-        this.subscribers.forEach(function (s) {
-            var handler = s[id];
-            if (handler) {
-                handler.apply(s, args);
-            }
-        });
-    },
-
-    // delayed events
 
     delays: {},
     nextDelayId: 0,
@@ -190,41 +180,7 @@ var events = {
     }
 };
 
-/// entity manager
-
-var entityManager = {
-
-    entities: [],
-
-    register: function (/*entities...*/) {
-        var entities = this.entities;
-        Array.prototype.forEach.call(arguments, function (e) {
-            if (e instanceof Array) {
-                entities.push.apply(entities, e);
-            } else {
-                entities.push(e);
-            }
-        });
-    },
-
-    unregister: function (e) {
-        this.entities.remove(e);
-    },
-
-    drawAll: function (g) {
-        this.entities.doAll('draw', g);
-    },
-
-    updateAll: function () {
-        this.entities.doAll('update');
-    },
-
-    invalidateRegion: function (x, y, w, h) {
-        this.entities.doAll('invalidateRegion', x, y, w, h);
-    }
-};
-
-// standard drawable entity
+/// entities
 
 function Entity(props) {
     copy(props, this);
@@ -253,8 +209,7 @@ Entity.prototype = {
             nw -= Math.max(0, nx + nw - SCREEN_W);
             nh -= Math.max(0, ny + nh - SCREEN_H);
             if (nw > 0 && nh > 0) {
-                // invalidate entities in affected region
-                entityManager.invalidateRegion(nx, ny, nw, nh);
+                broadcast('invalidateRegion', nx, ny, nw, nh);
             }
         }
     },
@@ -277,7 +232,7 @@ Entity.prototype = {
         }
     },
 
-    // subclasses should implement this
+    // implemented by subclasses
     repaint: noop,
 
     moveTo: function (x, y) {
@@ -290,6 +245,40 @@ Entity.prototype = {
 
     centreAt: function (x, y) {
         this.moveTo(x - this.w / 2, y - this.h / 2);
+    }
+};
+
+function EntityGroup(props) {
+    this.members = [];
+    copy(props, this);
+}
+
+EntityGroup.prototype = {
+
+    add: function (/*entities...*/) {
+        this.members.push.apply(this.members, arguments);
+    },
+
+    remove: function (e) {
+        this.members.remove(e);
+    },
+
+    // invoked named function on all members iff it exists
+    notify: function (fName /*, args...*/) {
+        var allArgs = Array.prototype.slice.call(arguments, 0);
+        var fArgs = Array.prototype.slice.call(arguments, 1);
+        this.members.forEach(function (e) {
+            var f = e[fName];
+            if (f) {
+                f.apply(e, fArgs);
+            } else if (e instanceof EntityGroup) {
+                e.notify.apply(e, allArgs);
+            }
+        });
+    },
+
+    toString: function () {
+        return 'EntityGroup [' + this.members.length + ']';
     }
 };
 

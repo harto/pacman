@@ -355,4 +355,3 @@ maze.HOME_TILE = { col: maze.HOME_COL, row: maze.HOME_ROW };
 maze.PACMAN_X = maze.BONUS_X = maze.HOME_COL * TILE_SIZE;
 maze.PACMAN_Y = maze.BONUS_Y = 26 * TILE_SIZE + TILE_CENTRE;
 
-events.subscribe(maze);

@@ -10,9 +10,12 @@
 
 /*global $, window, alert, SCREEN_W, SCREEN_H, UPDATE_HZ, DEBUG,
          TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
-         toTicks, entityManager, events, lives: true, level: true, Ghost, maze,
-         Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts, Loader,
-         Entity, Delay, soundManager */
+         toTicks, all:true, lives:true, level:true, Ghost, maze, broadcast,
+         Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts, events
+         loadResources, resources:true, EntityGroup, Entity, Delay */
+
+// FIXME
+all = new EntityGroup();
 
 var TEXT_HEIGHT = TILE_SIZE;
 
@@ -40,7 +43,6 @@ var scoreboard = new Entity({
     }
 });
 scoreboard.dotEaten = scoreboard.energiserEaten = scoreboard.bonusEaten = scoreboard.objectEaten;
-events.subscribe(scoreboard);
 
 var stats = {
 
@@ -79,9 +81,9 @@ var stats = {
     }
 };
 
-entityManager.register(maze, scoreboard, bonusDisplay, pacman, ghosts.all);
+all.add(maze, scoreboard, bonusDisplay, pacman, ghosts);
 if (DEBUG) {
-    entityManager.register(stats);
+    all.add(stats);
 }
 
 function resetActors() {
@@ -182,27 +184,28 @@ State = {
 
     RUNNING: function () {
         events.update();
-        entityManager.updateAll();
+        broadcast('update');
 
         // collision check edibles
         var item = maze.itemAt(pacman.col, pacman.row);
         if (item) {
-            events.broadcast(item.eatenEvent, item);
+            broadcast(item.eatenEvent, item);
         }
 
         // collision check ghosts
-        ghosts.all.filter(function (g) {
+        // FIXME
+        ghosts.members.filter(function (g) {
             return !g.is(Ghost.STATE_DEAD) &&
                    g.col === pacman.col &&
                    g.row === pacman.row;
         }).forEach(function (g) {
             if (g.is(Ghost.STATE_FRIGHTENED)) {
                 var score = new InlineText(200, g.cx, g.cy);
-                entityManager.register(score);
+                all.add(score);
                 pacman.setVisible(false);
                 g.setVisible(false);
                 wait(toTicks(0.5), function () {
-                    entityManager.unregister(score);
+                    all.remove(score);
                     g.kill();
                     pacman.setVisible(true);
                     g.setVisible(true);
@@ -252,7 +255,7 @@ State = {
 var ctx;
 
 function draw() {
-    entityManager.drawAll(ctx);
+    broadcast('draw', ctx);
 }
 
 var UPDATE_DELAY = 1000 / UPDATE_HZ,
@@ -297,9 +300,9 @@ function togglePause() {
     paused = !paused;
     resources.togglePause(paused);
     if (paused) {
-        entityManager.register(pauseText);
+        all.add(pauseText);
     } else {
-        entityManager.unregister(pauseText);
+        all.remove(pauseText);
     }
 }
 
