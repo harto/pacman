@@ -3,9 +3,9 @@
  */
 
 /*jslint bitwise: false */
-/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
-         NORTH, SOUTH, EAST, WEST, ScreenBuffer, Entity, toCol, toRow, toTicks,
-         debug, level, events, resources */
+/*global COLS, DEBUG, EAST, Entity, NORTH, ROWS, SCREEN_H, SCREEN_W, SOUTH,
+  ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser,
+  events, level, resources, toCol, toRow, toTicks */
 
 /// edibles
 
@@ -103,7 +103,8 @@ bonusDisplay.repaint = function (g) {
 
 /// maze
 
-var maze = {
+// FIXME
+var Maze = {
     // house entry/exit tile
     HOME_COL: 14,
     HOME_ROW: 14,
@@ -115,7 +116,55 @@ var maze = {
     NNTZ_ROW_2: 26,
 
     TUNNEL_WEST_EXIT_COL: -2,
-    TUNNEL_EAST_EXIT_COL: COLS + 1,
+    TUNNEL_EAST_EXIT_COL: COLS + 1
+};
+Maze.HOME_TILE = { col: Maze.HOME_COL, row: Maze.HOME_ROW };
+Maze.PACMAN_X = Maze.BONUS_X = Maze.HOME_COL * TILE_SIZE;
+Maze.PACMAN_Y = Maze.BONUS_Y = 26 * TILE_SIZE + TILE_CENTRE;
+
+enqueueInitialiser(function () {
+    var img = resources.getImage('bg');
+    Maze.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
+    var g = Maze.bg.getContext('2d');
+    g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
+
+    // FIXME: should this be toggleable?
+    if (DEBUG) {
+        // gridlines
+        g.strokeStyle = 'white';
+        g.lineWidth = 0.25;
+        for (var row = 0; row < ROWS; row++) {
+            g.beginPath();
+            g.moveTo(0, row * TILE_SIZE);
+            g.lineTo(SCREEN_W, row * TILE_SIZE);
+            g.stroke();
+        }
+        for (var col = 0; col < COLS; col++) {
+            g.beginPath();
+            g.moveTo(col * TILE_SIZE, 0);
+            g.lineTo(col * TILE_SIZE, SCREEN_H);
+            g.stroke();
+        }
+
+        g.globalAlpha = 0.5;
+
+        // no-NORTH-turn zones
+        g.fillStyle = 'grey';
+        var nntzX = Maze.NNTZ_COL_MIN * TILE_SIZE;
+        var nntzW = (Maze.NNTZ_COL_MAX - Maze.NNTZ_COL_MIN + 1) * TILE_SIZE;
+        g.fillRect(nntzX, Maze.NNTZ_ROW_1 * TILE_SIZE,
+                   nntzW, TILE_SIZE);
+        g.fillRect(nntzX, Maze.NNTZ_ROW_2 * TILE_SIZE,
+                   nntzW, TILE_SIZE);
+
+        // ghost home tile
+        g.fillStyle = 'green';
+        g.fillRect(Maze.HOME_COL * TILE_SIZE, Maze.HOME_ROW * TILE_SIZE,
+                   TILE_SIZE, TILE_SIZE);
+    }
+});
+
+var maze = {
 
     // collision map including dots and energisers
     layout: ['############################',
@@ -154,48 +203,6 @@ var maze = {
              '############################',
              '############################',
              '############################'],
-
-    init: function () {
-        var img = resources.getImage('bg');
-        this.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
-        var g = this.bg.getContext('2d');
-        g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
-
-        // FIXME: should this be toggleable?
-        if (DEBUG) {
-            // gridlines
-            g.strokeStyle = 'white';
-            g.lineWidth = 0.25;
-            for (var row = 0; row < ROWS; row++) {
-                g.beginPath();
-                g.moveTo(0, row * TILE_SIZE);
-                g.lineTo(SCREEN_W, row * TILE_SIZE);
-                g.stroke();
-            }
-            for (var col = 0; col < COLS; col++) {
-                g.beginPath();
-                g.moveTo(col * TILE_SIZE, 0);
-                g.lineTo(col * TILE_SIZE, SCREEN_H);
-                g.stroke();
-            }
-
-            g.globalAlpha = 0.5;
-
-            // no-NORTH-turn zones
-            g.fillStyle = 'grey';
-            var nntzX = this.NNTZ_COL_MIN * TILE_SIZE;
-            var nntzW = (this.NNTZ_COL_MAX - this.NNTZ_COL_MIN + 1) * TILE_SIZE;
-            g.fillRect(nntzX, this.NNTZ_ROW_1 * TILE_SIZE,
-                       nntzW, TILE_SIZE);
-            g.fillRect(nntzX, this.NNTZ_ROW_2 * TILE_SIZE,
-                       nntzW, TILE_SIZE);
-
-            // ghost home tile
-            g.fillStyle = 'green';
-            g.fillRect(this.HOME_COL * TILE_SIZE, this.HOME_ROW * TILE_SIZE,
-                       TILE_SIZE, TILE_SIZE);
-        }
-    },
 
     reset: function () {
         this.dots = [];
@@ -246,8 +253,8 @@ var maze = {
     // check if tile falls within one of two zones in which ghosts are
     // prohibited from turning north
     northDisallowed: function (col, row) {
-        return (this.NNTZ_COL_MIN <= col && col <= this.NNTZ_COL_MAX) &&
-               (row === this.NNTZ_ROW_1 || row === this.NNTZ_ROW_2);
+        return (Maze.NNTZ_COL_MIN <= col && col <= Maze.NNTZ_COL_MAX) &&
+               (row === Maze.NNTZ_ROW_1 || row === Maze.NNTZ_ROW_2);
     },
 
     inTunnel: function (col, row) {
@@ -275,7 +282,7 @@ var maze = {
         --this.nDots;
         if (this.nDots === 74 || this.nDots === 174) {
             this.bonus = Bonus.forLevel(level);
-            this.bonus.centreAt(this.BONUS_X, this.BONUS_Y);
+            this.bonus.centreAt(Maze.BONUS_X, Maze.BONUS_Y);
             var secs = 9 + Math.random();
             debug('displaying bonus for %.3ns', secs);
             var self = this;
@@ -336,7 +343,7 @@ var maze = {
     draw: function (g) {
         this.invalidatedRegions.forEach(function (r) {
             var x = r.x, y = r.y, w = r.w, h = r.h;
-            g.drawImage(this.bg, x, y, w, h, x, y, w, h);
+            g.drawImage(Maze.bg, x, y, w, h, x, y, w, h);
         }, this);
         this.invalidatedRegions = [];
 
@@ -350,8 +357,4 @@ var maze = {
         }
     }
 };
-
-maze.HOME_TILE = { col: maze.HOME_COL, row: maze.HOME_ROW };
-maze.PACMAN_X = maze.BONUS_X = maze.HOME_COL * TILE_SIZE;
-maze.PACMAN_Y = maze.BONUS_Y = 26 * TILE_SIZE + TILE_CENTRE;
 

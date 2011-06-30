@@ -8,14 +8,11 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, window, alert, SCREEN_W, SCREEN_H, UPDATE_HZ, DEBUG,
-         TILE_SIZE, NORTH, SOUTH, EAST, WEST, invalidated: true, debug, format,
-         toTicks, all:true, lives:true, level:true, Ghost, maze, broadcast,
-         Energiser, Bonus, bonusDisplay, pacman, drawPacman, ghosts, events
-         loadResources, resources:true, EntityGroup, Entity, Delay */
-
-// FIXME
-all = new EntityGroup();
+/*global $, Bonus, DEBUG, Delay, EAST, Energiser, Entity, EntityGroup, Ghost,
+  NORTH, Pacman, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ, WEST, alert,
+  all:true, bonusDisplay, broadcast, debug, drawPacman, events, format, ghosts,
+  initialisers, level:true, lives:true, loadResources, maze, resources:true,
+  toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 
@@ -42,7 +39,8 @@ var scoreboard = new Entity({
         this.invalidate();
     }
 });
-scoreboard.dotEaten = scoreboard.energiserEaten = scoreboard.bonusEaten = scoreboard.objectEaten;
+scoreboard.dotEaten = scoreboard.energiserEaten = scoreboard.bonusEaten =
+    scoreboard.objectEaten;
 
 var stats = {
 
@@ -81,21 +79,29 @@ var stats = {
     }
 };
 
-all.add(maze, scoreboard, bonusDisplay, pacman, ghosts);
-if (DEBUG) {
-    all.add(stats);
-}
-
 function resetActors() {
-    pacman.reset();
+    all.set('pacman', new Pacman());
     ghosts.reset();
 }
 
 function levelUp() {
     ++level;
     debug('starting level %s', level);
+    all = new EntityGroup();
+    all.set({
+        'maze': maze,
+        'scoreboard': scoreboard,
+        'bonusDisplay': bonusDisplay,
+        'ghosts': ghosts
+    });
+    if (DEBUG) {
+        all.set('stats', stats);
+    }
+
+    // FIXME
     maze.reset();
     bonusDisplay.reset(level);
+
     resetActors();
 }
 
@@ -186,6 +192,8 @@ State = {
         events.update();
         broadcast('update');
 
+        var pacman = all.get('pacman');
+
         // collision check edibles
         var item = maze.itemAt(pacman.col, pacman.row);
         if (item) {
@@ -194,18 +202,17 @@ State = {
 
         // collision check ghosts
         // FIXME
-        ghosts.members.filter(function (g) {
+        ghosts.all().filter(function (g) {
             return !g.is(Ghost.STATE_DEAD) &&
                    g.col === pacman.col &&
                    g.row === pacman.row;
         }).forEach(function (g) {
             if (g.is(Ghost.STATE_FRIGHTENED)) {
-                var score = new InlineText(200, g.cx, g.cy);
-                all.add(score);
+                all.set('score', new InlineText(200, g.cx, g.cy));
                 pacman.setVisible(false);
                 g.setVisible(false);
                 wait(toTicks(0.5), function () {
-                    all.remove(score);
+                    all.remove('score');
                     g.kill();
                     pacman.setVisible(true);
                     g.setVisible(true);
@@ -229,6 +236,7 @@ State = {
     },
 
     DYING: function () {
+        var pacman = all.get('pacman');
         if (!pacman.dead) {
             // continue dying
             // FIXME: separate method on pacman?
@@ -300,9 +308,9 @@ function togglePause() {
     paused = !paused;
     resources.togglePause(paused);
     if (paused) {
-        all.add(pauseText);
+        all.set('pauseText', pauseText);
     } else {
-        all.remove(pauseText);
+        all.remove('pauseText');
     }
 }
 
@@ -369,7 +377,10 @@ $(function () {
         case keys.right:
         case keys.up:
         case keys.down:
-            pacman.turning = directions[k];
+            var pacman = all.get('pacman');
+            if (pacman) {
+                pacman.turning = directions[k];
+            }
             break;
         case keys.togglePause:
             togglePause();
@@ -389,9 +400,12 @@ $(function () {
     });
 
     $(window).keyup(function (e) {
-        var k = getKeyCode(e);
-        if (pacman.turning === directions[k]) {
-            pacman.turning = null;
+        var pacman = all.get('pacman');
+        if (pacman) {
+            var k = getKeyCode(e);
+            if (pacman.turning === directions[k]) {
+                pacman.turning = null;
+            }
         }
     });
 
@@ -421,7 +435,9 @@ $(function () {
         onComplete: function (resourceManager) {
             // TODO: fade indicator
             resources = resourceManager;
-            broadcast('init');
+            initialisers.forEach(function (f) {
+                f();
+            });
             newGame();
         },
 

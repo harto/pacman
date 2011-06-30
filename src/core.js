@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise: false */
-/*global $, console, noop, format, copy, values */
+/*global $, console, copy, format, keys, noop, values */
 
 var TILE_SIZE = 8,
     TILE_CENTRE = TILE_SIZE / 2,
@@ -249,25 +249,40 @@ Entity.prototype = {
 };
 
 function EntityGroup(props) {
-    this.members = [];
+    this.members = {};
     copy(props, this);
 }
 
 EntityGroup.prototype = {
 
-    add: function (/*entities...*/) {
-        this.members.push.apply(this.members, arguments);
+    get: function (id) {
+        return this.members[id];
+    },
+
+    set: function (/*entities...*/) {
+        if (arguments.length === 1) {
+            var m = arguments[0];
+            keys(m).forEach(function (k) {
+                this.set(k, m[k]);
+            }, this);
+        } else {
+            this.members[arguments[0]] = arguments[1];
+        }
     },
 
     remove: function (e) {
-        this.members.remove(e);
+        delete this.members[e];
+    },
+
+    all: function () {
+        return values(this.members);
     },
 
     // invoked named function on all members iff it exists
     notify: function (fName /*, args...*/) {
         var allArgs = Array.prototype.slice.call(arguments, 0);
         var fArgs = Array.prototype.slice.call(arguments, 1);
-        this.members.forEach(function (e) {
+        this.all().forEach(function (e) {
             var f = e[fName];
             if (f) {
                 f.apply(e, fArgs);
@@ -278,7 +293,12 @@ EntityGroup.prototype = {
     },
 
     toString: function () {
-        return 'EntityGroup [' + this.members.length + ']';
+        return 'EntityGroup [' + keys(this.members).length + ']';
     }
 };
 
+var initialisers = [];
+
+function enqueueInitialiser(f) {
+    initialisers.push(f);
+}

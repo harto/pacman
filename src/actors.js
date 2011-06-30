@@ -3,18 +3,21 @@
  */
 
 /*jslint bitwise: false */
-/*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
-         UPDATE_HZ, debug, distance, format, reverse, toCol, toDx, toDy, resources,
-         toTicks, toRow, toOrdinal, ScreenBuffer, SpriteMap, Entity, Dot,
-         Energiser, Bonus, maze, level, dotCounter: true, events, toSeconds */
+/*global Bonus, COLS, DEBUG, Dot, EAST, Energiser, Entity, EntityGroup, Maze,
+  NORTH, ROWS, SOUTH, ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE,
+  UPDATE_HZ, WEST, all, copy, debug, distance, dotCounter: true,
+  enqueueInitialiser, events, format, level, maze, resources, reverse, toCol,
+  toDx, toDy, toOrdinal, toRow, toSeconds, toTicks */
 
-function Actor() {}
+function Actor(props) {
+    copy(props, this);
+}
 
 Actor.prototype = new Entity();
 
 Actor.prototype.moveTo = function (x, y) {
-    var min = maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
-    var max = maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
+    var min = Maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
+    var max = Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
     x = x < min ? max : max < x ? min : x;
 
     Entity.prototype.moveTo.call(this, x, y);
@@ -74,11 +77,6 @@ Actor.exitingTile = function (direction, lx, ly) {
 
 /// pacman
 
-var pacman = new Actor();
-
-pacman.w = pacman.h = 1.5 * TILE_SIZE;
-pacman.animSteps = 12;
-
 function drawPacman(g, x, y, radius, fraction, startAngle) {
     g.save();
     g.beginPath();
@@ -93,11 +91,27 @@ function drawPacman(g, x, y, radius, fraction, startAngle) {
     g.restore();
 }
 
-pacman.init = function () {
-    // programmatically pre-render frames
-    var w = this.w, h = this.h,
+function Pacman() {
+    this.centreAt(Maze.PACMAN_X, Maze.PACMAN_Y);
+    this.direction = WEST;
+    this.frameIndex = 0;
+    this.animStepInc = 1;
+    this.speed = (level === 1 ? 0.8 :
+                  level < 5 || level > 20 ? 0.9 :
+                  1);
+}
+
+Pacman.WIDTH = Pacman.HEIGHT = 1.5 * TILE_SIZE;
+Pacman.ANIM_STEPS = 12;
+Pacman.MAX_ANIM_STEP = Math.floor(Pacman.ANIM_STEPS * 1 / 3);
+
+// programmatically pre-render frames
+enqueueInitialiser(function () {
+    var w = Pacman.WIDTH,
+        h = Pacman.HEIGHT,
+        // iterate through directions in increasing-degrees order
         directions = [EAST, SOUTH, WEST, NORTH],
-        steps = this.animSteps,
+        steps = Pacman.ANIM_STEPS,
         buf = new ScreenBuffer(w * steps, h * directions.length),
         g = buf.getContext('2d'),
         radius = w / 2,
@@ -111,99 +125,95 @@ pacman.init = function () {
                        (steps - col) / steps, startAngle);
         }
     }
-    this.sprites = new SpriteMap(buf, w, h);
-    this.maxAnimStep = Math.floor(this.animSteps * 1 / 3);
-};
+    Pacman.SPRITES = new SpriteMap(buf, w, h);
+});
 
-pacman.reset = function () {
-    this.dying = this.dead = this.waiting = false;
-    this.centreAt(maze.PACMAN_X, maze.PACMAN_Y);
-    this.direction = WEST;
-    this.frameIndex = 0;
-    this.animStepInc = 1;
-    this.speed = (level === 1 ? 0.8 :
-                  level < 5 || level > 20 ? 0.9 :
-                  1);
-};
+Pacman.prototype = new Actor({
 
-pacman.dotEaten = function (d) {
-    this.waiting = true;
-    var self = this;
-    events.delay(d.delay, function () {
-        self.waiting = false;
-    });
-};
-pacman.energiserEaten = pacman.dotEaten;
+    w: Pacman.WIDTH,
+    h: Pacman.HEIGHT,
 
-pacman.repaint = function (g) {
-    this.sprites.draw(g, this.x, this.y, this.frameIndex, toOrdinal(this.direction));
-};
+    dotEaten: function (d) {
+        this.waiting = true;
+        var self = this;
+        events.delay(d.delay, function () {
+            self.waiting = false;
+        });
+    },
 
-pacman.update = function () {
-    if (this.dying) {
-        // TODO: death sequence
-        this.dead = true;
-    } else {
-        if (this.waiting) {
-            return;
+    energiserEaten: function (e) {
+        this.dotEaten(e);
+    },
+
+    repaint: function (g) {
+        Pacman.SPRITES.draw(g, this.x, this.y, this.frameIndex, toOrdinal(this.direction));
+    },
+
+    update: function () {
+        if (this.dying) {
+            // TODO: death sequence
+            this.dead = true;
+        } else {
+            if (this.waiting) {
+                return;
+            }
+
+            var newDirection = this.turning || this.direction;
+            if (this.move(newDirection)) {
+                this.direction = newDirection;
+            } else if (this.direction !== newDirection) {
+                this.move(this.direction);
+            }
+        }
+    },
+
+    move: function (direction) {
+        var dx = 0,
+            dy = 0,
+            lx = this.lx,
+            ly = this.ly,
+            speed = this.speed;
+
+        // Move in the given direction iff before tile centrepoint or
+        // an adjacent tile lies beyond.
+        //
+        // FIXME: consider accumulated sub-pixel movement
+
+        dx = toDx(direction) * speed;
+        dy = toDy(direction) * speed;
+
+        if (Actor.exitingTile(direction, lx + dx, ly + dy) &&
+            !(direction & maze.exitsFrom(this.col, this.row))) {
+            return false;
         }
 
-        var newDirection = this.turning || this.direction;
-        if (this.move(newDirection)) {
-            this.direction = newDirection;
-        } else if (this.direction !== newDirection) {
-            this.move(this.direction);
+        // cornering
+        if (dx) {
+            dy = (ly > TILE_CENTRE ? -1 : ly < TILE_CENTRE ? 1 : 0) * speed;
+        } else if (dy) {
+            dx = (lx > TILE_CENTRE ? -1 : lx < TILE_CENTRE ? 1 : 0) * speed;
         }
+
+        this.moveBy(dx, dy);
+        // update animation cycle
+        this.frameIndex += this.animStepInc;
+        if (this.frameIndex === 0 || this.frameIndex === Pacman.MAX_ANIM_STEP) {
+            this.animStepInc *= -1;
+        }
+        return true;
+    },
+
+    kill: function () {
+        if (!this.dead) {
+            debug('%s: dying', this);
+            this.dying = true;
+        }
+    },
+
+    toString: function () {
+        return 'pacman';
     }
-};
-
-pacman.move = function (direction) {
-    var dx = 0,
-        dy = 0,
-        lx = this.lx,
-        ly = this.ly,
-        speed = this.speed;
-
-    // Move in the given direction iff before tile centrepoint or
-    // an adjacent tile lies beyond.
-    //
-    // FIXME: consider accumulated sub-pixel movement
-
-    dx = toDx(direction) * speed;
-    dy = toDy(direction) * speed;
-
-    if (Actor.exitingTile(direction, lx + dx, ly + dy) &&
-        !(direction & maze.exitsFrom(this.col, this.row))) {
-        return false;
-    }
-
-    // cornering
-    if (dx) {
-        dy = (ly > TILE_CENTRE ? -1 : ly < TILE_CENTRE ? 1 : 0) * speed;
-    } else if (dy) {
-        dx = (lx > TILE_CENTRE ? -1 : lx < TILE_CENTRE ? 1 : 0) * speed;
-    }
-
-    this.moveBy(dx, dy);
-    // update animation cycle
-    this.frameIndex += this.animStepInc;
-    if (this.frameIndex === 0 || this.frameIndex === this.maxAnimStep) {
-        this.animStepInc *= -1;
-    }
-    return true;
-};
-
-pacman.kill = function () {
-    if (!this.dead) {
-        debug('%s: dying', this);
-        this.dying = true;
-    }
-};
-
-pacman.toString = function () {
-    return 'pacman';
-};
-
+});
 
 /// ghosts
 
@@ -258,17 +268,15 @@ Ghost.prototype.is = function (state) {
 Ghost.ANIM_FREQ = UPDATE_HZ / 4;
 
 Ghost.prototype.repaint = function (g) {
-    g.save();
-
     var sprites =
-            this.is(Ghost.STATE_DEAD) ? this.sprites.dead :
-            this.is(Ghost.STATE_FRIGHTENED) ? (this.flashing ? this.sprites.flashing :
-                                               this.sprites.frightened) :
-            this.sprites.normal,
+            this.is(Ghost.STATE_DEAD) ? Ghost.SPRITES.dead :
+            this.is(Ghost.STATE_FRIGHTENED) ? (this.flashing ? Ghost.SPRITES.flashing :
+                                               Ghost.SPRITES.frightened) :
+            Ghost.SPRITES[this.name],
         spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % sprites.cols,
         spriteRow = toOrdinal(this.direction);
+    g.save();
     sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
-
     g.restore();
 };
 
@@ -280,8 +288,8 @@ Ghost.prototype.release = function () {
 };
 
 Ghost.prototype.calcExitPath = function () {
-    var x = maze.HOME_COL * TILE_SIZE;
-    var y = maze.HOME_ROW * TILE_SIZE + TILE_CENTRE;
+    var x = Maze.HOME_COL * TILE_SIZE;
+    var y = Maze.HOME_ROW * TILE_SIZE + TILE_CENTRE;
     return [{ x: x, y: y + 3 * TILE_SIZE }, { x: x, y: y }];
 };
 
@@ -324,14 +332,14 @@ Ghost.prototype.update = function () {
         }
         return;
     } else if (this.is(Ghost.STATE_DEAD) &&
-               this.row === maze.HOME_ROW &&
-               Math.abs(this.cx - maze.HOME_COL * TILE_SIZE) < speed) {
+               this.row === Maze.HOME_ROW &&
+               Math.abs(this.cx - Maze.HOME_COL * TILE_SIZE) < speed) {
         debug('%s: entering house', this);
         this.unset(Ghost.STATE_DEAD);
         this.set(Ghost.STATE_ENTERING);
         var entryPath = this.calcExitPath();
         entryPath.reverse();
-        if (toRow(this.startCy) !== maze.HOME_ROW) {
+        if (toRow(this.startCy) !== Maze.HOME_ROW) {
             // return ghosts to start point within house
             entryPath.push({ x: this.startCx, y: this.startCy });
         }
@@ -363,8 +371,8 @@ Ghost.prototype.setNextDirection = function (nextDirection) {
         this.is(Ghost.STATE_EXITING)) {
         // Set the direction to be taken when ghost gets outside the house.
         this.direction = this.currTileDirection = nextDirection;
-        this.nextTileDirection = this.calcNextDirection(maze.HOME_COL,
-                                                        maze.HOME_ROW,
+        this.nextTileDirection = this.calcNextDirection(Maze.HOME_COL,
+                                                        Maze.HOME_ROW,
                                                         nextDirection);
     } else if (Actor.exitingTile(this.direction, this.lx, this.ly)) {
         // wait until next tile
@@ -405,7 +413,7 @@ Ghost.prototype.calcNextDirection = function (col, row, entryDirection) {
             i = (i + 1) % directions.length;
         }
     } else {
-        var target = this.is(Ghost.STATE_DEAD) ? maze.HOME_TILE :
+        var target = this.is(Ghost.STATE_DEAD) ? Maze.HOME_TILE :
                      this.is(Ghost.STATE_SCATTERING) ? this.scatterTile :
                      this.calcTarget();
 
@@ -442,24 +450,26 @@ Ghost.prototype.kill = function () {
 /// blinky
 
 var blinky = new Ghost('blinky',
-                       maze.HOME_COL, maze.HOME_ROW,
+                       Maze.HOME_COL, Maze.HOME_ROW,
                        COLS - 3, 0);
 // FIXME
 blinky.colour = 'red';
 blinky.calcTarget = function () {
     // target pacman directly
+    var pacman = all.get('pacman');
     return { col: pacman.col, row: pacman.row };
 };
 
 /// pinky
 
 var pinky = new Ghost('pinky',
-                      maze.HOME_COL, maze.HOME_ROW + 3,
+                      Maze.HOME_COL, Maze.HOME_ROW + 3,
                       2, 0);
 // FIXME
 pinky.colour = 'pink';
 pinky.calcTarget = function () {
     // target 4 tiles ahead of pacman's current direction
+    var pacman = all.get('pacman');
     return { col: pacman.col + toDx(pacman.direction) * 4,
              row: pacman.row + toDy(pacman.direction) * 4 };
 };
@@ -467,13 +477,14 @@ pinky.calcTarget = function () {
 /// inky
 
 var inky = new Ghost('inky',
-                     maze.HOME_COL - 2, maze.HOME_ROW + 3,
+                     Maze.HOME_COL - 2, Maze.HOME_ROW + 3,
                      COLS - 1, ROWS - 2);
 // FIXME
 inky.colour = 'cyan';
 inky.calcTarget = function () {
     // target tile at vector extending from blinky with midpoint 2 tiles
     // ahead of pacman
+    var pacman = all.get('pacman');
     var cx = pacman.col + toDx(pacman.direction) * 2;
     var cy = pacman.row + toDy(pacman.direction) * 2;
     return { col: cx + cx - blinky.col,
@@ -486,15 +497,16 @@ inky.resetDotCounter = function () {
 /// clyde
 
 var clyde = new Ghost('clyde',
-                      maze.HOME_COL + 2, maze.HOME_ROW + 3,
+                      Maze.HOME_COL + 2, Maze.HOME_ROW + 3,
                       0, ROWS - 2);
 // FIXME
 clyde.colour = 'orange';
 clyde.calcTarget = function () {
     // target pacman directly when further than 8 tiles from him, otherwise
     // target scatter mode tile
-    var pCol = pacman.col;
-    var pRow = pacman.row;
+    var pacman = all.get('pacman'),
+        pCol = pacman.col,
+        pRow = pacman.row;
     return distance(pCol, pRow, this.col, this.row) > 8 ?
               { col: pCol, row: pRow } :
               this.scatterTile;
@@ -505,22 +517,17 @@ clyde.resetDotCounter = function () {
 
 /// aggregate functions
 
-var ghosts = new EntityGroup({
+enqueueInitialiser(function () {
+    Ghost.SPRITES = {};
+    var w = Ghost.prototype.w,
+        h = Ghost.prototype.h,
+        ids = ['blinky', 'pinky', 'inky', 'clyde', 'frightened', 'flashing', 'dead'];
+    ids.forEach(function (id) {
+        Ghost.SPRITES[id] = new SpriteMap(resources.getImage(id), w, h);
+    });
+});
 
-    init: function () {
-        var w = Ghost.prototype.w, h = Ghost.prototype.h,
-            frightened = new SpriteMap(resources.getImage('frightened'), w, h),
-            flashing = new SpriteMap(resources.getImage('flashing'), w, h),
-            dead = new SpriteMap(resources.getImage('dead'), w, h);
-        this.members.forEach(function (g) {
-            g.sprites = {
-                normal: new SpriteMap(resources.getImage(g.name), w, h),
-                frightened: frightened,
-                flashing: flashing,
-                dead: dead
-            };
-        });
-    },
+var ghosts = new EntityGroup({
 
     // Ghosts are individually released from the house according to the number of
     // dots eaten by Pac-Man and the time since a dot was last eaten.
@@ -542,7 +549,7 @@ var ghosts = new EntityGroup({
     // released.
 
     reset: function () {
-        this.members.forEach(function (g) {
+        this.all().forEach(function (g) {
             g.nTicks = 0;
             g.state = 0;
             g.set(Ghost.STATE_INSIDE);
@@ -579,7 +586,7 @@ var ghosts = new EntityGroup({
                 newState = Ghost.STATE_SCATTERING;
                 oldState = Ghost.STATE_CHASING;
             }
-            self.members.forEach(function (g) {
+            self.all().forEach(function (g) {
                 g.unset(oldState);
                 g.set(newState);
             });
@@ -654,7 +661,7 @@ var ghosts = new EntityGroup({
     FRIGHT_FLASHES: [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3],
 
     reverseAll: function () {
-        this.members.filter(function (g) {
+        this.all().filter(function (g) {
             return !g.is(Ghost.STATE_DEAD);
         }).forEach(function (g) {
             g.setNextDirection(reverse(g.direction));
@@ -679,7 +686,7 @@ var ghosts = new EntityGroup({
             flashStart = frightTicks - (flashes + 1) * flashDuration,
             self = this;
 
-        this.members.forEach(function (g) {
+        this.all().forEach(function (g) {
             g.set(Ghost.STATE_FRIGHTENED);
             // ensure stationary ghosts are redrawn
             // FIXME: might be unnecessary
@@ -694,11 +701,16 @@ var ghosts = new EntityGroup({
 
         events.delay(frightTicks, function () {
             self.scatterChaseTimer.resume();
-            self.members.forEach(function (g) {
+            self.all().forEach(function (g) {
                 g.unset(Ghost.STATE_FRIGHTENED);
             });
         });
     }
 });
 
-ghosts.add(blinky, inky, pinky, clyde);
+ghosts.set({
+    'blinky': blinky,
+    'inky': inky,
+    'pinky': pinky,
+    'clyde': clyde
+});
