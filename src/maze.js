@@ -5,7 +5,7 @@
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, SCREEN_W, SCREEN_H, DEBUG,
          NORTH, SOUTH, EAST, WEST, ScreenBuffer, Entity, toCol, toRow, toTicks,
-         debug, level, events */
+         debug, level, events, resources */
 
 /// edibles
 
@@ -155,11 +155,8 @@ var maze = {
              '############################',
              '############################'],
 
-    init: function (resources) {
-        this.initBg(resources.bg);
-    },
-
-    initBg: function (img) {
+    init: function () {
+        var img = resources.getImage('bg');
         this.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
         var g = this.bg.getContext('2d');
         g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);

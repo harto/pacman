@@ -23,6 +23,9 @@ var TILE_SIZE = 8,
     EAST =  1 << 2,
     WEST =  1 << 3,
 
+    // resource manager
+    resources,
+
     lives,
     level;
 
@@ -121,38 +124,6 @@ function SpriteMap(img, fw, fh) {
 SpriteMap.prototype.draw = function (g, x, y, col, row) {
     var w = this.fw, h = this.fh;
     g.drawImage(this.img, col * w, row * h, w, h, x, y, w, h);
-};
-
-/// sounds
-
-var soundManager = {
-
-    sounds: {},
-    playing: [],
-
-    init: function (sounds) {
-        copy(sounds, this.sounds);
-    },
-
-    play: function (id) {
-        var sound = this.sounds[id];
-        var playing = this.playing;
-        playing.push(sound);
-        $(sound).bind('ended', function () {
-            playing.remove(sound);
-        });
-        sound.play();
-    },
-
-    togglePause: function (paused) {
-        this.playing.forEach(function (sound) {
-            if (paused) {
-                sound.pause();
-            } else {
-                sound.play();
-            }
-        });
-    }
 };
 
 /// event management

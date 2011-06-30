@@ -41,7 +41,7 @@ function noop() {}
 
 function bind(o, f) {
     return function (/*...*/) {
-        f.call(o, arguments);
+        f.apply(o, arguments);
     };
 }
 

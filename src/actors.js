@@ -4,7 +4,7 @@
 
 /*jslint bitwise: false */
 /*global TILE_SIZE, TILE_CENTRE, ROWS, COLS, DEBUG, NORTH, SOUTH, EAST, WEST,
-         UPDATE_HZ, debug, distance, format, reverse, toCol, toDx, toDy,
+         UPDATE_HZ, debug, distance, format, reverse, toCol, toDx, toDy, resources,
          toTicks, toRow, toOrdinal, ScreenBuffer, SpriteMap, Entity, Dot,
          Energiser, Bonus, maze, level, dotCounter: true, events, toSeconds */
 
@@ -510,14 +510,14 @@ var ghosts = {
 
     all: [blinky, inky, pinky, clyde],
 
-    init: function (resources) {
+    init: function () {
         var w = Ghost.prototype.w, h = Ghost.prototype.h,
-            frightened = new SpriteMap(resources.frightened, w, h),
-            flashing = new SpriteMap(resources.flashing, w, h),
-            dead = new SpriteMap(resources.dead, w, h);
+            frightened = new SpriteMap(resources.getImage('frightened'), w, h),
+            flashing = new SpriteMap(resources.getImage('flashing'), w, h),
+            dead = new SpriteMap(resources.getImage('dead'), w, h);
         this.all.forEach(function (g) {
             g.sprites = {
-                normal: new SpriteMap(resources[g.name], w, h),
+                normal: new SpriteMap(resources.getImage(g.name), w, h),
                 frightened: frightened,
                 flashing: flashing,
                 dead: dead

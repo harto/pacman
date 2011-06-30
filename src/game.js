@@ -284,7 +284,7 @@ function newGame() {
     paused = false;
 
     levelUp();
-    soundManager.play('intro');
+    resources.playSound('intro');
     wait(toTicks(4), function () {
         enterState(State.RUNNING);
     });
@@ -295,7 +295,7 @@ var pauseText = new InfoText('Paused');
 
 function togglePause() {
     paused = !paused;
-    soundManager.togglePause(paused);
+    resources.togglePause(paused);
     if (paused) {
         entityManager.register(pauseText);
     } else {
@@ -392,12 +392,12 @@ $(function () {
         }
     });
 
-    var loader = new Loader('res');
-    loader.enqueueImages('bg', 'blinky', 'pinky', 'inky', 'clyde',
-                         'frightened', 'flashing', 'dead');
-    loader.enqueueSounds('intro');
-    loader.load({
-        update: function (completed) {
+    loadResources({
+        base: 'res',
+        images: ['bg', 'blinky', 'pinky', 'inky', 'clyde', 'frightened', 'flashing', 'dead'],
+        sounds: ['intro'],
+
+        onUpdate: function (completed) {
             var g = ctx;
             g.save();
             g.fillStyle = 'black';
@@ -414,13 +414,15 @@ $(function () {
             drawPacman(g, ox, oy, SCREEN_W / 8, completed);
             g.restore();
         },
-        complete: function (resources) {
+
+        onComplete: function (resourceManager) {
             // TODO: fade indicator
-            events.broadcast('init', resources.images);
-            soundManager.init(resources.sounds);
+            resources = resourceManager;
+            events.broadcast('init');
             newGame();
         },
-        error: function (msg) {
+
+        onError: function (msg) {
             alert(msg);
             throw new Error(msg);
         }
