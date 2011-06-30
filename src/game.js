@@ -11,7 +11,7 @@
 /*global $, Bonus, DEBUG, Delay, EAST, Energiser, Entity, EntityGroup, Ghost,
   NORTH, Pacman, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ, WEST, alert,
   all:true, bonusDisplay, broadcast, debug, drawPacman, events, format, ghosts,
-  initialisers, level:true, lives:true, loadResources, maze, resources:true,
+  initialisers, level:true, lives:true, loadResources, Maze, resources:true,
   toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
@@ -82,6 +82,7 @@ var stats = {
 function resetActors() {
     all.set('pacman', new Pacman());
     ghosts.reset();
+    broadcast('invalidateRegion', 0, 0, SCREEN_W, SCREEN_H);
 }
 
 function levelUp() {
@@ -89,7 +90,7 @@ function levelUp() {
     debug('starting level %s', level);
     all = new EntityGroup();
     all.set({
-        'maze': maze,
+        'maze': new Maze(),
         'scoreboard': scoreboard,
         'bonusDisplay': bonusDisplay,
         'ghosts': ghosts
@@ -99,7 +100,6 @@ function levelUp() {
     }
 
     // FIXME
-    maze.reset();
     bonusDisplay.reset(level);
 
     resetActors();
@@ -192,7 +192,8 @@ State = {
         events.update();
         broadcast('update');
 
-        var pacman = all.get('pacman');
+        var pacman = all.get('pacman'),
+            maze = all.get('maze');
 
         // collision check edibles
         var item = maze.itemAt(pacman.col, pacman.row);

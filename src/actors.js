@@ -6,8 +6,8 @@
 /*global Bonus, COLS, DEBUG, Dot, EAST, Energiser, Entity, EntityGroup, Maze,
   NORTH, ROWS, SOUTH, ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE,
   UPDATE_HZ, WEST, all, copy, debug, distance, dotCounter: true,
-  enqueueInitialiser, events, format, level, maze, resources, reverse, toCol,
-  toDx, toDy, toOrdinal, toRow, toSeconds, toTicks */
+  enqueueInitialiser, events, format, level, resources, reverse, toCol, toDx,
+  toDy, toOrdinal, toRow, toSeconds, toTicks */
 
 function Actor(props) {
     copy(props, this);
@@ -183,7 +183,7 @@ Pacman.prototype = new Actor({
         dy = toDy(direction) * speed;
 
         if (Actor.exitingTile(direction, lx + dx, ly + dy) &&
-            !(direction & maze.exitsFrom(this.col, this.row))) {
+            !(direction & all.get('maze').exitsFrom(this.col, this.row))) {
             return false;
         }
 
@@ -295,12 +295,14 @@ Ghost.prototype.calcExitPath = function () {
 
 Ghost.prototype.calcSpeed = function () {
     return this.is(Ghost.STATE_DEAD) || this.is(Ghost.STATE_ENTERING) ? 2 :
-           maze.inTunnel(this.col, this.row) ? (level === 1 ? 0.4 :
-                                                2 <= level && level <= 4 ? 0.45 :
-                                                0.5) :
-           this.is(Ghost.STATE_FRIGHTENED) ? (level === 1 ? 0.5 :
-                                              2 <= level && level <= 4 ? 0.55 :
-                                              0.6) :
+           all.get('maze').inTunnel(this.col, this.row) ?
+               (level === 1 ? 0.4 :
+                2 <= level && level <= 4 ? 0.45 :
+                0.5) :
+           this.is(Ghost.STATE_FRIGHTENED) ?
+               (level === 1 ? 0.5 :
+                2 <= level && level <= 4 ? 0.55 :
+                0.6) :
            (level === 1 ? 0.75 :
             2 <= level && level <= 4 ? 0.85 :
             0.95);
@@ -387,6 +389,7 @@ Ghost.prototype.setNextDirection = function (nextDirection) {
 
 // calculates direction to exit a tile
 Ghost.prototype.calcNextDirection = function (col, row, entryDirection) {
+    var maze = all.get('maze');
     var exits = maze.exitsFrom(col, row);
     // exclude illegal moves
     exits &= ~reverse(entryDirection);

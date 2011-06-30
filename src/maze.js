@@ -103,138 +103,90 @@ bonusDisplay.repaint = function (g) {
 
 /// maze
 
-// FIXME
-var Maze = {
-    // house entry/exit tile
-    HOME_COL: 14,
-    HOME_ROW: 14,
+function Maze() {
+    this.dots = [];
+    this.nDots = 0;
+    this.energisers = [];
+    var layout = Maze.LAYOUT;
+    for (var row = 0; row < layout.length; row++) {
+        this.dots[row] = [];
+        for (var col = 0; col < layout[row].length; col++) {
+            var c = layout[row][col];
+            if (c !== '.' && c !== 'o') {
+                continue;
+            }
+            var dot;
+            if (c === '.') {
+                dot = new Dot(col, row);
+            } else if (c === 'o') {
+                dot = new Energiser(col, row);
+                this.energisers.push(dot);
+            }
+            this.dots[row][col] = dot;
+            ++this.nDots;
+        }
+    }
+}
 
-    // no NORTH-turn zones
-    NNTZ_COL_MIN: 12,
-    NNTZ_COL_MAX: 15,
-    NNTZ_ROW_1: 14,
-    NNTZ_ROW_2: 26,
-
-    TUNNEL_WEST_EXIT_COL: -2,
-    TUNNEL_EAST_EXIT_COL: COLS + 1
-};
+// house entry/exit tile
+Maze.HOME_COL = 14;
+Maze.HOME_ROW = 14;
 Maze.HOME_TILE = { col: Maze.HOME_COL, row: Maze.HOME_ROW };
+
+// no-north-turn zones
+Maze.NNTZ_COL_MIN = 12;
+Maze.NNTZ_COL_MAX = 15;
+Maze.NNTZ_ROW_1 = 14;
+Maze.NNTZ_ROW_2 = 26;
+
+Maze.TUNNEL_WEST_EXIT_COL = -2;
+Maze.TUNNEL_EAST_EXIT_COL = COLS + 1;
+
 Maze.PACMAN_X = Maze.BONUS_X = Maze.HOME_COL * TILE_SIZE;
 Maze.PACMAN_Y = Maze.BONUS_Y = 26 * TILE_SIZE + TILE_CENTRE;
 
-enqueueInitialiser(function () {
-    var img = resources.getImage('bg');
-    Maze.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
-    var g = Maze.bg.getContext('2d');
-    g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
+// collision map including dots and energisers
+Maze.LAYOUT = ['############################',
+               '############################',
+               '############################',
+               '############################',
+               '#............##............#',
+               '#.####.#####.##.#####.####.#',
+               '#o####.#####.##.#####.####o#',
+               '#.####.#####.##.#####.####.#',
+               '#..........................#',
+               '#.####.##.########.##.####.#',
+               '#.####.##.########.##.####.#',
+               '#......##....##....##......#',
+               '######.##### ## #####.######',
+               '######.##### ## #####.######',
+               '######.##          ##.######',
+               '######.## ######## ##.######',
+               '######.## ######## ##.######',
+               '      .   ########   .      ',
+               '######.## ######## ##.######',
+               '######.## ######## ##.######',
+               '######.##          ##.######',
+               '######.## ######## ##.######',
+               '######.## ######## ##.######',
+               '#............##............#',
+               '#.####.#####.##.#####.####.#',
+               '#.####.#####.##.#####.####.#',
+               '#o..##.......  .......##..o#',
+               '###.##.##.########.##.##.###',
+               '###.##.##.########.##.##.###',
+               '#......##....##....##......#',
+               '#.##########.##.##########.#',
+               '#.##########.##.##########.#',
+               '#..........................#',
+               '############################',
+               '############################',
+               '############################'];
 
-    // FIXME: should this be toggleable?
-    if (DEBUG) {
-        // gridlines
-        g.strokeStyle = 'white';
-        g.lineWidth = 0.25;
-        for (var row = 0; row < ROWS; row++) {
-            g.beginPath();
-            g.moveTo(0, row * TILE_SIZE);
-            g.lineTo(SCREEN_W, row * TILE_SIZE);
-            g.stroke();
-        }
-        for (var col = 0; col < COLS; col++) {
-            g.beginPath();
-            g.moveTo(col * TILE_SIZE, 0);
-            g.lineTo(col * TILE_SIZE, SCREEN_H);
-            g.stroke();
-        }
-
-        g.globalAlpha = 0.5;
-
-        // no-NORTH-turn zones
-        g.fillStyle = 'grey';
-        var nntzX = Maze.NNTZ_COL_MIN * TILE_SIZE;
-        var nntzW = (Maze.NNTZ_COL_MAX - Maze.NNTZ_COL_MIN + 1) * TILE_SIZE;
-        g.fillRect(nntzX, Maze.NNTZ_ROW_1 * TILE_SIZE,
-                   nntzW, TILE_SIZE);
-        g.fillRect(nntzX, Maze.NNTZ_ROW_2 * TILE_SIZE,
-                   nntzW, TILE_SIZE);
-
-        // ghost home tile
-        g.fillStyle = 'green';
-        g.fillRect(Maze.HOME_COL * TILE_SIZE, Maze.HOME_ROW * TILE_SIZE,
-                   TILE_SIZE, TILE_SIZE);
-    }
-});
-
-var maze = {
-
-    // collision map including dots and energisers
-    layout: ['############################',
-             '############################',
-             '############################',
-             '############################',
-             '#............##............#',
-             '#.####.#####.##.#####.####.#',
-             '#o####.#####.##.#####.####o#',
-             '#.####.#####.##.#####.####.#',
-             '#..........................#',
-             '#.####.##.########.##.####.#',
-             '#.####.##.########.##.####.#',
-             '#......##....##....##......#',
-             '######.##### ## #####.######',
-             '######.##### ## #####.######',
-             '######.##          ##.######',
-             '######.## ######## ##.######',
-             '######.## ######## ##.######',
-             '      .   ########   .      ',
-             '######.## ######## ##.######',
-             '######.## ######## ##.######',
-             '######.##          ##.######',
-             '######.## ######## ##.######',
-             '######.## ######## ##.######',
-             '#............##............#',
-             '#.####.#####.##.#####.####.#',
-             '#.####.#####.##.#####.####.#',
-             '#o..##.......  .......##..o#',
-             '###.##.##.########.##.##.###',
-             '###.##.##.########.##.##.###',
-             '#......##....##....##......#',
-             '#.##########.##.##########.#',
-             '#.##########.##.##########.#',
-             '#..........................#',
-             '############################',
-             '############################',
-             '############################'],
-
-    reset: function () {
-        this.dots = [];
-        this.nDots = 0;
-        this.energisers = [];
-        for (var row = 0; row < this.layout.length; row++) {
-            this.dots[row] = [];
-            for (var col = 0; col < this.layout[row].length; col++) {
-                var c = this.layout[row][col];
-                if (c !== '.' && c !== 'o') {
-                    continue;
-                }
-                var dot;
-                if (c === '.') {
-                    dot = new Dot(col, row);
-                } else if (c === 'o') {
-                    dot = new Energiser(col, row);
-                    this.energisers.push(dot);
-                }
-                this.dots[row][col] = dot;
-                ++this.nDots;
-            }
-        }
-        if (this.bonus) {
-            this.removeBonus();
-            events.cancel(this.bonusTimeout);
-        }
-        this.invalidate();
-    },
+Maze.prototype = {
 
     enterable: function (col, row) {
-        return this.layout[row][col] !== '#';
+        return Maze.LAYOUT[row][col] !== '#';
     },
 
     // Return a number that is the bitwise-OR of directions in which an actor
@@ -304,11 +256,6 @@ var maze = {
         this.removeBonus();
     },
 
-    invalidate: function () {
-        // redraw everything
-        this.invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
-    },
-
     invalidatedRegions: [],
     invalidatedDots: [],
 
@@ -358,3 +305,44 @@ var maze = {
     }
 };
 
+enqueueInitialiser(function () {
+    var img = resources.getImage('bg');
+    Maze.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
+    var g = Maze.bg.getContext('2d');
+    g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
+
+    // FIXME: should this be toggleable?
+    if (DEBUG) {
+        // gridlines
+        g.strokeStyle = 'white';
+        g.lineWidth = 0.25;
+        for (var row = 0; row < ROWS; row++) {
+            g.beginPath();
+            g.moveTo(0, row * TILE_SIZE);
+            g.lineTo(SCREEN_W, row * TILE_SIZE);
+            g.stroke();
+        }
+        for (var col = 0; col < COLS; col++) {
+            g.beginPath();
+            g.moveTo(col * TILE_SIZE, 0);
+            g.lineTo(col * TILE_SIZE, SCREEN_H);
+            g.stroke();
+        }
+
+        g.globalAlpha = 0.5;
+
+        // no-NORTH-turn zones
+        g.fillStyle = 'grey';
+        var nntzX = Maze.NNTZ_COL_MIN * TILE_SIZE;
+        var nntzW = (Maze.NNTZ_COL_MAX - Maze.NNTZ_COL_MIN + 1) * TILE_SIZE;
+        g.fillRect(nntzX, Maze.NNTZ_ROW_1 * TILE_SIZE,
+                   nntzW, TILE_SIZE);
+        g.fillRect(nntzX, Maze.NNTZ_ROW_2 * TILE_SIZE,
+                   nntzW, TILE_SIZE);
+
+        // ghost home tile
+        g.fillStyle = 'green';
+        g.fillRect(Maze.HOME_COL * TILE_SIZE, Maze.HOME_ROW * TILE_SIZE,
+                   TILE_SIZE, TILE_SIZE);
+    }
+});
