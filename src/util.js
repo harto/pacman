@@ -91,7 +91,7 @@ Array.prototype.remove = function (o) {
     if (i !== -1) {
         this.splice(i, 1);
     }
-}
+};
 
 // return first element matching pred in linear time
 Array.prototype.first = function (pred) {
@@ -101,4 +101,4 @@ Array.prototype.first = function (pred) {
             return x;
         }
     }
-}
+};
