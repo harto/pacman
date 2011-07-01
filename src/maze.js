@@ -3,9 +3,9 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, DEBUG, EAST, Entity, NORTH, ROWS, SCREEN_H, SCREEN_W, SOUTH,
-  ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser,
-  events, level, resources, toCol, toRow, toTicks */
+/*global COLS, DEBUG, EAST, Entity, EntityGroup, NORTH, ROWS, SCREEN_H,
+  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug,
+  enqueueInitialiser, events, level, resources, toCol, toRow, toTicks */
 
 /// edibles
 
@@ -77,29 +77,20 @@ Bonus.forLevel = function (level) {
            new Bonus('key', 5000);
 };
 
-var bonusDisplay = new Entity();
-bonusDisplay.MAX_DISPLAY = 6;
-bonusDisplay.w = bonusDisplay.MAX_DISPLAY * TILE_SIZE * 2;
-bonusDisplay.h = TILE_SIZE * 2;
-bonusDisplay.x = SCREEN_W - bonusDisplay.w - 2 * TILE_SIZE;
-bonusDisplay.y = SCREEN_H - bonusDisplay.h;
-bonusDisplay.reset = function (level) {
-    // display bonus for current and previous 5(?) levels
-    var x2 = this.x + this.w;
-    var y = this.y + TILE_SIZE;
-    this.bonuses = [];
-    var end = Math.max(1, level - this.MAX_DISPLAY + 1);
-    for (var l = level; l >= end; l--) {
-        var b = Bonus.forLevel(l);
-        this.bonuses.push(b);
-        b.centreAt(x2 - TILE_SIZE - (level - l) * 2 * TILE_SIZE, y);
+function BonusDisplay(level) {
+    // display bonus for current and previous 5 levels, drawing right-to-left
+    var cx = SCREEN_W - 3 * TILE_SIZE;
+    var cy = SCREEN_H - TILE_SIZE;
+    var minLevel = Math.max(1, level - BonusDisplay.MAX_DISPLAY + 1);
+    for (var L = level; L >= minLevel; L--) {
+        var b = Bonus.forLevel(L);
+        b.centreAt(cx - (level - L) * 2 * TILE_SIZE, cy);
+        this.add(b);
     }
-};
-bonusDisplay.repaint = function (g) {
-    this.bonuses.forEach(function (b) {
-        b.repaint(g);
-    });
-};
+}
+
+BonusDisplay.MAX_DISPLAY = 6;
+BonusDisplay.prototype = new EntityGroup();
 
 /// maze
 

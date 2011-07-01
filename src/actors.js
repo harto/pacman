@@ -711,7 +711,7 @@ var ghosts = new EntityGroup({
     }
 });
 
-ghosts.set({
+ghosts.setAll({
     'blinky': blinky,
     'inky': inky,
     'pinky': pinky,

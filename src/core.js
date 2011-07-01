@@ -250,6 +250,7 @@ Entity.prototype = {
 
 function EntityGroup(props) {
     this.members = {};
+    this.nextId = 0;
     copy(props, this);
 }
 
@@ -259,19 +260,25 @@ EntityGroup.prototype = {
         return this.members[id];
     },
 
-    set: function (/*entities...*/) {
-        if (arguments.length === 1) {
-            var m = arguments[0];
-            keys(m).forEach(function (k) {
-                this.set(k, m[k]);
-            }, this);
-        } else {
-            this.members[arguments[0]] = arguments[1];
-        }
+    // add a named group member
+    set: function (id, o) {
+        this.members[id] = o;
     },
 
-    remove: function (e) {
-        delete this.members[e];
+    // add all ID-object pairs in map
+    setAll: function (m) {
+        copy(m, this.members);
+    },
+
+    // add a group member and return an auto-generated ID
+    add: function (o) {
+        var id = this.nextId++;
+        this.set(id, o);
+        return id;
+    },
+
+    remove: function (id) {
+        delete this.members[id];
     },
 
     all: function () {

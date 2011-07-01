@@ -8,11 +8,11 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, Bonus, DEBUG, Delay, EAST, Energiser, Entity, EntityGroup, Ghost,
-  NORTH, Pacman, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ, WEST, alert,
-  all:true, bonusDisplay, broadcast, debug, drawPacman, events, format, ghosts,
-  initialisers, level:true, lives:true, loadResources, Maze, resources:true,
-  toTicks, window */
+/*global $, Bonus, BonusDisplay, DEBUG, Delay, EAST, Energiser, Entity,
+  EntityGroup, Ghost, Maze, NORTH, Pacman, SCREEN_H, SCREEN_W, SOUTH,
+  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman,
+  events, format, ghosts, initialisers, level:true, lives:true, loadResources,
+  resources:true, toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 
@@ -89,18 +89,15 @@ function levelUp() {
     ++level;
     debug('starting level %s', level);
     all = new EntityGroup();
-    all.set({
+    all.setAll({
         'maze': new Maze(),
         'scoreboard': scoreboard,
-        'bonusDisplay': bonusDisplay,
+        'bonusDisplay': new BonusDisplay(level),
         'ghosts': ghosts
     });
     if (DEBUG) {
         all.set('stats', stats);
     }
-
-    // FIXME
-    bonusDisplay.reset(level);
 
     resetActors();
 }
