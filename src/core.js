@@ -136,10 +136,12 @@ Delay.prototype = {
     }
 };
 
-var events = {
+function EventManager() {
+    this.delays = {};
+    this.nextDelayId = 0;
+}
 
-    delays: {},
-    nextDelayId: 0,
+EventManager.prototype = {
 
     delay: function (ticks, fn, repeats) {
         var manager = this,

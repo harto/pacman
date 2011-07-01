@@ -6,8 +6,8 @@
 /*global COLS, Dot, EAST, Entity, EntityGroup, InlineScore, Maze, Mode, NORTH,
   ROWS, SOUTH, ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ,
   WEST, all, broadcast, copy, debug, distance, enqueueInitialiser, enterMode,
-  events, format, keys, level, resources, reverse, toCol, toDx, toDy,
-  toOrdinal, toRow, toSeconds, toTicks, wait */
+  format, keys, level, resources, reverse, toCol, toDx, toDy, toOrdinal, toRow,
+  toSeconds, toTicks, wait */
 
 function Actor(props) {
     copy(props, this);
@@ -136,7 +136,7 @@ Pacman.prototype = new Actor({
     dotEaten: function (d) {
         this.waiting = true;
         var self = this;
-        events.delay(d.delay, function () {
+        all.get('events').delay(d.delay, function () {
             self.waiting = false;
         });
     },
@@ -466,7 +466,7 @@ Ghost.prototype = new Actor({
     kill: function () {
         debug('%s: dying', this);
         this.unset(Ghost.STATE_FRIGHTENED);
-        events.cancel(this.flashTimer);
+        all.get('events').cancel(this.flashTimer);
         this.set(Ghost.STATE_DEAD);
     }
 });
@@ -595,7 +595,8 @@ GhostGroup.prototype = new EntityGroup({
         // is eaten for some level-specific amount of time, the preferred ghost is
         // released.
 
-        // FIXME: all events should be trashed on level-up
+        var events = all.get('events');
+
         events.cancel(this.releaseTimer);
         var self = this;
         this.releaseTimer = events.repeat(toTicks(level < 5 ? 4 : 3), function () {
@@ -608,41 +609,49 @@ GhostGroup.prototype = new EntityGroup({
 
 
         // Initialise recurring mode-switch event
+        // XXX: should this only be reset on level-up?
 
-        var modeSwitches = 6;
         events.cancel(this.scatterChaseTimer);
-        this.scatterChaseTimer = events.delay(toTicks(level < 5 ? 7 : 5), function () {
-            var nSwitches = modeSwitches - this.repeats + 1;
+
+        function switchMode(n) {
             var newState, oldState;
-            if (nSwitches % 2) {
+            if (n % 2) {
                 newState = Ghost.STATE_CHASING;
                 oldState = Ghost.STATE_SCATTERING;
             } else {
                 newState = Ghost.STATE_SCATTERING;
                 oldState = Ghost.STATE_CHASING;
             }
+            debug('mode switch (%n): %s', n, Ghost.STATE_LABELS[newState]);
             self.all().forEach(function (g) {
                 g.unset(oldState);
                 g.set(newState);
             });
             self.reverseAll();
-            // XXX: this is ugly - it modifies the event object. It should
-            // enqueue a new event.
-            this.ticks =
-                nSwitches === 1 ? toTicks(20) :
-                nSwitches === 2 ? toTicks(level < 5 ? 7 : 5) :
-                nSwitches === 3 ? toTicks(20) :
-                nSwitches === 4 ? toTicks(5) :
-                nSwitches === 5 ? toTicks(level === 1 ? 20 :
-                                          level < 5 ? 1033 :
-                                          1037) :
-                nSwitches === 6 ? (level === 1 ? toTicks(5) : 1) :
-                null;
-            debug('mode switch (%s): %s %s',
-                  nSwitches,
-                  Ghost.STATE_LABELS[newState],
-                  this.ticks ? format('for %ns', toSeconds(this.ticks)) : 'indefinitely');
-        }, modeSwitches);
+        }
+
+        var switchDelays = [
+            toTicks(level < 5 ? 7 : 5),
+            toTicks(20),
+            toTicks(level < 5 ? 7 : 5),
+            toTicks(20),
+            toTicks(5),
+            toTicks(level === 1 ? 20 : level < 5 ? 1033 : 1037),
+            (level === 1 ? toTicks(5) : 1)
+        ];
+
+        function enqueueSwitch(n) {
+            var delay = switchDelays[n++];
+            if (delay) {
+                debug('next mode switch in %ns', toSeconds(delay));
+                self.scatterChaseTimer = events.delay(delay, function () {
+                    switchMode(n);
+                    enqueueSwitch(n);
+                });
+            }
+        }
+
+        enqueueSwitch(0);
     },
 
     // Returns ghosts inside the house in preferred-release-order.
@@ -756,22 +765,26 @@ GhostGroup.prototype = new EntityGroup({
             // FIXME: won't work for later levels
             flashDuration = toTicks(0.25),
             flashStart = frightTicks - (flashes + 1) * flashDuration,
-            self = this;
+            self = this,
+            events = all.get('events');
 
         this.all().forEach(function (g) {
+            events.cancel(g.startFlashTimer);
+            events.cancel(g.flashTimer);
             g.set(Ghost.STATE_FRIGHTENED);
+            g.flashing = false;
+            g.startFlashTimer = events.delay(flashStart, function () {
+                events.repeat(flashDuration, function () {
+                    g.flashing = !g.flashing;
+                }, flashes);
+            });
             // ensure stationary ghosts are redrawn
             // FIXME: might be unnecessary
             g.invalidate();
-
-            g.flashing = false;
-            g.flashTimer = events.repeat(flashStart, function () {
-                g.flashing = !g.flashing;
-                this.ticks = flashDuration;
-            }, flashes);
         });
 
-        events.delay(frightTicks, function () {
+        events.cancel(this.unfrightenTimer);
+        this.unfrightenTimer = events.delay(frightTicks, function () {
             self.scatterChaseTimer.resume();
             self.all().forEach(function (g) {
                 g.unset(Ghost.STATE_FRIGHTENED);

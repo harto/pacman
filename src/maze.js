@@ -4,9 +4,8 @@
 
 /*jslint bitwise: false */
 /*global COLS, DEBUG, EAST, Entity, EntityGroup, Mode, NORTH, ROWS, SCREEN_H,
-  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug,
-  enqueueInitialiser, enterMode, events, level, resources, toCol, toRow,
-  toTicks */
+  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, debug,
+  enqueueInitialiser, enterMode, level, resources, toCol, toRow, toTicks */
 
 /// edibles
 
@@ -39,8 +38,7 @@ function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
     this.setVisible(true);
     var self = this;
-    // XXX: these will accumulate each level
-    events.repeat(Energiser.BLINK_DURATION, function () {
+    all.get('events').repeat(Energiser.BLINK_DURATION, function () {
         self.setVisible(!self.visible);
     });
 }
@@ -232,7 +230,7 @@ Maze.prototype = {
             var secs = 9 + Math.random();
             debug('displaying bonus for %.3ns', secs);
             var self = this;
-            this.bonusTimeout = events.delay(toTicks(secs), function () {
+            this.bonusTimeout = all.get('events').delay(toTicks(secs), function () {
                 debug('bonus timeout');
                 self.removeBonus();
             });
@@ -248,7 +246,7 @@ Maze.prototype = {
 
     bonusEaten: function () {
         debug('bonus eaten');
-        events.cancel(this.bonusTimeout);
+        all.get('events').cancel(this.bonusTimeout);
         this.removeBonus();
     },
 

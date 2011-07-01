@@ -9,10 +9,10 @@
  */
 
 /*global $, Bonus, BonusDisplay, DEBUG, Delay, EAST, Energiser, Entity,
-  EntityGroup, GhostGroup, Maze, NORTH, Pacman, SCREEN_H, SCREEN_W, SOUTH,
-  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman,
-  events, format, initialisers, level:true, lives:true, loadResources,
-  resources:true, toTicks, window */
+  EntityGroup, EventManager, GhostGroup, Maze, NORTH, Pacman, SCREEN_H,
+  SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast,
+  debug, drawPacman, format, initialisers, level:true, lives:true,
+  loadResources, resources:true, toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 var score;
@@ -127,6 +127,7 @@ function levelUp() {
     debug('starting level %s', level);
 
     all = new EntityGroup();
+    all.set('events', new EventManager());
     all.set('maze', new Maze(),
             'scoreboard', new Scoreboard(),
             'bonusDisplay', new BonusDisplay(level));
@@ -170,7 +171,6 @@ function wait(ticks, fn) {
 Mode = {
 
     RUNNING: function () {
-        events.update();
         broadcast('update');
     },
 
