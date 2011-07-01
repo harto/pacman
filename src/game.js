@@ -15,11 +15,16 @@
   resources:true, toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
+var score;
 
-var scoreboard = new Entity({
+function Scoreboard() {
+    this.w = 0; // updated when score changes
+}
+
+Scoreboard.prototype = new Entity({
+
     x: 6 * TILE_SIZE,
     y: TILE_SIZE,
-    w: 0, // updated when score changes
     h: TEXT_HEIGHT,
 
     repaint: function (g) {
@@ -29,18 +34,20 @@ var scoreboard = new Entity({
         g.textBaseline = 'top';
         g.setFontSize(TEXT_HEIGHT);
         // track width to allow invalidation on next update
-        this.w = g.measureText(this.score).width;
-        g.fillText(this.score, this.x, this.y);
+        this.w = g.measureText(score).width;
+        g.fillText(score, this.x, this.y);
         g.restore();
     },
 
     objectEaten: function (o) {
-        this.score += o.value;
+        score += o.value;
         this.invalidate();
     }
 });
-scoreboard.dotEaten = scoreboard.energiserEaten = scoreboard.bonusEaten =
-    scoreboard.objectEaten;
+Scoreboard.prototype.dotEaten =
+    Scoreboard.prototype.energiserEaten =
+    Scoreboard.prototype.bonusEaten =
+    Scoreboard.prototype.objectEaten;
 
 var stats = {
 
@@ -81,6 +88,7 @@ var stats = {
 
 function resetActors() {
     all.set('pacman', new Pacman());
+    // FIXME
     ghosts.reset();
     broadcast('invalidateRegion', 0, 0, SCREEN_W, SCREEN_H);
 }
@@ -88,13 +96,12 @@ function resetActors() {
 function levelUp() {
     ++level;
     debug('starting level %s', level);
+
     all = new EntityGroup();
-    all.setAll({
-        'maze': new Maze(),
-        'scoreboard': scoreboard,
-        'bonusDisplay': new BonusDisplay(level),
-        'ghosts': ghosts
-    });
+    all.set('maze', new Maze(),
+            'scoreboard', new Scoreboard(),
+            'bonusDisplay', new BonusDisplay(level),
+            'ghosts', ghosts);
     if (DEBUG) {
         all.set('stats', stats);
     }
@@ -287,9 +294,9 @@ function loop() {
 function newGame() {
     window.clearTimeout(timer);
 
-    scoreboard.score = 0;
     level = 0;
     lives = 3;
+    score = 0;
     paused = false;
 
     levelUp();

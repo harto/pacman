@@ -711,9 +711,7 @@ var ghosts = new EntityGroup({
     }
 });
 
-ghosts.setAll({
-    'blinky': blinky,
-    'inky': inky,
-    'pinky': pinky,
-    'clyde': clyde
-});
+ghosts.set('blinky', blinky,
+           'inky', inky,
+           'pinky', pinky,
+           'clyde', clyde);

@@ -248,8 +248,15 @@ Entity.prototype = {
     }
 };
 
+// Entities are organised into a tree-like structure, with `all' at the root.
+// EntityGroups provide a relatively simple way to group entities send them
+// 'messages' (i.e. invoke methods on them). Group members are internally stored
+// in a map (for fast lookup), but the order in which they are added is also
+// preserved for iteration via `all()'.
+
 function EntityGroup(props) {
     this.members = {};
+    this.order = [];
     this.nextId = 0;
     copy(props, this);
 }
@@ -260,17 +267,20 @@ EntityGroup.prototype = {
         return this.members[id];
     },
 
-    // add a named group member
-    set: function (id, o) {
-        this.members[id] = o;
+    // Add one or more id-member pairs
+    set: function (/*id, o [, id, o, ...]*/) {
+        for (var i = 0; i < arguments.length; i += 2) {
+            var id = arguments[i];
+            if (id in this.members) {
+                this.remove(id);
+            }
+            var o = arguments[i + 1];
+            this.members[id] = o;
+            this.order.push(o);
+        }
     },
 
-    // add all ID-object pairs in map
-    setAll: function (m) {
-        copy(m, this.members);
-    },
-
-    // add a group member and return an auto-generated ID
+    // add a group member and return its auto-generated ID
     add: function (o) {
         var id = this.nextId++;
         this.set(id, o);
@@ -278,11 +288,13 @@ EntityGroup.prototype = {
     },
 
     remove: function (id) {
+        var o = this.members[id];
+        this.order.remove(o);
         delete this.members[id];
     },
 
     all: function () {
-        return values(this.members);
+        return this.order;
     },
 
     // invoked named function on all members iff it exists
