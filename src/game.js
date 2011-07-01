@@ -9,9 +9,9 @@
  */
 
 /*global $, Bonus, BonusDisplay, DEBUG, Delay, EAST, Energiser, Entity,
-  EntityGroup, Ghost, Maze, NORTH, Pacman, SCREEN_H, SCREEN_W, SOUTH,
+  EntityGroup, GhostGroup, Maze, NORTH, Pacman, SCREEN_H, SCREEN_W, SOUTH,
   TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman,
-  events, format, ghosts, initialisers, level:true, lives:true, loadResources,
+  events, format, initialisers, level:true, lives:true, loadResources,
   resources:true, toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
@@ -48,6 +48,32 @@ Scoreboard.prototype.dotEaten =
     Scoreboard.prototype.energiserEaten =
     Scoreboard.prototype.bonusEaten =
     Scoreboard.prototype.objectEaten;
+
+function InfoText(txt) {
+    this.txt = txt;
+}
+InfoText.prototype = new Entity({
+    pad: TEXT_HEIGHT / 2,
+    repaint: function (g) {
+        g.save();
+        g.setFontSize(TEXT_HEIGHT);
+        if (this.x === undefined) {
+            this.w = g.measureText(this.txt).width + 2 * this.pad;
+            this.x = (SCREEN_W - this.w) / 2;
+        }
+        // frame
+        g.fillStyle = 'white';
+        g.fillRect(this.x, this.y, this.w, this.h);
+        // text
+        g.fillStyle = 'black';
+        g.textAlign = 'left';
+        g.textBaseline = 'top';
+        g.fillText(this.txt, this.x + this.pad, this.y + this.pad);
+        g.restore();
+    }
+});
+InfoText.prototype.h = TEXT_HEIGHT + 2 * InfoText.prototype.pad;
+InfoText.prototype.y = (SCREEN_H - InfoText.prototype.h) / 2;
 
 var stats = {
 
@@ -88,8 +114,11 @@ var stats = {
 
 function resetActors() {
     all.set('pacman', new Pacman());
-    // FIXME
+    // The ghosts global dot counter must persist during levels, so just reset
+    // it if it already exists.
+    var ghosts = all.get('ghosts') || new GhostGroup();
     ghosts.reset();
+    all.set('ghosts', ghosts);
     broadcast('invalidateRegion', 0, 0, SCREEN_W, SCREEN_H);
 }
 
@@ -100,8 +129,7 @@ function levelUp() {
     all = new EntityGroup();
     all.set('maze', new Maze(),
             'scoreboard', new Scoreboard(),
-            'bonusDisplay', new BonusDisplay(level),
-            'ghosts', ghosts);
+            'bonusDisplay', new BonusDisplay(level));
     if (DEBUG) {
         all.set('stats', stats);
     }
@@ -109,80 +137,29 @@ function levelUp() {
     resetActors();
 }
 
-var state, paused;
+var mode, paused;
 
 function update() {
     if (!paused) {
-        state();
+        mode();
     }
 }
 
-function enterState(s) {
-    state = s;
+function enterMode(m) {
+    mode = m;
 }
 
-var State, nTicksRemaining, prevState;
-
-function InlineText(txt, cx, cy) {
-    this.txt = txt;
-    this.cx = cx;
-    this.cy = cy;
-}
-InlineText.prototype = new Entity({
-    h: 5,
-    repaint: function (g) {
-        g.save();
-        g.setFontSize(this.h);
-        if (this.x === undefined) {
-            // can't position until we know text width
-            this.w = g.measureText(this.txt).width;
-            this.centreAt(this.cx, this.cy);
-        }
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillStyle = 'white';
-        g.fillText(this.txt, this.cx, this.cy);
-        g.restore();
-    }
-});
-
-function InfoText(txt) {
-    this.txt = txt;
-}
-InfoText.prototype = new Entity({
-    pad: TEXT_HEIGHT / 2,
-    repaint: function (g) {
-        g.save();
-        g.setFontSize(TEXT_HEIGHT);
-        if (this.x === undefined) {
-            this.w = g.measureText(this.txt).width + 2 * this.pad;
-            this.x = (SCREEN_W - this.w) / 2;
-        }
-        // frame
-        g.fillStyle = 'white';
-        g.fillRect(this.x, this.y, this.w, this.h);
-        // text
-        g.fillStyle = 'black';
-        g.textAlign = 'left';
-        g.textBaseline = 'top';
-        g.fillText(this.txt, this.x + this.pad, this.y + this.pad);
-        g.restore();
-    }
-});
-InfoText.prototype.h = TEXT_HEIGHT + 2 * InfoText.prototype.pad;
-InfoText.prototype.y = (SCREEN_H - InfoText.prototype.h) / 2;
-
-var waitTimer;
+var Mode, prevMode, waitTimer;
 
 function wait(ticks, fn) {
     if (waitTimer) {
         // prevent deadlock
         return;
     }
-    prevState = state;
-    enterState(State.WAITING);
+    prevMode = mode;
+    enterMode(Mode.WAITING);
     waitTimer = new Delay(ticks, function () {
-        enterState(prevState);
+        enterMode(prevMode);
         if (fn) {
             fn();
         }
@@ -190,74 +167,36 @@ function wait(ticks, fn) {
     });
 }
 
-State = {
+Mode = {
 
     RUNNING: function () {
         events.update();
         broadcast('update');
-
-        var pacman = all.get('pacman'),
-            maze = all.get('maze');
-
-        // collision check edibles
-        var item = maze.itemAt(pacman.col, pacman.row);
-        if (item) {
-            broadcast(item.eatenEvent, item);
-        }
-
-        // collision check ghosts
-        // FIXME
-        ghosts.all().filter(function (g) {
-            return !g.is(Ghost.STATE_DEAD) &&
-                   g.col === pacman.col &&
-                   g.row === pacman.row;
-        }).forEach(function (g) {
-            if (g.is(Ghost.STATE_FRIGHTENED)) {
-                all.set('score', new InlineText(200, g.cx, g.cy));
-                pacman.setVisible(false);
-                g.setVisible(false);
-                wait(toTicks(0.5), function () {
-                    all.remove('score');
-                    g.kill();
-                    pacman.setVisible(true);
-                    g.setVisible(true);
-                });
-            } else {
-                pacman.kill();
-            }
-        });
-
-        if (maze.nDots === 0) {
-            enterState(State.LEVELUP);
-        } else if (pacman.dying) {
-            enterState(State.DYING);
-        }
     },
 
     LEVELUP: function () {
         // FIXME: flashing maze, delay
         levelUp();
-        enterState(State.RUNNING);
+        enterMode(Mode.RUNNING);
     },
 
     DYING: function () {
         var pacman = all.get('pacman');
-        if (!pacman.dead) {
-            // continue dying
-            // FIXME: separate method on pacman?
-            pacman.update();
-        } else {
+        // if (!pacman.dead) {
+        //     // continue dying
+        //     // FIXME: separate method on pacman?
+        //     pacman.update();
+        // } else {
             if (--lives) {
                 resetActors();
-                ghosts.useGlobalCounter = true;
             }
-            enterState(lives ? State.REVIVING : State.FINISHED);
-        }
+            enterMode(lives ? Mode.REVIVING : Mode.FINISHED);
+        // }
     },
 
     REVIVING: function () {
         // FIXME: is this any different from starting a level?
-        enterState(State.RUNNING);
+        enterMode(Mode.RUNNING);
     },
 
     WAITING: function () {
@@ -284,7 +223,7 @@ function loop() {
 
     var elapsed = new Date() - now;
     stats.totalTickTime += elapsed;
-    if (state !== State.FINISHED) {
+    if (mode !== Mode.FINISHED) {
         timer = window.setTimeout(loop, Math.max(0, UPDATE_DELAY - elapsed));
     }
 }
@@ -302,7 +241,7 @@ function newGame() {
     levelUp();
     resources.playSound('intro');
     wait(toTicks(4), function () {
-        enterState(State.RUNNING);
+        enterMode(Mode.RUNNING);
     });
     loop();
 }

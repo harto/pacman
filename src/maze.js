@@ -3,13 +3,15 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, DEBUG, EAST, Entity, EntityGroup, NORTH, ROWS, SCREEN_H,
+/*global COLS, DEBUG, EAST, Entity, EntityGroup, Mode, NORTH, ROWS, SCREEN_H,
   SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug,
-  enqueueInitialiser, events, level, resources, toCol, toRow, toTicks */
+  enqueueInitialiser, enterMode, events, level, resources, toCol, toRow,
+  toTicks */
 
 /// edibles
 
 function Dot(col, row) {
+    // XXX: this needs some cleaning up - init is called unnecessarily
     this.init(col, row, 3);
 }
 
@@ -37,6 +39,7 @@ function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
     this.setVisible(true);
     var self = this;
+    // XXX: these will accumulate each level
     events.repeat(Energiser.BLINK_DURATION, function () {
         self.setVisible(!self.visible);
     });
@@ -174,35 +177,35 @@ Maze.LAYOUT = ['############################',
                '############################',
                '############################'];
 
+Maze.enterable = function (col, row) {
+    return Maze.LAYOUT[row][col] !== '#';
+};
+
+Maze.inTunnel = function (col, row) {
+    return row === 17 && (col <= 4 || 23 <= col);
+};
+
+// Return a number that is the bitwise-OR of directions in which an actor
+// may exit a given tile.
+Maze.exitsFrom = function (col, row) {
+    if (this.inTunnel(col, row)) {
+        return EAST | WEST;
+    } else {
+        return (this.enterable(col, row - 1) ? NORTH : 0) |
+               (this.enterable(col, row + 1) ? SOUTH : 0) |
+               (this.enterable(col - 1, row) ? WEST : 0) |
+               (this.enterable(col + 1, row) ? EAST : 0);
+    }
+};
+
+// check if tile falls within one of two zones in which ghosts are
+// prohibited from turning north
+Maze.northDisallowed = function (col, row) {
+    return (Maze.NNTZ_COL_MIN <= col && col <= Maze.NNTZ_COL_MAX) &&
+           (row === Maze.NNTZ_ROW_1 || row === Maze.NNTZ_ROW_2);
+};
+
 Maze.prototype = {
-
-    enterable: function (col, row) {
-        return Maze.LAYOUT[row][col] !== '#';
-    },
-
-    // Return a number that is the bitwise-OR of directions in which an actor
-    // may exit a given tile.
-    exitsFrom: function (col, row) {
-        if (this.inTunnel(col, row)) {
-            return EAST | WEST;
-        } else {
-            return (this.enterable(col, row - 1) ? NORTH : 0) |
-                   (this.enterable(col, row + 1) ? SOUTH : 0) |
-                   (this.enterable(col - 1, row) ? WEST : 0) |
-                   (this.enterable(col + 1, row) ? EAST : 0);
-        }
-    },
-
-    // check if tile falls within one of two zones in which ghosts are
-    // prohibited from turning north
-    northDisallowed: function (col, row) {
-        return (Maze.NNTZ_COL_MIN <= col && col <= Maze.NNTZ_COL_MAX) &&
-               (row === Maze.NNTZ_ROW_1 || row === Maze.NNTZ_ROW_2);
-    },
-
-    inTunnel: function (col, row) {
-        return row === 17 && (col <= 4 || 23 <= col);
-    },
 
     itemAt: function (col, row) {
         var b = this.bonus;
@@ -233,6 +236,8 @@ Maze.prototype = {
                 debug('bonus timeout');
                 self.removeBonus();
             });
+        } else if (this.nDots === 0) {
+            enterMode(Mode.LEVELUP);
         }
     },
 

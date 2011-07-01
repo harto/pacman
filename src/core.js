@@ -333,3 +333,28 @@ var initialisers = [];
 function enqueueInitialiser(f) {
     initialisers.push(f);
 }
+
+/// in-game score indicator
+
+function InlineScore(score, cx, cy) {
+    this.score = score;
+    this.cx = cx;
+    this.cy = cy;
+}
+InlineScore.prototype = new Entity({
+    h: 5,
+    repaint: function (g) {
+        g.save();
+        g.setFontSize(this.h);
+        if (this.x === undefined) {
+            // can't position until we know text width
+            this.w = g.measureText(this.txt).width;
+            this.centreAt(this.cx, this.cy);
+        }
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillStyle = 'white';
+        g.fillText(this.txt, this.cx, this.cy);
+        g.restore();
+    }
+});
