@@ -216,6 +216,10 @@ Entity.prototype = {
 
     invalidateRegion: function (x, y, w, h) {
         if (this.visible && !this.invalidated && this.intersects(x, y, w, h)) {
+            // This default implementation invalidates the whole entity when any
+            // part of it is invalidated, and recursively invalidates any other
+            // affected entities. This can be overridden for finer control (Maze
+            // does this).
             this.invalidate();
         }
     },
@@ -249,7 +253,7 @@ Entity.prototype = {
 };
 
 // Entities are organised into a tree-like structure, with `all' at the root.
-// EntityGroups provide a relatively simple way to group entities send them
+// EntityGroups provide a relatively simple way to group entities and send them
 // 'messages' (i.e. invoke methods on them). Group members are internally stored
 // in a map (for fast lookup), but the order in which they are added is also
 // preserved for iteration via `all()'.
@@ -263,8 +267,13 @@ function EntityGroup(props) {
 
 EntityGroup.prototype = {
 
-    get: function (id) {
-        return this.members[id];
+    // Lookup member by name, reaching into subgroups if multiple name
+    // components are provided.
+    get: function (id /*, subId, ...*/) {
+        var o = this.members[id];
+        return o && arguments.length > 1 && o.get ?
+            o.get.apply(o, Array.prototype.slice.call(arguments, 1)) :
+            o;
     },
 
     // Add one or more id-member pairs
@@ -280,7 +289,7 @@ EntityGroup.prototype = {
         }
     },
 
-    // add a group member and return its auto-generated ID
+    // Add a group member and return its auto-generated ID.
     add: function (o) {
         var id = this.nextId++;
         this.set(id, o);
@@ -293,11 +302,14 @@ EntityGroup.prototype = {
         delete this.members[id];
     },
 
+    // Return group members in the order they were added.
     all: function () {
         return this.order;
     },
 
-    // invoked named function on all members iff it exists
+    // Invokes the named method on all members if the member has a property with
+    // that name. If the method doesn't exist for a member EntityGroup, its
+    // `notify' method is invoked instead.
     notify: function (fName /*, args...*/) {
         var allArgs = Array.prototype.slice.call(arguments, 0);
         var fArgs = Array.prototype.slice.call(arguments, 1);
