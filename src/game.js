@@ -256,6 +256,7 @@ function togglePause() {
     } else {
         all.remove('pauseText');
     }
+    pauseText.invalidate();
 }
 
 $(function () {

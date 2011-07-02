@@ -186,6 +186,7 @@ EventManager.prototype = {
 
 function Entity(props) {
     copy(props, this);
+    this.invalidated = true;
 }
 
 Entity.prototype = {
@@ -348,15 +349,15 @@ InlineScore.prototype = new Entity({
     repaint: function (g) {
         g.save();
         g.setFontSize(this.h);
-        if (this.x === undefined) {
+        if (!this.w) {
             // can't position until we know text width
-            this.w = g.measureText(this.txt).width;
+            this.w = g.measureText(this.score).width;
             this.centreAt(this.cx, this.cy);
         }
         g.textAlign = 'center';
         g.textBaseline = 'middle';
         g.fillStyle = 'white';
-        g.fillText(this.txt, this.cx, this.cy);
+        g.fillText(this.score, this.cx, this.cy);
         g.restore();
     }
 });
