@@ -116,6 +116,8 @@ function resetActors() {
     all.set('pacman', new Pacman());
     // The ghosts global dot counter must persist during levels, so just reset
     // it if it already exists.
+    // XXX: I don't like this - perhaps the dot counting could be managed by
+    // a separate persistent entity?
     var ghosts = all.get('ghosts') || new GhostGroup();
     ghosts.reset();
     all.set('ghosts', ghosts);
