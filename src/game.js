@@ -128,9 +128,9 @@ function levelUp() {
 
     all = new EntityGroup();
     all.set('events', new EventManager());
-    all.set('maze', new Maze(),
-            'scoreboard', new Scoreboard(),
-            'bonusDisplay', new BonusDisplay(level));
+    all.set('maze', new Maze());
+    all.set('scoreboard', new Scoreboard());
+    all.set('bonusDisplay', new BonusDisplay(level));
     if (DEBUG) {
         all.set('stats', stats);
     }

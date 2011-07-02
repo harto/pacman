@@ -571,10 +571,10 @@ function GhostGroup() {
 GhostGroup.prototype = new EntityGroup({
 
     reset: function () {
-        this.set('blinky', new Blinky(),
-                 'inky', new Inky(),
-                 'pinky', new Pinky(),
-                 'clyde', new Clyde());
+        this.set('blinky', new Blinky());
+        this.set('inky', new Inky());
+        this.set('pinky', new Pinky());
+        this.set('clyde', new Clyde());
 
         // Ghosts are individually released from the house according to the number of
         // dots eaten by Pac-Man and the time since a dot was last eaten.

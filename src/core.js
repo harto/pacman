@@ -279,17 +279,10 @@ EntityGroup.prototype = {
             o;
     },
 
-    // Add one or more id-member pairs
-    set: function (/*id, o [, id, o, ...]*/) {
-        for (var i = 0; i < arguments.length; i += 2) {
-            var id = arguments[i];
-            if (id in this.members) {
-                this.remove(id);
-            }
-            var o = arguments[i + 1];
-            this.members[id] = o;
-            this.order.push(o);
-        }
+    // Add a named member.
+    set: function (id, o) {
+        this.members[id] = o;
+        this.order.push(o);
     },
 
     // Add a group member and return its auto-generated ID.
