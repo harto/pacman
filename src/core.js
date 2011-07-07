@@ -103,10 +103,6 @@ SpriteMap.prototype.draw = function (g, x, y, col, row) {
 
 /// event management
 
-function broadcast(/*event, args...*/) {
-    all.notify.apply(all, arguments);
-}
-
 function Delay(ticks, fn) {
     this.ticks = this.remaining = ticks;
     this.fn = fn;
@@ -183,6 +179,14 @@ EventManager.prototype = {
 };
 
 /// entities
+
+function broadcast(/*event, args...*/) {
+    return all.notify.apply(all, arguments);
+}
+
+function lookup(id) {
+    return all.get(id);
+}
 
 function Entity(props) {
     copy(props, this);
@@ -270,19 +274,21 @@ function EntityGroup(props) {
 
 EntityGroup.prototype = {
 
-    // Lookup member by name, reaching into subgroups if multiple name
-    // components are provided.
-    get: function (id /*, subId, ...*/) {
-        var o = this.members[id];
-        return o && arguments.length > 1 && o.get ?
-            o.get.apply(o, Array.prototype.slice.call(arguments, 1)) :
-            o;
+    // Lookup member by name.
+    get: function (id) {
+        return this.members[id];
     },
 
     // Add a named member.
     set: function (id, o) {
+        // preserve ordering
+        var old = this.get(id);
+        if (old) {
+            this.order.splice(this.order.indexOf(old), 1, o);
+        } else {
+            this.order.push(o);
+        }
         this.members[id] = o;
-        this.order.push(o);
     },
 
     // Add a group member and return its auto-generated ID.

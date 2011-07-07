@@ -5,9 +5,9 @@
 /*jslint bitwise: false */
 /*global COLS, Dot, EAST, Entity, EntityGroup, InlineScore, Maze, Mode, NORTH,
   ROWS, SOUTH, ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ,
-  WEST, all, broadcast, copy, debug, distance, enqueueInitialiser, enterMode,
-  format, keys, level, resources, reverse, toCol, toDx, toDy, toOrdinal, toRow,
-  toSeconds, toTicks, wait */
+  WEST, all, bind, broadcast, copy, debug, distance, enqueueInitialiser,
+  enterMode, format, keys, level, lookup, resources, reverse, toCol, toDx,
+  toDy, toOrdinal, toRow, toSeconds, toTicks, wait */
 
 function Actor(props) {
     copy(props, this);
@@ -135,10 +135,9 @@ Pacman.prototype = new Actor({
 
     dotEaten: function (d) {
         this.waiting = true;
-        var self = this;
-        all.get('events').delay(d.delay, function () {
-            self.waiting = false;
-        });
+        lookup('events').delay(d.delay, bind(this, function () {
+            this.waiting = false;
+        }));
     },
 
     energiserEaten: function (e) {
@@ -166,7 +165,7 @@ Pacman.prototype = new Actor({
         }
 
         // collision check edibles
-        var item = all.get('maze').itemAt(this.col, this.row);
+        var item = lookup('maze').itemAt(this.col, this.row);
         if (item) {
             broadcast(item.eatenEvent, item);
         }
@@ -244,6 +243,17 @@ Ghost.STATE_LABELS = (function () {
     return labels;
 }());
 
+Ghost.all = function () {
+    return ['blinky', 'pinky', 'inky', 'clyde'].map(function (name) {
+        return lookup(name);
+    });
+};
+
+// duration of frightened time, indexed by level
+Ghost.FRIGHT_TICKS = [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1].map(toTicks);
+// number of times to flash when becoming unfrightened, indexed by level
+Ghost.FRIGHT_FLASHES = [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3];
+
 Ghost.ANIM_FREQ = UPDATE_HZ / 4;
 Ghost.SPRITES = {};
 
@@ -265,7 +275,6 @@ Ghost.prototype = new Actor({
         this.set(Ghost.STATE_INSIDE);
         this.set(Ghost.STATE_SCATTERING);
         this.centreAt(this.startCx, this.startCy);
-        this.resetDotCounter();
         this.setNextDirection(WEST);
     },
 
@@ -348,7 +357,6 @@ Ghost.prototype = new Actor({
                 if (this.is(Ghost.STATE_ENTERING)) {
                     this.unset(Ghost.STATE_ENTERING);
                     this.set(Ghost.STATE_INSIDE);
-                    this.resetDotCounter();
                 } else {
                     this.unset(Ghost.STATE_EXITING);
                 }
@@ -459,15 +467,75 @@ Ghost.prototype = new Actor({
         return exitDirection;
     },
 
-    resetDotCounter: function () {
-        this.dotCounter = 0;
+    collideWith: function (pacman) {
+        if (this.is(Ghost.STATE_DEAD)) {
+            return;
+        } else if (this.is(Ghost.STATE_FRIGHTENED)) {
+            pacman.setVisible(false);
+            this.setVisible(false);
+            // FIXME: add to actual score
+            var score = all.add(new InlineScore(200, this.cx, this.cy));
+            wait(toTicks(0.5), bind(this, function () {
+                all.remove(score);
+                pacman.setVisible(true);
+                this.setVisible(true);
+
+                debug('%s: dying', this);
+                this.unfrighten();
+                this.set(Ghost.STATE_DEAD);
+            }));
+        } else {
+            broadcast('pacmanKilled');
+            enterMode(Mode.DYING);
+        }
     },
 
-    kill: function () {
-        debug('%s: dying', this);
+    energiserEaten: function () {
+        if (!this.is(Ghost.STATE_DEAD)) {
+            this.reverse();
+        }
+
+        var frightTicks = Ghost.FRIGHT_TICKS[level];
+        if (!frightTicks) {
+            return;
+        }
+
+        // cancel any existing timers
+        this.unfrighten();
+        this.set(Ghost.STATE_FRIGHTENED);
+        // ensure stationary ghosts are redrawn
+        // FIXME: might be unnecessary
+        this.invalidate();
+
+        var events = lookup('events');
+
+        this.unfrightenTimer = events.delay(frightTicks, bind(this, function () {
+            this.unfrighten();
+        }));
+
+        var flashes = 2 * Ghost.FRIGHT_FLASHES[level],
+            // FIXME: won't work for later levels
+            flashDuration = toTicks(0.25),
+            flashStart = frightTicks - (flashes + 1) * flashDuration;
+
+        this.flashing = false;
+        this.startFlashTimer = events.delay(flashStart, bind(this, function () {
+            this.flashTimer = events.repeat(flashDuration, bind(this, function () {
+                this.flashing = !this.flashing;
+            }), flashes);
+        }));
+    },
+
+    unfrighten: function () {
+        var events = lookup('events');
+        events.cancel(this.unfrightenTimer);
+        events.cancel(this.startFlashTimer);
+        events.cancel(this.flashTimer);
         this.unset(Ghost.STATE_FRIGHTENED);
-        all.get('events').cancel(this.flashTimer);
-        this.set(Ghost.STATE_DEAD);
+    },
+
+    reverse: function () {
+        this.setNextDirection(reverse(this.direction));
     }
 });
 
@@ -485,7 +553,7 @@ Blinky.prototype = new Ghost({
 
     calcTarget: function () {
         // target pacman directly
-        var pacman = all.get('pacman');
+        var pacman = lookup('pacman');
         return { col: pacman.col, row: pacman.row };
     }
 });
@@ -503,7 +571,7 @@ Pinky.prototype = new Ghost({
 
     calcTarget: function () {
         // target 4 tiles ahead of pacman's current direction
-        var pacman = all.get('pacman');
+        var pacman = lookup('pacman');
         return { col: pacman.col + toDx(pacman.direction) * 4,
                  row: pacman.row + toDy(pacman.direction) * 4 };
     }
@@ -523,16 +591,12 @@ Inky.prototype = new Ghost({
     calcTarget: function () {
         // target tile at vector extending from blinky with midpoint 2 tiles
         // ahead of pacman
-        var pacman = all.get('pacman'),
-            blinky = all.get('ghosts', 'blinky');
+        var pacman = lookup('pacman'),
+            blinky = lookup('blinky');
         var cx = pacman.col + toDx(pacman.direction) * 2;
         var cy = pacman.row + toDy(pacman.direction) * 2;
         return { col: cx + cx - blinky.col,
                  row: cy + cy - blinky.row };
-    },
-
-    resetDotCounter: function () {
-        this.dotCounter = level === 1 ? 30 : 0;
     }
 });
 
@@ -550,169 +614,79 @@ Clyde.prototype = new Ghost({
     calcTarget: function () {
         // target pacman directly when further than 8 tiles from him, otherwise
         // target scatter mode tile
-        var pacman = all.get('pacman'),
+        var pacman = lookup('pacman'),
             pCol = pacman.col,
             pRow = pacman.row;
         return distance(pCol, pRow, this.col, this.row) > 8 ?
                    { col: pCol, row: pRow } :
                    this.scatterTile;
-    },
-
-    resetDotCounter: function () {
-        this.dotCounter = level === 1 ? 60 : level === 2 ? 50 : 0;
     }
 });
 
-function GhostGroup() {
-    this.useGlobalCounter = false;
-    this.dotCounter = 0;
+function GhostReleaser(level) {
+    // Ghosts are individually released from the house according to the number of
+    // dots eaten by Pac-Man and the time since a dot was last eaten.
+    //
+    // At the start of each level, each ghost is initialised with a personal dot
+    // counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
+    // eaten, the counter of the most preferred ghost within the house (in order:
+    // Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
+    // released.
+    //
+    // Whenever a life is lost, a global dot counter is used in place of the
+    // individual counters. Ghosts are released according to the value of this
+    // counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
+    // when the counter reaches 32, the individual dot counters are used henceforth
+    // as previously described. Otherwise, the global counter remains in effect.
+    //
+    // Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
+    // is eaten for some level-specific amount of time, the preferred ghost is
+    // released.
+
+    this.counters = {
+        blinky: 0,
+        pinky: 0,
+        inky: level === 1 ? 30 : 0,
+        clyde: level === 1 ? 60 : level === 2 ? 50 : 0
+    };
+
+    this.globalCounter = 0;
+
+    this.resetReleaseTimer();
 }
 
-GhostGroup.prototype = new EntityGroup({
+GhostReleaser.prototype = {
 
-    reset: function () {
-        this.set('blinky', new Blinky());
-        this.set('inky', new Inky());
-        this.set('pinky', new Pinky());
-        this.set('clyde', new Clyde());
-
-        // Ghosts are individually released from the house according to the number of
-        // dots eaten by Pac-Man and the time since a dot was last eaten.
-        //
-        // At the start of each level, each ghost is initialised with a personal dot
-        // counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
-        // eaten, the counter of the most preferred ghost within the house (in order:
-        // Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
-        // released.
-        //
-        // Whenever a life is lost, a global dot counter is used in place of the
-        // individual counters. Ghosts are released according to the value of this
-        // counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
-        // when the counter reaches 32, the individual dot counters are used henceforth
-        // as previously described. Otherwise, the global counter remains in effect.
-        //
-        // Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
-        // is eaten for some level-specific amount of time, the preferred ghost is
-        // released.
-
-        var events = all.get('events');
-
+    resetReleaseTimer: function () {
+        var events = lookup('events');
         events.cancel(this.releaseTimer);
-        var self = this;
-        this.releaseTimer = events.repeat(toTicks(level < 5 ? 4 : 3), function () {
-            var ghost = self.firstWaiting();
+        this.releaseTimer = events.repeat(toTicks(level < 5 ? 4 : 3), bind(this, function () {
+            var ghost = this.firstWaiting();
             if (ghost) {
                 debug('dot-eaten timeout');
                 ghost.release();
             }
-        });
-
-
-        // Initialise recurring mode-switch event
-        // XXX: should this only be reset on level-up?
-
-        events.cancel(this.scatterChaseTimer);
-
-        function switchMode(n) {
-            var newState, oldState;
-            if (n % 2) {
-                newState = Ghost.STATE_CHASING;
-                oldState = Ghost.STATE_SCATTERING;
-            } else {
-                newState = Ghost.STATE_SCATTERING;
-                oldState = Ghost.STATE_CHASING;
-            }
-            debug('mode switch (%n): %s', n, Ghost.STATE_LABELS[newState]);
-            self.all().forEach(function (g) {
-                g.unset(oldState);
-                g.set(newState);
-            });
-            self.reverseAll();
-        }
-
-        var switchDelays = [
-            toTicks(level < 5 ? 7 : 5),
-            toTicks(20),
-            toTicks(level < 5 ? 7 : 5),
-            toTicks(20),
-            toTicks(5),
-            toTicks(level === 1 ? 20 : level < 5 ? 1033 : 1037),
-            (level === 1 ? toTicks(5) : 1)
-        ];
-
-        function enqueueSwitch(n) {
-            var delay = switchDelays[n++];
-            if (delay) {
-                debug('next mode switch in %ns', toSeconds(delay));
-                self.scatterChaseTimer = events.delay(delay, function () {
-                    switchMode(n);
-                    enqueueSwitch(n);
-                });
-            }
-        }
-
-        enqueueSwitch(0);
-    },
-
-    // Returns ghosts inside the house in preferred-release-order.
-    insiders: function () {
-        return ['blinky', 'pinky', 'inky', 'clyde'].map(function (id) {
-            return this.get(id);
-        }, this).filter(function (g) {
-            return g.is(Ghost.STATE_INSIDE);
-        });
-    },
-
-    firstWaiting: function () {
-        var insiders = this.insiders();
-        return insiders.length ? insiders[0] : null;
-    },
-
-    update: function () {
-        this.notify('update');
-
-        // check collisions
-        var pacman = all.get('pacman');
-        this.all().filter(function (g) {
-            return !g.is(Ghost.STATE_DEAD) &&
-                   g.col === pacman.col &&
-                   g.row === pacman.row;
-        }).forEach(function (g) {
-            if (g.is(Ghost.STATE_FRIGHTENED)) {
-                pacman.setVisible(false);
-                g.setVisible(false);
-                var score = all.add(new InlineScore(200, g.cx, g.cy));
-                wait(toTicks(0.5), function () {
-                    all.remove(score);
-                    pacman.setVisible(true);
-                    g.setVisible(true);
-                    g.kill();
-                });
-            } else {
-                broadcast('pacmanKilled');
-                this.useGlobalCounter = true;
-                enterMode(Mode.DYING);
-            }
-        });
+        }));
     },
 
     dotEaten: function () {
         // reset dot-eaten timer
         this.releaseTimer.reset();
 
-        var pinky = this.get('pinky'),
-            inky = this.get('inky'),
-            clyde = this.get('clyde');
+        var counters = this.counters,
+            pinky = lookup('pinky'),
+            inky = lookup('inky'),
+            clyde = lookup('clyde');
 
         // update dot counter(s)
         if (this.useGlobalCounter &&
-            ++this.dotCounter === 32 &&
+            ++this.globalCounter === 32 &&
             clyde.is(Ghost.STATE_INSIDE)) {
             this.useGlobalCounter = false;
         } else {
             var firstWaiting = this.firstWaiting();
             if (firstWaiting) {
-                --firstWaiting.dotCounter;
+                --counters[firstWaiting.name];
             }
         }
 
@@ -724,7 +698,7 @@ GhostGroup.prototype = new EntityGroup({
         }
 
         var ghost = insiders.first(function (g) {
-            return g.dotCounter <= 0;
+            return counters[g.name] <= 0;
         }) ||
             // check global counter
             (this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
@@ -736,59 +710,90 @@ GhostGroup.prototype = new EntityGroup({
         }
     },
 
-    // duration of frightened time in seconds, indexed by level
-    FRIGHT_SEC:     [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1],
-    // number of times to flash when becoming unfrightened, indexed by level
-    FRIGHT_FLASHES: [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3],
-
-    reverseAll: function () {
-        this.all().filter(function (g) {
-            return !g.is(Ghost.STATE_DEAD);
-        }).forEach(function (g) {
-            g.setNextDirection(reverse(g.direction));
+    // Returns ghosts currently within the house, in preferred-release-order.
+    insiders: function () {
+        return ['blinky', 'pinky', 'inky', 'clyde'].map(function (id) {
+            return lookup(id);
+        }, this).filter(function (g) {
+            return g.is(Ghost.STATE_INSIDE);
         });
     },
 
-    energiserEaten: function () {
-        this.reverseAll();
+    firstWaiting: function () {
+        var insiders = this.insiders();
+        return insiders.length ? insiders[0] : null;
+    },
 
-        var frightSec = this.FRIGHT_SEC[level];
-        if (!frightSec) {
+    pacmanKilled: function () {
+        this.useGlobalCounter = true;
+        this.resetReleaseTimer();
+    }
+};
+
+function GhostModeSwitcher(level) {
+    this.switchDelays = [
+        toTicks(level < 5 ? 7 : 5),
+        toTicks(20),
+        toTicks(level < 5 ? 7 : 5),
+        toTicks(20),
+        toTicks(5),
+        toTicks(level === 1 ? 20 : level < 5 ? 1033 : 1037),
+        (level === 1 ? toTicks(5) : 1)
+    ];
+
+    this.enqueueSwitch(0);
+}
+
+GhostModeSwitcher.prototype = {
+
+    enqueueSwitch: function (n) {
+        var delay = this.switchDelays[n++];
+        if (!delay) {
+            // finished switching
             return;
         }
 
-        debug('%s for %ss', Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED], frightSec);
-        this.scatterChaseTimer.suspend();
-
-        var frightTicks = toTicks(frightSec),
-            flashes = 2 * this.FRIGHT_FLASHES[level],
-            // FIXME: won't work for later levels
-            flashDuration = toTicks(0.25),
-            flashStart = frightTicks - (flashes + 1) * flashDuration,
-            self = this,
-            events = all.get('events');
-
-        this.all().forEach(function (g) {
-            events.cancel(g.startFlashTimer);
-            events.cancel(g.flashTimer);
-            g.set(Ghost.STATE_FRIGHTENED);
-            g.flashing = false;
-            g.startFlashTimer = events.delay(flashStart, function () {
-                events.repeat(flashDuration, function () {
-                    g.flashing = !g.flashing;
-                }, flashes);
+        debug('next mode switch in %ns', toSeconds(delay));
+        this.scatterChaseTimer = lookup('events').delay(delay, bind(this, function () {
+            var newState, oldState;
+            if (n % 2) {
+                oldState = Ghost.STATE_SCATTERING;
+                newState = Ghost.STATE_CHASING;
+            } else {
+                oldState = Ghost.STATE_CHASING;
+                newState = Ghost.STATE_SCATTERING;
+            }
+            debug('mode switch (%n): %s', n, Ghost.STATE_LABELS[newState]);
+            Ghost.all().forEach(function (g) {
+                g.unset(oldState);
+                g.set(newState);
+                g.reverse();
             });
-            // ensure stationary ghosts are redrawn
-            // FIXME: might be unnecessary
-            g.invalidate();
-        });
+            this.enqueueSwitch(n);
+        }));
+    },
 
-        events.cancel(this.unfrightenTimer);
-        this.unfrightenTimer = events.delay(frightTicks, function () {
-            self.scatterChaseTimer.resume();
-            self.all().forEach(function (g) {
-                g.unset(Ghost.STATE_FRIGHTENED);
-            });
-        });
+    energiserEaten: function () {
+        // suspend scatter/chase timer for duration of fright
+        var frightTicks = Ghost.FRIGHT_TICKS[level];
+        if (frightTicks) {
+            debug('%s for %ss',
+                  Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED],
+                  toSeconds(frightTicks));
+            var events = lookup('events');
+            events.cancel(this.resumeTimer);
+            this.scatterChaseTimer.suspend();
+            this.resumeTimer = events.delay(frightTicks, bind(this, function () {
+                this.scatterChaseTimer.resume();
+            }));
+        }
+    },
+
+    pacmanKilled: function () {
+        // cleanup
+        var events = lookup('events');
+        events.cancel(this.resumeTimer);
+        events.cancel(this.scatterChaseTimer);
     }
-});
+};
+

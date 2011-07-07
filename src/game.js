@@ -8,11 +8,12 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, Bonus, BonusDisplay, DEBUG, Delay, EAST, Energiser, Entity,
-  EntityGroup, EventManager, GhostGroup, Maze, NORTH, Pacman, SCREEN_H,
-  SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast,
-  debug, drawPacman, format, initialisers, level:true, lives:true,
-  loadResources, resources:true, toTicks, window */
+/*global $, Blinky, Bonus, BonusDisplay, Clyde, DEBUG, Delay, EAST, Energiser,
+  Entity, EntityGroup, EventManager, Ghost, GhostGroup, GhostModeSwitcher,
+  GhostReleaser, Inky, Maze, NORTH, Pacman, Pinky, SCREEN_H, SCREEN_W, SOUTH,
+  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman,
+  format, initialisers, level:true, lives:true, loadResources, lookup,
+  resources:true, toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 var score;
@@ -114,13 +115,11 @@ var stats = {
 
 function resetActors() {
     all.set('pacman', new Pacman());
-    // The ghosts global dot counter must persist during levels, so just reset
-    // it if it already exists.
-    // XXX: I don't like this - perhaps the dot counting could be managed by
-    // a separate persistent entity?
-    var ghosts = all.get('ghosts') || new GhostGroup();
-    ghosts.reset();
-    all.set('ghosts', ghosts);
+    all.set('blinky', new Blinky());
+    all.set('pinky', new Pinky());
+    all.set('inky', new Inky());
+    all.set('clyde', new Clyde());
+    all.set('modeSwitcher', new GhostModeSwitcher(level));
     broadcast('invalidateRegion', 0, 0, SCREEN_W, SCREEN_H);
 }
 
@@ -130,6 +129,7 @@ function levelUp() {
 
     all = new EntityGroup();
     all.set('events', new EventManager());
+    all.set('releaser', new GhostReleaser(level));
     all.set('maze', new Maze());
     all.set('scoreboard', new Scoreboard());
     all.set('bonusDisplay', new BonusDisplay(level));
@@ -174,6 +174,16 @@ Mode = {
 
     RUNNING: function () {
         broadcast('update');
+
+        // XXX: There's probably a better way to check collisions - perhaps
+        // entities could declare that they are 'collideable', or register
+        // interest for collisions with specific entities.
+        var pacman = lookup('pacman');
+        Ghost.all().filter(function (g) {
+            return g.col === pacman.col && g.row === pacman.row;
+        }).forEach(function (g) {
+            g.collideWith(pacman);
+        });
     },
 
     LEVELUP: function () {
@@ -183,7 +193,7 @@ Mode = {
     },
 
     DYING: function () {
-        var pacman = all.get('pacman');
+        var pacman = lookup('pacman');
         // if (!pacman.dead) {
         //     // continue dying
         //     // FIXME: separate method on pacman?
@@ -324,7 +334,7 @@ $(function () {
         case keys.right:
         case keys.up:
         case keys.down:
-            var pacman = all.get('pacman');
+            var pacman = lookup('pacman');
             if (pacman) {
                 pacman.turning = directions[k];
             }
@@ -347,7 +357,7 @@ $(function () {
     });
 
     $(window).keyup(function (e) {
-        var pacman = all.get('pacman');
+        var pacman = lookup('pacman');
         if (pacman) {
             var k = getKeyCode(e);
             if (pacman.turning === directions[k]) {

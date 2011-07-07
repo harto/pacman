@@ -4,8 +4,9 @@
 
 /*jslint bitwise: false */
 /*global COLS, DEBUG, EAST, Entity, EntityGroup, Mode, NORTH, ROWS, SCREEN_H,
-  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, debug,
-  enqueueInitialiser, enterMode, level, resources, toCol, toRow, toTicks */
+  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, bind,
+  debug, enqueueInitialiser, enterMode, level, lookup, resources, toCol, toRow,
+  toTicks */
 
 /// edibles
 
@@ -37,10 +38,9 @@ Dot.prototype = new Entity({
 function Energiser(col, row) {
     this.init(col, row, TILE_SIZE - 2);
     this.setVisible(true);
-    var self = this;
-    all.get('events').repeat(Energiser.BLINK_DURATION, function () {
-        self.setVisible(!self.visible);
-    });
+    lookup('events').repeat(Energiser.BLINK_DURATION, bind(this, function () {
+        this.setVisible(!this.visible);
+    }));
 }
 
 Energiser.BLINK_DURATION = toTicks(0.25);
@@ -229,11 +229,10 @@ Maze.prototype = {
             this.bonus.centreAt(Maze.BONUS_X, Maze.BONUS_Y);
             var secs = 9 + Math.random();
             debug('displaying bonus for %.3ns', secs);
-            var self = this;
-            this.bonusTimeout = all.get('events').delay(toTicks(secs), function () {
+            this.bonusTimeout = lookup('events').delay(toTicks(secs), bind(this, function () {
                 debug('bonus timeout');
-                self.removeBonus();
-            });
+                this.removeBonus();
+            }));
         } else if (this.nDots === 0) {
             enterMode(Mode.LEVELUP);
         }
@@ -246,7 +245,7 @@ Maze.prototype = {
 
     bonusEaten: function () {
         debug('bonus eaten');
-        all.get('events').cancel(this.bonusTimeout);
+        lookup('events').cancel(this.bonusTimeout);
         this.removeBonus();
     },
 
