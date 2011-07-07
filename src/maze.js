@@ -4,13 +4,15 @@
 
 /*jslint bitwise: false */
 /*global COLS, DEBUG, EAST, Entity, EntityGroup, Mode, NORTH, ROWS, SCREEN_H,
-  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, bind,
+  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, bind, copy,
   debug, enqueueInitialiser, enterMode, level, lookup, resources, toCol, toRow,
   toTicks */
 
 /// edibles
 
-function Dot() {}
+function Dot(props) {
+    copy(props, this);
+}
 
 Dot.prototype = new Entity({
 
@@ -36,20 +38,23 @@ Dot.prototype = new Entity({
     }
 });
 
-function Energiser() {
-    //this.setVisible(true);
-    lookup('events').repeat(Energiser.BLINK_DURATION, bind(this, function () {
-        this.setVisible(!this.visible);
-    }));
-}
+function Energiser() {}
 
-Energiser.BLINK_DURATION = toTicks(0.25);
+Energiser.prototype = new Dot({
 
-Energiser.prototype = new Dot();
-Energiser.prototype.value = 50;
-Energiser.prototype.delay = 3;
-Energiser.prototype.w = Energiser.prototype.h = TILE_SIZE - 2;
-Energiser.prototype.eatenEvent = 'energiserEaten';
+    value: 50,
+    delay: 3,
+    w: TILE_SIZE - 2,
+    h: TILE_SIZE - 2,
+    eatenEvent: 'energiserEaten',
+    blinkDuration: toTicks(0.25),
+
+    start: function () {
+        lookup('events').repeat(this.blinkDuration, bind(this, function () {
+            this.setVisible(!this.visible);
+        }));
+    }
+});
 
 function Bonus(symbol, value) {
     // FIXME: do something with symbol

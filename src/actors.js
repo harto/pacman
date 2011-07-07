@@ -652,21 +652,24 @@ Clyde.prototype = new Ghost({
 // released.
 
 function ReleaseTimer(level) {
-    var events = lookup('events');
-    this.releaseTimer = events.repeat(toTicks(level < 5 ? 4 : 3), function () {
-        var insiders = Ghost.insiders();
-        if (insiders.length) {
-            debug('dot-eaten timeout');
-            insiders[0].release();
-        }
-    });
+    this.frequency = toTicks(level < 5 ? 4 : 3);
 }
 
 ReleaseTimer.prototype = {
 
+    start: function () {
+        var events = lookup('events');
+        this.timer = events.repeat(this.frequency, function () {
+            var insiders = Ghost.insiders();
+            if (insiders.length) {
+                debug('dot-eaten timeout');
+                insiders[0].release();
+            }
+        });
+    },
+
     dotEaten: function () {
-        // reset dot-eaten timer
-        this.releaseTimer.reset();
+        this.timer.reset();
     }
 };
 
@@ -734,11 +737,13 @@ function ModeSwitcher(level) {
         toTicks(level === 1 ? 20 : level < 5 ? 1033 : 1037),
         (level === 1 ? toTicks(5) : 1)
     ];
-
-    this.enqueueSwitch(0);
 }
 
 ModeSwitcher.prototype = {
+
+    start: function () {
+        this.enqueueSwitch(0);
+    },
 
     enqueueSwitch: function (n) {
         var delay = this.switchDelays[n++];

@@ -115,7 +115,7 @@ var stats = {
 
 function reset() {
     lookup('events').reset();
-    
+
     all.set('pacman', new Pacman());
     all.set('blinky', new Blinky());
     all.set('pinky', new Pinky());
@@ -124,6 +124,7 @@ function reset() {
     all.set('modeSwitcher', new ModeSwitcher(level));
     all.set('releaseTimer', new ReleaseTimer(level));
 
+    broadcast('start');
     broadcast('invalidateRegion', 0, 0, SCREEN_W, SCREEN_H);
 }
 
