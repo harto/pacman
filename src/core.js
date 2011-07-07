@@ -144,19 +144,16 @@ EventManager.prototype = {
     },
 
     delay: function (ticks, fn, repeats) {
-        var manager = this,
-            delay = new Delay(ticks, function () {
-                fn.call(this);
-                // fn might modify this.remaining, so check again
-                if (!this.remaining) {
-                    if (this.repeats === undefined || --this.repeats === 0) {
-                        manager.cancel(this);
-                    } else {
-                        this.reset();
-                    }
-                }
-            }),
-            id = this.nextDelayId++;
+        var manager = this;
+        var delay = new Delay(ticks, function () {
+            fn.call(this);
+            if (this.repeats === undefined || --this.repeats === 0) {
+                manager.cancel(this);
+            } else {
+                this.reset();
+            }
+        });
+        var id = this.nextDelayId++;
         delay.id = id;
         delay.repeats = repeats;
         this.delays[id] = delay;
@@ -193,13 +190,12 @@ function lookup(id) {
 }
 
 function Entity(props) {
-    copy(props, this);
     this.invalidated = true;
+    this.visible = true;
+    copy(props, this);
 }
 
 Entity.prototype = {
-
-    visible: true,
 
     setVisible: function (visible) {
         this.visible = visible;

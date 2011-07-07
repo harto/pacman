@@ -10,22 +10,23 @@
 
 /// edibles
 
-function Dot(col, row) {
-    // XXX: this needs some cleaning up - init is called unnecessarily
-    this.init(col, row, 3);
-}
+function Dot() {}
 
 Dot.prototype = new Entity({
+
     value: 10,
     delay: 1,
+    w: 3,
+    h: 3,
     eatenEvent: 'dotEaten',
-    init: function (col, row, size) {
+
+    place: function (col, row) {
         this.col = col;
         this.row = row;
-        this.x = col * TILE_SIZE + (TILE_SIZE - size) / 2;
-        this.y = row * TILE_SIZE + (TILE_SIZE - size) / 2;
-        this.w = this.h = size;
+        this.centreAt(col * TILE_SIZE + TILE_SIZE / 2,
+                      row * TILE_SIZE + TILE_SIZE / 2);
     },
+
     repaint: function (g) {
         g.save();
         // FIXME
@@ -35,9 +36,8 @@ Dot.prototype = new Entity({
     }
 });
 
-function Energiser(col, row) {
-    this.init(col, row, TILE_SIZE - 2);
-    this.setVisible(true);
+function Energiser() {
+    //this.setVisible(true);
     lookup('events').repeat(Energiser.BLINK_DURATION, bind(this, function () {
         this.setVisible(!this.visible);
     }));
@@ -48,6 +48,7 @@ Energiser.BLINK_DURATION = toTicks(0.25);
 Energiser.prototype = new Dot();
 Energiser.prototype.value = 50;
 Energiser.prototype.delay = 3;
+Energiser.prototype.w = Energiser.prototype.h = TILE_SIZE - 2;
 Energiser.prototype.eatenEvent = 'energiserEaten';
 
 function Bonus(symbol, value) {
@@ -109,12 +110,13 @@ function Maze() {
             }
             var dot;
             if (c === '.') {
-                dot = new Dot(col, row);
+                dot = new Dot();
             } else if (c === 'o') {
-                dot = new Energiser(col, row);
+                dot = new Energiser();
                 this.energisers.push(dot);
             }
             this.dots[row][col] = dot;
+            dot.place(col, row);
             ++this.nDots;
         }
     }

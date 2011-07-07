@@ -45,11 +45,6 @@ function bind(o, f) {
     };
 }
 
-function alias(o, fName) {
-    var f = o[fName];
-    return f ? bind(o, f) : noop;
-}
-
 function keys(o) {
     var ks = [];
     for (var k in o) {

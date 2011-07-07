@@ -2,7 +2,7 @@
  * Resource loader and manager
  */
 
-/*global Audio, Image, $, debug, format, alias */
+/*global Audio, Image, $, debug, format */
 
 /// managers
 
@@ -87,22 +87,19 @@ function loadSound(id, path, onLoad, onError) {
     aud.load();
 }
 
-// Load resources as specified. The `props' object should specify:
+// Load resources as specified. The `handler' object should specify:
 //   base: base href of resources
 //   images: array of image IDs to be loaded
 //   sounds: array of sound IDs to be loaded
 //   onUpdate: function that accepts the proportion of loaded resources (0.0 - 1.0)
 //   onComplete: a function that accepts an initialised ResourceManager
 //   onError: a function that accepts an error message
-function loadResources(props) {
-    var base = props.base.replace(/\/$/, ''),
-        imageIds = props.images || [],
-        soundIds = props.sounds || [],
-        update = alias(props, 'onUpdate'),
-        complete = alias(props, 'onComplete'),
-        error = alias(props, 'onError');
+function loadResources(handler) {
+    var base = handler.base.replace(/\/$/, ''),
+        imageIds = handler.images || [],
+        soundIds = handler.sounds || [];
 
-    update(0);
+    handler.onUpdate(0);
 
     var nTotal = imageIds.length + soundIds.length,
         nRemaining = nTotal,
@@ -113,9 +110,9 @@ function loadResources(props) {
         return function (resource) {
             collection[id] = resource;
             --nRemaining;
-            update((nTotal - nRemaining) / nTotal);
+            handler.onUpdate((nTotal - nRemaining) / nTotal);
             if (nRemaining === 0) {
-                complete(new ResourceManager(images, sounds));
+                handler.onComplete(new ResourceManager(images, sounds));
             }
         };
     }
@@ -126,7 +123,7 @@ function loadResources(props) {
         return function (src) {
             if (!aborted) {
                 aborted = true;
-                error(format('Unable to load resource %s (%s)', id, src));
+                handler.onError(format('Unable to load resource %s (%s)', id, src));
             }
         };
     }
