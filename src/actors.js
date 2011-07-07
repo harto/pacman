@@ -249,6 +249,15 @@ Ghost.all = function () {
     });
 };
 
+// Returns ghosts currently within the house, in preferred-release-order.
+Ghost.insiders = function () {
+    return ['blinky', 'pinky', 'inky', 'clyde'].map(function (id) {
+        return lookup(id);
+    }).filter(function (g) {
+        return g.is(Ghost.STATE_INSIDE);
+    });
+};
+
 // duration of frightened time, indexed by level
 Ghost.FRIGHT_TICKS = [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1].map(toTicks);
 // number of times to flash when becoming unfrightened, indexed by level
@@ -623,75 +632,75 @@ Clyde.prototype = new Ghost({
     }
 });
 
-function GhostReleaser(level) {
-    // Ghosts are individually released from the house according to the number of
-    // dots eaten by Pac-Man and the time since a dot was last eaten.
-    //
-    // At the start of each level, each ghost is initialised with a personal dot
-    // counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
-    // eaten, the counter of the most preferred ghost within the house (in order:
-    // Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
-    // released.
-    //
-    // Whenever a life is lost, a global dot counter is used in place of the
-    // individual counters. Ghosts are released according to the value of this
-    // counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
-    // when the counter reaches 32, the individual dot counters are used henceforth
-    // as previously described. Otherwise, the global counter remains in effect.
-    //
-    // Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
-    // is eaten for some level-specific amount of time, the preferred ghost is
-    // released.
+// Ghosts are individually released from the house according to the number of
+// dots eaten by Pac-Man and the time since a dot was last eaten.
+//
+// At the start of each level, each ghost is initialised with a personal dot
+// counter that tracks the number of dots eaten by Pac-Man. Each time a dot is
+// eaten, the counter of the most preferred ghost within the house (in order:
+// Pinky, Inky and Clyde) is decremented. When a ghost's counter is zero, it is
+// released.
+//
+// Whenever a life is lost, a global dot counter is used in place of the
+// individual counters. Ghosts are released according to the value of this
+// counter: Pinky at 7, Inky at 17 and Clyde at 32. If Clyde is inside the house
+// when the counter reaches 32, the individual dot counters are used henceforth
+// as previously described. Otherwise, the global counter remains in effect.
+//
+// Additionally, a timer tracks the time since Pac-Man last ate a dot. If no dot
+// is eaten for some level-specific amount of time, the preferred ghost is
+// released.
 
+function ReleaseTimer(level) {
+    var events = lookup('events');
+    this.releaseTimer = events.repeat(toTicks(level < 5 ? 4 : 3), function () {
+        var insiders = Ghost.insiders();
+        if (insiders.length) {
+            debug('dot-eaten timeout');
+            insiders[0].release();
+        }
+    });
+}
+
+ReleaseTimer.prototype = {
+
+    dotEaten: function () {
+        // reset dot-eaten timer
+        this.releaseTimer.reset();
+    }
+};
+
+function DotCounter(level) {
     this.counters = {
         blinky: 0,
         pinky: 0,
         inky: level === 1 ? 30 : 0,
         clyde: level === 1 ? 60 : level === 2 ? 50 : 0
     };
-
     this.globalCounter = 0;
-
-    this.resetReleaseTimer();
 }
 
-GhostReleaser.prototype = {
-
-    resetReleaseTimer: function () {
-        var events = lookup('events');
-        events.cancel(this.releaseTimer);
-        this.releaseTimer = events.repeat(toTicks(level < 5 ? 4 : 3), bind(this, function () {
-            var ghost = this.firstWaiting();
-            if (ghost) {
-                debug('dot-eaten timeout');
-                ghost.release();
-            }
-        }));
-    },
+DotCounter.prototype = {
 
     dotEaten: function () {
-        // reset dot-eaten timer
-        this.releaseTimer.reset();
-
         var counters = this.counters,
             pinky = lookup('pinky'),
             inky = lookup('inky'),
-            clyde = lookup('clyde');
+            clyde = lookup('clyde'),
+            insiders = Ghost.insiders();
 
-        // update dot counter(s)
         if (this.useGlobalCounter &&
             ++this.globalCounter === 32 &&
             clyde.is(Ghost.STATE_INSIDE)) {
             this.useGlobalCounter = false;
         } else {
-            var firstWaiting = this.firstWaiting();
-            if (firstWaiting) {
-                --counters[firstWaiting.name];
+            if (insiders.length) {
+                var first = insiders[0];
+                --counters[first.name];
             }
         }
 
         // check counters and maybe release
-        var insiders = this.insiders();
         if (!insiders.length) {
             // nobody home
             return;
@@ -710,27 +719,12 @@ GhostReleaser.prototype = {
         }
     },
 
-    // Returns ghosts currently within the house, in preferred-release-order.
-    insiders: function () {
-        return ['blinky', 'pinky', 'inky', 'clyde'].map(function (id) {
-            return lookup(id);
-        }, this).filter(function (g) {
-            return g.is(Ghost.STATE_INSIDE);
-        });
-    },
-
-    firstWaiting: function () {
-        var insiders = this.insiders();
-        return insiders.length ? insiders[0] : null;
-    },
-
     pacmanKilled: function () {
         this.useGlobalCounter = true;
-        this.resetReleaseTimer();
     }
 };
 
-function GhostModeSwitcher(level) {
+function ModeSwitcher(level) {
     this.switchDelays = [
         toTicks(level < 5 ? 7 : 5),
         toTicks(20),
@@ -744,7 +738,7 @@ function GhostModeSwitcher(level) {
     this.enqueueSwitch(0);
 }
 
-GhostModeSwitcher.prototype = {
+ModeSwitcher.prototype = {
 
     enqueueSwitch: function (n) {
         var delay = this.switchDelays[n++];

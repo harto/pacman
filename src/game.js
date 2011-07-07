@@ -8,9 +8,9 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, Blinky, Bonus, BonusDisplay, Clyde, DEBUG, Delay, EAST, Energiser,
-  Entity, EntityGroup, EventManager, Ghost, GhostGroup, GhostModeSwitcher,
-  GhostReleaser, Inky, Maze, NORTH, Pacman, Pinky, SCREEN_H, SCREEN_W, SOUTH,
+/*global $, Blinky, Bonus, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, EAST,
+  Energiser, Entity, EntityGroup, EventManager, Ghost, Inky, Maze,
+  ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
   TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman,
   format, initialisers, level:true, lives:true, loadResources, lookup,
   resources:true, toTicks, window */
@@ -113,13 +113,17 @@ var stats = {
     }
 };
 
-function resetActors() {
+function reset() {
+    lookup('events').reset();
+    
     all.set('pacman', new Pacman());
     all.set('blinky', new Blinky());
     all.set('pinky', new Pinky());
     all.set('inky', new Inky());
     all.set('clyde', new Clyde());
-    all.set('modeSwitcher', new GhostModeSwitcher(level));
+    all.set('modeSwitcher', new ModeSwitcher(level));
+    all.set('releaseTimer', new ReleaseTimer(level));
+
     broadcast('invalidateRegion', 0, 0, SCREEN_W, SCREEN_H);
 }
 
@@ -128,8 +132,9 @@ function levelUp() {
     debug('starting level %s', level);
 
     all = new EntityGroup();
+
     all.set('events', new EventManager());
-    all.set('releaser', new GhostReleaser(level));
+    all.set('dotCounter', new DotCounter(level));
     all.set('maze', new Maze());
     all.set('scoreboard', new Scoreboard());
     all.set('bonusDisplay', new BonusDisplay(level));
@@ -137,7 +142,7 @@ function levelUp() {
         all.set('stats', stats);
     }
 
-    resetActors();
+    reset();
 }
 
 var mode, paused;
@@ -200,7 +205,7 @@ Mode = {
         //     pacman.update();
         // } else {
             if (--lives) {
-                resetActors();
+                reset();
             }
             enterMode(lives ? Mode.REVIVING : Mode.FINISHED);
         // }

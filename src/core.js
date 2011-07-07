@@ -133,11 +133,15 @@ Delay.prototype = {
 };
 
 function EventManager() {
-    this.delays = {};
-    this.nextDelayId = 0;
+    this.reset();
 }
 
 EventManager.prototype = {
+
+    reset: function () {
+        this.delays = {};
+        this.nextDelayId = 0;
+    },
 
     delay: function (ticks, fn, repeats) {
         var manager = this,
