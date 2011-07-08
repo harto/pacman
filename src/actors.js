@@ -3,11 +3,11 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, Dot, EAST, Entity, EntityGroup, InlineScore, Maze, Mode, NORTH,
-  ROWS, SOUTH, ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ,
-  WEST, all, bind, broadcast, copy, debug, distance, enqueueInitialiser,
-  enterMode, format, keys, level, lookup, resources, reverse, toCol, toDx,
-  toDy, toOrdinal, toRow, toSeconds, toTicks, wait */
+/*global COLS, Dot, EAST, Entity, InlineScore, Maze, Mode, NORTH, ROWS, SOUTH,
+  ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ, WEST, all, bind,
+  broadcast, copy, debug, distance, enqueueInitialiser, enterMode, format,
+  keys, level, lookup, noop, resources, reverse, toCol, toDx, toDy, toOrdinal,
+  toRow, toSeconds, toTicks, wait */
 
 function Actor(props) {
     copy(props, this);
@@ -20,19 +20,14 @@ Actor.prototype.moveTo = function (x, y) {
     var max = Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
     x = x < min ? max : max < x ? min : x;
 
+    this.prevCol = this.col;
+    this.prevRow = this.row;
+
     Entity.prototype.moveTo.call(this, x, y);
 
-    // centre x, y
-    this.cx = x + this.w / 2;
-    this.cy = y + this.h / 2;
     // local x, y
     this.lx = Math.abs(this.cx % TILE_SIZE);
     this.ly = Math.abs(this.cy % TILE_SIZE);
-
-    this.prevCol = this.col;
-    this.prevRow = this.row;
-    this.col = toCol(this.cx);
-    this.row = toRow(this.cy);
 };
 
 Actor.prototype.moveBy = function (dx, dy) {
@@ -134,9 +129,10 @@ Pacman.prototype = new Actor({
     h: Pacman.HEIGHT,
 
     dotEaten: function (d) {
-        this.waiting = true;
+        // stub update() for duration of dot delay
+        this.update = noop;
         lookup('events').delay(d.delay, bind(this, function () {
-            this.waiting = false;
+            delete this.update;
         }));
     },
 
@@ -153,8 +149,6 @@ Pacman.prototype = new Actor({
             // TODO: death sequence
             this.dead = true;
             return;
-        } else if (this.waiting) {
-            return;
         }
 
         var newDirection = this.turning || this.direction;
@@ -162,12 +156,6 @@ Pacman.prototype = new Actor({
             this.direction = newDirection;
         } else if (this.direction !== newDirection) {
             this.move(this.direction);
-        }
-
-        // collision check edibles
-        var item = lookup('maze').itemAt(this.col, this.row);
-        if (item) {
-            broadcast(item.eatenEvent, item);
         }
     },
 
@@ -476,10 +464,12 @@ Ghost.prototype = new Actor({
         return exitDirection;
     },
 
-    collideWith: function (pacman) {
-        if (this.is(Ghost.STATE_DEAD)) {
+    checkCollision: function (pacman) {
+        if (pacman.col !== this.col || pacman.row !== this.row || this.is(Ghost.STATE_DEAD)) {
             return;
-        } else if (this.is(Ghost.STATE_FRIGHTENED)) {
+        }
+
+        if (this.is(Ghost.STATE_FRIGHTENED)) {
             pacman.setVisible(false);
             this.setVisible(false);
             // FIXME: add to actual score

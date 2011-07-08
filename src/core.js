@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise: false */
-/*global $, console, copy, format, keys, noop, values */
+/*global $, console, copy, dispatch, dispatchAll, format, keys, noop, values */
 
 var TILE_SIZE = 8,
     TILE_CENTRE = TILE_SIZE / 2,
@@ -181,8 +181,8 @@ EventManager.prototype = {
 
 /// entities
 
-function broadcast(/*event, args...*/) {
-    return all.notify.apply(all, arguments);
+function broadcast(event, args) {
+    return dispatch(all, event, args);
 }
 
 function lookup(id) {
@@ -190,20 +190,24 @@ function lookup(id) {
 }
 
 function Entity(props) {
-    this.invalidated = true;
-    this.visible = true;
+    this._invalidated = true;
+    this._visible = true;
     copy(props, this);
 }
 
 Entity.prototype = {
 
     setVisible: function (visible) {
-        this.visible = visible;
+        this._visible = visible;
         this.invalidate();
     },
 
+    isVisible: function () {
+        return this._visible;
+    },
+
     invalidate: function () {
-        this.invalidated = true;
+        this._invalidated = true;
         if (this.x !== undefined && this.y !== undefined && this.w && this.h) {
             // cover antialiasing and sub-pixel artifacts
             var x = this.x - 1, y = this.y - 1, w = this.w + 2, h = this.h + 2;
@@ -216,13 +220,13 @@ Entity.prototype = {
             nw -= Math.max(0, nx + nw - SCREEN_W);
             nh -= Math.max(0, ny + nh - SCREEN_H);
             if (nw > 0 && nh > 0) {
-                broadcast('invalidateRegion', nx, ny, nw, nh);
+                broadcast('invalidateRegion', [nx, ny, nw, nh]);
             }
         }
     },
 
     invalidateRegion: function (x, y, w, h) {
-        if (this.visible && !this.invalidated && this.intersects(x, y, w, h)) {
+        if (this._visible && !this._invalidated && this.intersects(x, y, w, h)) {
             // This default implementation invalidates the whole entity when any
             // part of it is invalidated, and recursively invalidates any other
             // affected entities. This can be overridden for finer control (Maze
@@ -237,9 +241,9 @@ Entity.prototype = {
     },
 
     draw: function (g, regions) {
-        if (this.visible && this.invalidated) {
+        if (this._visible && this._invalidated) {
             this.repaint(g);
-            this.invalidated = false;
+            this._invalidated = false;
         }
     },
 
@@ -251,6 +255,12 @@ Entity.prototype = {
             this.invalidate();
             this.x = x;
             this.y = y;
+            // centre x, y
+            this.cx = x + this.w / 2;
+            this.cy = y + this.h / 2;
+            // tile location
+            this.col = toCol(this.cx);
+            this.row = toRow(this.cy);
         }
     },
 
@@ -309,19 +319,13 @@ EntityGroup.prototype = {
         return this.order;
     },
 
-    // Invokes the named method on all members if the member has a property with
-    // that name. If the method doesn't exist for a member EntityGroup, its
-    // `notify' method is invoked instead.
-    notify: function (fName /*, args...*/) {
-        var allArgs = Array.prototype.slice.call(arguments, 0);
-        var fArgs = Array.prototype.slice.call(arguments, 1);
-        this.all().forEach(function (e) {
-            var f = e[fName];
-            if (f) {
-                f.apply(e, fArgs);
-            } else if (e instanceof EntityGroup) {
-                e.notify.apply(e, allArgs);
-            }
+    // Returns the result of dispatching the given message to all members of the
+    // group. To intercept specific messages, define a method with that name.
+    // This function could then be manually called from within the handler to
+    // continue propagating the message.
+    dispatch: function (msg, args) {
+        this.all().forEach(function (o) {
+            dispatch(o, msg, args);
         });
     },
 

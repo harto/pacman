@@ -67,6 +67,24 @@ function copy(from, to) {
     });
 }
 
+// Sends a message to an object. The object handles the message in one of the
+// following ways:
+//   - If msg is a property of the object, returns the result of invoking the
+//     method with the given args.
+//   - If no specific handler is found, but the object defines a `dispatch'
+//     method, returns the result of invoking that method with the given msg
+//     and args.
+//   - If no handler or dispatch method is found, returns null.
+function dispatch(o, msg, args) {
+    if (msg in o) {
+        return o[msg].apply(o, args);
+    } else if ('dispatch' in o) {
+        return o.dispatch(msg, args);
+    } else {
+        return null;
+    }
+}
+
 // Math extensions
 
 Math.sign = function (x) {

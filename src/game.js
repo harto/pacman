@@ -8,12 +8,12 @@
  * Requires: jQuery 1.4.2
  */
 
-/*global $, Blinky, Bonus, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, EAST,
-  Energiser, Entity, EntityGroup, EventManager, Ghost, Inky, Maze,
-  ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
-  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman,
-  format, initialisers, level:true, lives:true, loadResources, lookup,
-  resources:true, toTicks, window */
+/*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
+  EAST, Entity, EntityGroup, EventManager, Ghost, Inky, Maze, ModeSwitcher,
+  NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE,
+  UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman, format,
+  initialisers, level:true, lives:true, loadResources, lookup, resources:true,
+  toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 var score;
@@ -125,7 +125,7 @@ function reset() {
     all.set('releaseTimer', new ReleaseTimer(level));
 
     broadcast('start');
-    broadcast('invalidateRegion', 0, 0, SCREEN_W, SCREEN_H);
+    broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
 }
 
 function levelUp() {
@@ -135,10 +135,11 @@ function levelUp() {
     all = new EntityGroup();
 
     all.set('events', new EventManager());
-    all.set('dotCounter', new DotCounter(level));
     all.set('maze', new Maze());
+    all.set('dots', new DotGroup());
     all.set('scoreboard', new Scoreboard());
     all.set('bonusDisplay', new BonusDisplay(level));
+    all.set('dotCounter', new DotCounter(level));
     if (DEBUG) {
         all.set('stats', stats);
     }
@@ -180,16 +181,7 @@ Mode = {
 
     RUNNING: function () {
         broadcast('update');
-
-        // XXX: There's probably a better way to check collisions - perhaps
-        // entities could declare that they are 'collideable', or register
-        // interest for collisions with specific entities.
-        var pacman = lookup('pacman');
-        Ghost.all().filter(function (g) {
-            return g.col === pacman.col && g.row === pacman.row;
-        }).forEach(function (g) {
-            g.collideWith(pacman);
-        });
+        broadcast('checkCollision', [lookup('pacman')]);
     },
 
     LEVELUP: function () {
@@ -225,7 +217,7 @@ Mode = {
 var ctx;
 
 function draw() {
-    broadcast('draw', ctx);
+    broadcast('draw', [ctx]);
 }
 
 var UPDATE_DELAY = 1000 / UPDATE_HZ,
