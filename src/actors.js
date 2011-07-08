@@ -6,62 +6,58 @@
 /*global COLS, Dot, EAST, Entity, InlineScore, Maze, Mode, NORTH, ROWS, SOUTH,
   ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ, WEST, all, bind,
   broadcast, copy, debug, distance, enqueueInitialiser, enterMode, format,
-  keys, level, lookup, noop, resources, reverse, toCol, toDx, toDy, toOrdinal,
-  toRow, toSeconds, toTicks, wait */
+  keys, level, lookup, noop, resources, reverse, toDx, toDy, toOrdinal, toRow,
+  toSeconds, toTicks, wait */
 
 function Actor(props) {
     copy(props, this);
 }
 
-Actor.prototype = new Entity();
+Actor.prototype = new Entity({
 
-Actor.prototype.moveTo = function (x, y) {
-    var min = Maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
-    var max = Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
-    x = x < min ? max : max < x ? min : x;
+    moveTo: function (x, y) {
+        var min = Maze.TUNNEL_WEST_EXIT_COL * TILE_SIZE;
+        var max = Maze.TUNNEL_EAST_EXIT_COL * TILE_SIZE;
+        x = x < min ? max : max < x ? min : x;
 
-    this.prevCol = this.col;
-    this.prevRow = this.row;
+        this.prevCol = this.col;
+        this.prevRow = this.row;
 
-    Entity.prototype.moveTo.call(this, x, y);
+        Entity.prototype.moveTo.call(this, x, y);
 
-    // local x, y
-    this.lx = Math.abs(this.cx % TILE_SIZE);
-    this.ly = Math.abs(this.cy % TILE_SIZE);
-};
+        // local x, y
+        this.lx = Math.abs(this.cx % TILE_SIZE);
+        this.ly = Math.abs(this.cy % TILE_SIZE);
+    },
 
-Actor.prototype.moveBy = function (dx, dy) {
-    // Actors can only move in whole-pixel offsets. This avoids dealing with
-    // sub-pixel values when rendering and calculating in-tile locations. To
-    // allow for variable speeds, any fractional amount of movement is
-    // accumulated and added to the actor's next move.
+    moveBy: function (dx, dy) {
+        // Actors can only move in whole-pixel offsets. This avoids dealing with
+        // sub-pixel values when rendering and calculating in-tile locations. To
+        // allow for variable speeds, any fractional amount of movement is
+        // accumulated and added to the actor's next move.
 
-    // reset accumulated value when changing direction
-    if (!dx || Math.sign(dx) !== Math.sign(this.accX)) {
-        this.accX = 0;
+        // reset accumulated value when changing direction
+        if (!dx || Math.sign(dx) !== Math.sign(this.accX)) {
+            this.accX = 0;
+        }
+        if (!dy || Math.sign(dy) !== Math.sign(this.accY)) {
+            this.accY = 0;
+        }
+
+        var x = dx + (this.accX || 0);
+        var y = dy + (this.accY || 0);
+        var actualX = Math.trunc(x);
+        var actualY = Math.trunc(y);
+
+        this.moveTo(this.x + actualX, this.y + actualY);
+        this.accX = x - actualX;
+        this.accY = y - actualY;
+    },
+
+    enteringTile: function () {
+        return this.col !== this.prevCol || this.row !== this.prevRow;
     }
-    if (!dy || Math.sign(dy) !== Math.sign(this.accY)) {
-        this.accY = 0;
-    }
-
-    var x = dx + (this.accX || 0);
-    var y = dy + (this.accY || 0);
-    var actualX = Math.trunc(x);
-    var actualY = Math.trunc(y);
-
-    this.moveTo(this.x + actualX, this.y + actualY);
-    this.accX = x - actualX;
-    this.accY = y - actualY;
-};
-
-Actor.prototype.enteringTile = function () {
-    return this.col !== this.prevCol || this.row !== this.prevRow;
-};
-
-Actor.prototype.drawFrame = function (g, frames, col, row) {
-    var w = this.w, h = this.h;
-    g.drawImage(frames, col * w, row * h, w, h, this.x, this.y, w, h);
-};
+});
 
 Actor.exitingTile = function (direction, lx, ly) {
     return (direction === WEST && lx <= TILE_CENTRE) ||
@@ -230,12 +226,6 @@ Ghost.STATE_LABELS = (function () {
     });
     return labels;
 }());
-
-Ghost.all = function () {
-    return ['blinky', 'pinky', 'inky', 'clyde'].map(function (name) {
-        return lookup(name);
-    });
-};
 
 // Returns ghosts currently within the house, in preferred-release-order.
 Ghost.insiders = function () {
@@ -752,8 +742,12 @@ ModeSwitcher.prototype = {
                 oldState = Ghost.STATE_CHASING;
                 newState = Ghost.STATE_SCATTERING;
             }
+
             debug('mode switch (%n): %s', n, Ghost.STATE_LABELS[newState]);
-            Ghost.all().forEach(function (g) {
+
+            ['blinky', 'pinky', 'inky', 'clyde'].map(function (name) {
+                return lookup(name);
+            }).forEach(function (g) {
                 g.unset(oldState);
                 g.set(newState);
                 g.reverse();

@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise: false */
-/*global $, console, copy, dispatch, dispatchAll, format, keys, noop, values */
+/*global $, console, copy, dispatch, format, keys, noop, values */
 
 var TILE_SIZE = 8,
     TILE_CENTRE = TILE_SIZE / 2,
@@ -133,15 +133,11 @@ Delay.prototype = {
 };
 
 function EventManager() {
-    this.reset();
+    this.delays = {};
+    this.nextDelayId = 0;
 }
 
 EventManager.prototype = {
-
-    reset: function () {
-        this.delays = {};
-        this.nextDelayId = 0;
-    },
 
     delay: function (ticks, fn, repeats) {
         var manager = this;

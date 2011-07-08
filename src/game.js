@@ -4,16 +4,14 @@
  *
  * Based on the game as described by The Pac-Man Dossier
  * (http://home.comcast.net/~jpittman2/pacman/pacmandossier.html)
- *
- * Requires: jQuery 1.4.2
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, Entity, EntityGroup, EventManager, Ghost, Inky, Maze, ModeSwitcher,
-  NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE,
-  UPDATE_HZ, WEST, alert, all:true, broadcast, debug, drawPacman, format,
-  initialisers, level:true, lives:true, loadResources, lookup, resources:true,
-  toTicks, window */
+  EAST, Entity, EntityGroup, EventManager, Inky, Maze, ModeSwitcher, NORTH,
+  Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ,
+  WEST, alert, all:true, broadcast, debug, drawPacman, format, initialisers,
+  level:true, lives:true, loadResources, lookup, resources:true, toTicks,
+  window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 var score;
@@ -45,6 +43,7 @@ Scoreboard.prototype = new Entity({
         this.invalidate();
     }
 });
+
 Scoreboard.prototype.dotEaten =
     Scoreboard.prototype.energiserEaten =
     Scoreboard.prototype.bonusEaten =
@@ -53,6 +52,7 @@ Scoreboard.prototype.dotEaten =
 function InfoText(txt) {
     this.txt = txt;
 }
+
 InfoText.prototype = new Entity({
     pad: TEXT_HEIGHT / 2,
     repaint: function (g) {
@@ -73,6 +73,7 @@ InfoText.prototype = new Entity({
         g.restore();
     }
 });
+
 InfoText.prototype.h = TEXT_HEIGHT + 2 * InfoText.prototype.pad;
 InfoText.prototype.y = (SCREEN_H - InfoText.prototype.h) / 2;
 
@@ -114,8 +115,7 @@ var stats = {
 };
 
 function reset() {
-    lookup('events').reset();
-
+    all.set('events', new EventManager());
     all.set('pacman', new Pacman());
     all.set('blinky', new Blinky());
     all.set('pinky', new Pinky());
@@ -134,7 +134,6 @@ function levelUp() {
 
     all = new EntityGroup();
 
-    all.set('events', new EventManager());
     all.set('maze', new Maze());
     all.set('dots', new DotGroup());
     all.set('scoreboard', new Scoreboard());

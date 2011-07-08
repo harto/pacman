@@ -2,7 +2,7 @@
  * Resource loader and manager
  */
 
-/*global Audio, Image, $, debug, format */
+/*global $, Audio, Image, debug, format */
 
 /// managers
 
