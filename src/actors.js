@@ -460,16 +460,16 @@ Ghost.prototype = new Actor({
         }
 
         if (this.is(Ghost.STATE_FRIGHTENED)) {
+            debug('%s: dying', this);
             pacman.setVisible(false);
             this.setVisible(false);
             // FIXME: add to actual score
-            var score = all.add(new InlineScore(200, this.cx, this.cy));
+            var score = new InlineScore(200, this.cx, this.cy);
+            score.insert();
             wait(toTicks(0.5), bind(this, function () {
-                all.remove(score);
+                score.remove();
                 pacman.setVisible(true);
                 this.setVisible(true);
-
-                debug('%s: dying', this);
                 this.unfrighten();
                 this.set(Ghost.STATE_DEAD);
             }));

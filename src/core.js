@@ -343,8 +343,28 @@ function InlineScore(score, cx, cy) {
     this.cx = cx;
     this.cy = cy;
 }
+
 InlineScore.prototype = new Entity({
+
     h: 5,
+
+    insert: function () {
+        this.id = all.add(this);
+        this.invalidate();
+    },
+
+    remove: function () {
+        all.remove(this.id);
+        this.invalidate();
+    },
+
+    showFor: function (ticks) {
+        this.insert();
+        all.get('events').delay(ticks, bind(this, function () {
+            this.remove();
+        }));
+    },
+
     repaint: function (g) {
         g.save();
         g.setFontSize(this.h);

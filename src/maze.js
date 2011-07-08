@@ -212,9 +212,13 @@ Bonus.prototype = new Entity({
     checkCollision: function (pacman) {
         if (pacman.col === this.col && pacman.row === this.row) {
             debug('bonus eaten');
+            broadcast('bonusEaten', [this]);
+
             all.remove('bonus');
             lookup('events').cancel(this.timeout);
-            broadcast('bonusEaten', [this]);
+
+            var score = new InlineScore(this.value, this.cx, this.cy);
+            score.showFor(toTicks(1));
         }
     }
 });
