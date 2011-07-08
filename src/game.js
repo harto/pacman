@@ -7,11 +7,10 @@
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, Entity, EntityGroup, EventManager, Inky, Maze, ModeSwitcher, NORTH,
-  Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ,
-  WEST, alert, all:true, broadcast, debug, drawPacman, format, initialisers,
-  level:true, lives:true, loadResources, lookup, resources:true, toTicks,
-  window */
+  EAST, Entity, EventManager, Inky, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
+  ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ, WEST, alert,
+  all:true, broadcast, debug, drawPacman, format, initialisers, level:true,
+  lives:true, loadResources, lookup, resources:true, toTicks, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 var score;
@@ -132,7 +131,7 @@ function levelUp() {
     ++level;
     debug('starting level %s', level);
 
-    all = new EntityGroup();
+    all = new Group();
 
     all.set('maze', new Maze());
     all.set('dots', new DotGroup());

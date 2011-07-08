@@ -266,19 +266,21 @@ Entity.prototype = {
 };
 
 // Entities are organised into a tree-like structure, with `all' at the root.
-// EntityGroups provide a relatively simple way to group entities and send them
-// 'messages' (i.e. invoke methods on them). Group members are internally stored
-// in a map (for fast lookup), but the order in which they are added is also
-// preserved for iteration via `all()'.
+// Groups provide a relatively simple way to organise objects and send them
+// 'messages' (i.e. invoke methods on them).
+//
+// Group members are internally stored in a map for fast lookup. Their iteration
+// order is defined by their respective `z' attributes. (Note: this is only
+// checked on insert.)
 
-function EntityGroup(props) {
+function Group(props) {
     this.members = {};
-    this.order = [];
+    this.zIndex = [];
     this.nextId = 0;
     copy(props, this);
 }
 
-EntityGroup.prototype = {
+Group.prototype = {
 
     // Lookup member by name.
     get: function (id) {
@@ -287,14 +289,25 @@ EntityGroup.prototype = {
 
     // Add a named member.
     set: function (id, o) {
-        // preserve ordering
-        var old = this.get(id);
-        if (old) {
-            this.order.splice(this.order.indexOf(old), 1, o);
-        } else {
-            this.order.push(o);
+        if (id in this.members) {
+            // Remove previous incarnation
+            this.remove(id);
         }
         this.members[id] = o;
+
+        // Respect z-index order. An object added after another object with the
+        // same z-index appears later in the index.
+        if (o.z === undefined) {
+            o.z = 0;
+        }
+        // Insertion sort
+        var zIndex = this.zIndex;
+        for (var i = 0; i < zIndex.length; i++) {
+            if (o.z < zIndex[i].z) {
+                break;
+            }
+        }
+        zIndex.splice(i, 0, o);
     },
 
     // Add a group member and return its auto-generated ID.
@@ -306,13 +319,13 @@ EntityGroup.prototype = {
 
     remove: function (id) {
         var o = this.members[id];
-        this.order.remove(o);
+        this.zIndex.remove(o);
         delete this.members[id];
     },
 
-    // Return group members in the order they were added.
+    // Return group members in z-index order.
     all: function () {
-        return this.order;
+        return this.zIndex;
     },
 
     // Returns the result of dispatching the given message to all members of the
@@ -326,7 +339,7 @@ EntityGroup.prototype = {
     },
 
     toString: function () {
-        return 'EntityGroup [' + keys(this.members).length + ']';
+        return 'Group [' + keys(this.members).length + ']';
     }
 };
 
@@ -378,5 +391,9 @@ InlineScore.prototype = new Entity({
         g.fillStyle = 'white';
         g.fillText(this.score, this.cx, this.cy);
         g.restore();
+    },
+
+    toString: function () {
+        return 'InlineScore';
     }
 });

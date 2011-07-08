@@ -123,6 +123,7 @@ Pacman.prototype = new Actor({
 
     w: Pacman.WIDTH,
     h: Pacman.HEIGHT,
+    z: 10,
 
     dotEaten: function (d) {
         // stub update() for duration of dot delay
@@ -257,6 +258,8 @@ Ghost.prototype = new Actor({
 
     w: 12,
     h: 12,
+
+    z: 20,
 
     init: function () {
         this.set(Ghost.STATE_INSIDE);
@@ -463,6 +466,7 @@ Ghost.prototype = new Actor({
             debug('%s: dying', this);
             pacman.setVisible(false);
             this.setVisible(false);
+            this.set(Ghost.STATE_DEAD);
             // FIXME: add to actual score
             var score = new InlineScore(200, this.cx, this.cy);
             score.insert();
@@ -471,7 +475,6 @@ Ghost.prototype = new Actor({
                 pacman.setVisible(true);
                 this.setVisible(true);
                 this.unfrighten();
-                this.set(Ghost.STATE_DEAD);
             }));
         } else {
             broadcast('pacmanKilled');

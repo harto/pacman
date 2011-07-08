@@ -3,10 +3,10 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, DEBUG, EAST, Entity, EntityGroup, Mode, NORTH, ROWS, SCREEN_H,
-  SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, broadcast,
-  copy, debug, enqueueInitialiser, enterMode, level, lookup, resources, toCol,
-  toRow, toTicks */
+/*global COLS, DEBUG, EAST, Entity, Mode, NORTH, ROWS, SCREEN_H, SCREEN_W,
+  SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, broadcast, copy,
+  debug, enqueueInitialiser, enterMode, level, lookup, resources, toCol, toRow,
+  toTicks */
 
 /// maze
 
@@ -98,6 +98,9 @@ Maze.northDisallowed = function (col, row) {
 };
 
 Maze.prototype = {
+
+    // always draw first
+    z: -1,
 
     // itemAt: function (col, row) {
     //     var b = this.bonus;
@@ -247,7 +250,7 @@ function BonusDisplay(level) {
 }
 
 BonusDisplay.MAX_DISPLAY = 6;
-BonusDisplay.prototype = new EntityGroup();
+BonusDisplay.prototype = new Group();
 
 /// dots
 
