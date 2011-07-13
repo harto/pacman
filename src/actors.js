@@ -228,12 +228,12 @@ Ghost.STATE_LABELS = (function () {
     return labels;
 }());
 
-// Returns ghosts currently within the house, in preferred-release-order.
-Ghost.insiders = function () {
+// Returns ghosts in the given state, in preferred-release-order.
+Ghost.all = function (state) {
     return ['blinky', 'pinky', 'inky', 'clyde'].map(function (id) {
         return lookup(id);
     }).filter(function (g) {
-        return g.is(Ghost.STATE_INSIDE);
+        return g.is(state);
     });
 };
 
@@ -313,6 +313,16 @@ Ghost.prototype = new Actor({
         return [{ x: x, y: y + 3 * TILE_SIZE }, { x: x, y: y }];
     },
 
+    calcEntryPath: function () {
+        var path = this.calcExitPath();
+        path.reverse();
+        if (toRow(this.startCy) !== Maze.HOME_ROW) {
+            // return ghosts to start column in house
+            path.push({ x: this.startCx, y: this.startCy });
+        }
+        return path;
+    },
+
     calcSpeed: function () {
         return this.is(Ghost.STATE_DEAD) || this.is(Ghost.STATE_ENTERING) ? 2 :
                Maze.inTunnel(this.col, this.row) ?
@@ -358,13 +368,7 @@ Ghost.prototype = new Actor({
             debug('%s: entering house', this);
             this.unset(Ghost.STATE_DEAD);
             this.set(Ghost.STATE_ENTERING);
-            var entryPath = this.calcExitPath();
-            entryPath.reverse();
-            if (toRow(this.startCy) !== Maze.HOME_ROW) {
-                // return ghosts to start point within house
-                entryPath.push({ x: this.startCx, y: this.startCy });
-            }
-            this.path = entryPath;
+            this.path = this.calcEntryPath();
             return;
         } else {
             this.moveBy(toDx(this.direction) * speed, toDy(this.direction) * speed);
@@ -643,10 +647,10 @@ ReleaseTimer.prototype = {
     start: function () {
         var events = lookup('events');
         this.timer = events.repeat(this.frequency, function () {
-            var insiders = Ghost.insiders();
-            if (insiders.length) {
+            var ghost = Ghost.all(Ghost.STATE_INSIDE)[0];
+            if (ghost) {
                 debug('dot-eaten timeout');
-                insiders[0].release();
+                ghost.release();
             }
         });
     },
@@ -663,43 +667,46 @@ function DotCounter(level) {
         inky: level === 1 ? 30 : 0,
         clyde: level === 1 ? 60 : level === 2 ? 50 : 0
     };
-    this.globalCounter = 0;
 }
 
 DotCounter.prototype = {
 
     dotEaten: function () {
-        var counters = this.counters,
-            pinky = lookup('pinky'),
-            inky = lookup('inky'),
-            clyde = lookup('clyde'),
-            insiders = Ghost.insiders();
-
-        if (this.useGlobalCounter &&
-            ++this.globalCounter === 32 &&
-            clyde.is(Ghost.STATE_INSIDE)) {
+        if (this.useGlobalCounter && ++this.globalCounter === 32 && lookup('clyde').is(Ghost.STATE_INSIDE)) {
             this.useGlobalCounter = false;
         } else {
-            if (insiders.length) {
-                var first = insiders[0];
-                --counters[first.name];
+            var first = Ghost.all(Ghost.STATE_INSIDE)[0];
+            if (first) {
+                --this.counters[first.name];
             }
         }
+    },
 
-        // check counters and maybe release
-        if (!insiders.length) {
-            // nobody home
-            return;
+    // Check counters and maybe release. This happens every frame, not just when
+    // a dot is eaten, to ensure that ghosts with a zero dot count are instantly
+    // released.
+    update: function () {
+        var ghost,
+            blinky = lookup('blinky');
+        // The Pac-Man Dossier suggests that Blinky isn't affected by the global
+        // dot counter, so just instantly release him whenever he comes inside.
+        if (blinky.is(Ghost.STATE_INSIDE)) {
+            ghost = blinky;
+        } else if (this.useGlobalCounter) {
+            var pinky = lookup('pinky'),
+                inky = lookup('inky'),
+                clyde = lookup('clyde');
+            ghost = this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
+                    this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
+                    this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
+                    null;
+        } else {
+            var counters = this.counters;
+            ghost = Ghost.all(Ghost.STATE_INSIDE).first(function (g) {
+                return counters[g.name] <= 0;
+            });
         }
 
-        var ghost = insiders.first(function (g) {
-            return counters[g.name] <= 0;
-        }) ||
-            // check global counter
-            (this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
-             this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
-             this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
-             null);
         if (ghost) {
             ghost.release();
         }
@@ -707,8 +714,11 @@ DotCounter.prototype = {
 
     pacmanKilled: function () {
         this.useGlobalCounter = true;
+        this.globalCounter = 0;
     }
 };
+
+DotCounter.prototype.energiserEaten = DotCounter.prototype.dotEaten;
 
 function ModeSwitcher(level) {
     this.switchDelays = [
