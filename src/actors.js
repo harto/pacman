@@ -123,7 +123,7 @@ Pacman.prototype = new Actor({
 
     w: Pacman.WIDTH,
     h: Pacman.HEIGHT,
-    z: 10,
+    z: 1,
 
     dotEaten: function (d) {
         // stub update() for duration of dot delay
@@ -259,7 +259,7 @@ Ghost.prototype = new Actor({
     w: 12,
     h: 12,
 
-    z: 20,
+    z: 2,
 
     init: function () {
         this.set(Ghost.STATE_INSIDE);

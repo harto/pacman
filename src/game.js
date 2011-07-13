@@ -54,6 +54,7 @@ function InfoText(txt) {
 
 InfoText.prototype = new Entity({
     pad: TEXT_HEIGHT / 2,
+    z: 3,
     repaint: function (g) {
         g.save();
         g.setFontSize(TEXT_HEIGHT);
