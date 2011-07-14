@@ -206,10 +206,11 @@ Bonus.prototype = new Entity({
         var secs = 9 + Math.random();
         debug('displaying bonus for %.3ns', secs);
         all.set('bonus', this);
-        this.timeout = lookup('events').delay(toTicks(secs), function () {
+        this.timeout = lookup('events').delay(toTicks(secs), bind(this, function () {
             debug('bonus timeout');
             all.remove('bonus');
-        });
+            this.invalidate();
+        }));
     },
 
     checkCollision: function (pacman) {
