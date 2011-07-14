@@ -8,20 +8,18 @@
 
 function SoundManager(sounds) {
     this.sounds = sounds;
+    this.playing = [];
+    this.enabled = true;
 }
 
 SoundManager.prototype = {
 
-    sounds: {},
-    playing: [],
-
     play: function (id) {
-        var sound = this.sounds[id];
-        var playing = this.playing;
-        if (playing.indexOf(sound) !== -1) {
-            // already playing; make a copy
-            sound = sound.cloneNode(true);
+        if (!this.enabled) {
+            return;
         }
+        var sound = this.sounds[id].cloneNode(true);
+        var playing = this.playing;
         playing.push(sound);
         $(sound).bind('ended', function () {
             playing.remove(sound);
@@ -37,6 +35,14 @@ SoundManager.prototype = {
                 sound.play();
             }
         });
+    },
+
+    enable: function (enabled) {
+        if (!enabled) {
+            this.togglePause(true);
+            this.playing = [];
+        }
+        this.enabled = enabled;
     }
 };
 
@@ -57,6 +63,14 @@ ResourceManager.prototype = {
 
     togglePause: function (paused) {
         this.sounds.togglePause(paused);
+    },
+
+    enableSounds: function (enabled) {
+        this.sounds.enable(enabled);
+    },
+
+    soundsEnabled: function () {
+        return this.sounds.enabled;
     }
 };
 

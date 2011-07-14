@@ -389,6 +389,14 @@ $(function () {
         onComplete: function (resourceManager) {
             // TODO: fade indicator
             resources = resourceManager;
+
+            var soundToggle = $('#enableSounds');
+            soundToggle.attr('disabled', false);
+            soundToggle.attr('checked', resources.soundsEnabled());
+            soundToggle.click(function (e) {
+                resources.enableSounds(this.checked);
+            });
+
             initialisers.forEach(function (f) {
                 f();
             });
