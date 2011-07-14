@@ -354,6 +354,9 @@ DotGroup.prototype = {
         } else if (this.nDots === 0) {
             enterMode(Mode.LEVELUP);
         }
+
+        // FIXME: might not be the place for this
+        resources.playSound('tick' + Math.floor(Math.random() * 5));
     },
 
     invalidateRegion: function (x, y, w, h) {

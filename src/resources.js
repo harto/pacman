@@ -18,6 +18,10 @@ SoundManager.prototype = {
     play: function (id) {
         var sound = this.sounds[id];
         var playing = this.playing;
+        if (playing.indexOf(sound) !== -1) {
+            // already playing; make a copy
+            sound = sound.cloneNode(true);
+        }
         playing.push(sound);
         $(sound).bind('ended', function () {
             playing.remove(sound);

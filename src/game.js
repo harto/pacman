@@ -366,7 +366,7 @@ $(function () {
     loadResources({
         base: 'res',
         images: ['bg', 'blinky', 'pinky', 'inky', 'clyde', 'frightened', 'flashing', 'dead'],
-        sounds: ['intro'],
+        sounds: ['intro', 'tick0', 'tick1', 'tick2', 'tick3', 'tick4'],
 
         onUpdate: function (completed) {
             var g = ctx;
