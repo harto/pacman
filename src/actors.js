@@ -3,11 +3,11 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, Dot, EAST, Entity, InlineScore, Maze, Mode, NORTH, ROWS, SOUTH,
-  ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ, WEST, all, bind,
-  broadcast, copy, debug, distance, enqueueInitialiser, enterMode, format,
-  keys, level, lookup, noop, resources, reverse, toDx, toDy, toOrdinal, toRow,
-  toSeconds, toTicks, wait */
+/*global COLS, Dot, EAST, Entity, InlineScore, MAX_SPEED, Maze, Mode, NORTH,
+  ROWS, SOUTH, ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ,
+  WEST, all, bind, broadcast, copy, debug, distance, enqueueInitialiser,
+  enterMode, format, keys, level, lookup, noop, ordinal, resources, reverse,
+  toDx, toDy, toRow, toSeconds, toTicks, wait */
 
 function Actor(props) {
     copy(props, this);
@@ -89,7 +89,7 @@ function Pacman() {
     this.animStepInc = 1;
     this.speed = (level === 1 ? 0.8 :
                   level < 5 || level > 20 ? 0.9 :
-                  1);
+                  1) * MAX_SPEED;
 }
 
 Pacman.WIDTH = Pacman.HEIGHT = 1.5 * TILE_SIZE;
@@ -110,7 +110,7 @@ enqueueInitialiser(function () {
     for (row = 0; row < directions.length; row++) {
         direction = directions[row];
         startAngle = row * Math.PI / 2;
-        y = toOrdinal(direction) * h + radius;
+        y = ordinal(direction) * h + radius;
         for (col = 0; col < steps; col++) {
             drawPacman(g, col * w + radius, y, radius,
                        (steps - col) / steps, startAngle);
@@ -138,7 +138,7 @@ Pacman.prototype = new Actor({
     },
 
     repaint: function (g) {
-        Pacman.SPRITES.draw(g, this.x, this.y, this.frameIndex, toOrdinal(this.direction));
+        Pacman.SPRITES.draw(g, this.x, this.y, this.frameIndex, ordinal(this.direction));
     },
 
     update: function () {
@@ -294,7 +294,7 @@ Ghost.prototype = new Actor({
                                                    Ghost.SPRITES.frightened) :
                 Ghost.SPRITES[this.name],
             spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % sprites.cols,
-            spriteRow = toOrdinal(this.direction);
+            spriteRow = ordinal(this.direction);
         g.save();
         sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
         g.restore();
@@ -324,18 +324,18 @@ Ghost.prototype = new Actor({
     },
 
     calcSpeed: function () {
-        return this.is(Ghost.STATE_DEAD) || this.is(Ghost.STATE_ENTERING) ? 2 :
-               Maze.inTunnel(this.col, this.row) ?
-                   (level === 1 ? 0.4 :
-                    2 <= level && level <= 4 ? 0.45 :
-                    0.5) :
-               this.is(Ghost.STATE_FRIGHTENED) ?
-                   (level === 1 ? 0.5 :
-                    2 <= level && level <= 4 ? 0.55 :
-                    0.6) :
-               (level === 1 ? 0.75 :
-                2 <= level && level <= 4 ? 0.85 :
-                0.95);
+        return (this.is(Ghost.STATE_DEAD) || this.is(Ghost.STATE_ENTERING) ? 2 :
+                Maze.inTunnel(this.col, this.row) ?
+                    (level === 1 ? 0.4 :
+                     2 <= level && level <= 4 ? 0.45 :
+                     0.5) :
+                this.is(Ghost.STATE_FRIGHTENED) ?
+                    (level === 1 ? 0.5 :
+                     2 <= level && level <= 4 ? 0.55 :
+                     0.6) :
+                (level === 1 ? 0.75 :
+                 2 <= level && level <= 4 ? 0.85 :
+                 0.95)) * MAX_SPEED;
     },
 
     update: function () {
@@ -344,6 +344,7 @@ Ghost.prototype = new Actor({
         this.nTicks++;
         if (this.is(Ghost.STATE_INSIDE)) {
             // FIXME: jostle
+            this.invalidate();
         } else if (this.is(Ghost.STATE_ENTERING) || this.is(Ghost.STATE_EXITING)) {
             // follow path into/out of house
             var point = this.path.shift();

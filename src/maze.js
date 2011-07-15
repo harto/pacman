@@ -3,10 +3,10 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, DEBUG, EAST, Entity, Mode, NORTH, ROWS, SCREEN_H, SCREEN_W,
-  SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, broadcast, copy,
-  debug, enqueueInitialiser, enterMode, level, lookup, resources, toCol, toRow,
-  toTicks */
+/*global COLS, DEBUG, EAST, Entity, Group, InlineScore, Mode, NORTH, ROWS,
+  SCREEN_H, SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all,
+  bind, broadcast, copy, debug, enqueueInitialiser, enterMode, level, lookup,
+  resources, toCol, toRow, toTicks */
 
 /// maze
 
@@ -100,31 +100,10 @@ Maze.northDisallowed = function (col, row) {
 Maze.prototype = {
 
     // always draw first
-    z: -1,
-
-    // itemAt: function (col, row) {
-    //     var b = this.bonus;
-    //     return (b && row === toRow(b.y) && col === toCol(b.x)) ? b :
-    //         this.dotAt(col, row);
-    // },
-
-    // removeBonus: function () {
-    //     this.bonus.invalidate();
-    //     delete this.bonus;
-    // },
-
-    // bonusEaten: function () {
-    //     debug('bonus eaten');
-    //     lookup('events').cancel(this.bonusTimeout);
-    //     this.removeBonus();
-    // },
+    z: -Infinity,
 
     invalidateRegion: function (x, y, w, h) {
         this.invalidatedRegions.push({ x: x, y: y, w: w, h: h });
-
-        if (this.bonus) {
-            this.bonus.invalidateRegion(x, y, w, h);
-        }
     },
 
     draw: function (g) {
@@ -133,10 +112,6 @@ Maze.prototype = {
             g.drawImage(Maze.bg, x, y, w, h, x, y, w, h);
         }, this);
         this.invalidatedRegions = [];
-
-        if (this.bonus) {
-            this.bonus.draw(g);
-        }
     }
 };
 
