@@ -2,14 +2,28 @@
  * Resource loader and manager
  */
 
-/*global $, Audio, Image, debug, format */
+/*global Audio, Image, debug, format */
 
 /// managers
 
 function SoundManager(sounds) {
-    this.sounds = sounds;
+    // Copies of each sound are made in case a play request occurs while the
+    // original is playing. Borrowed from
+    // http://www.phoboslab.org/log/2011/03/multiple-channels-for-html5-audio
+    this.sounds = {};
+    keys(sounds).forEach(function (k) {
+        var sound = sounds[k];
+        var channels = [sound];
+        // XXX: determine the optimal number of copies
+        for (var i = 0; i < 2; i++) {
+            channels.push(sound.cloneNode(true));
+        }
+        this.sounds[k] = channels;
+    }, this);
+
     this.playing = [];
     this.enabled = true;
+    this.nclones = 0;
 }
 
 SoundManager.prototype = {
@@ -18,17 +32,35 @@ SoundManager.prototype = {
         if (!this.enabled) {
             return;
         }
-        var sound = this.sounds[id].cloneNode(true);
-        var playing = this.playing;
-        playing.push(sound);
-        $(sound).bind('ended', function () {
-            playing.remove(sound);
+        var channels = this.sounds[id];
+        // find the first sound not playing
+        var sound = channels.first(function (s) {
+            return !s.playing;
         });
+
+        if (!sound) {
+            debug('can\'nt play %s; skipping', id);
+            return;
+        }
+
+        sound.playing = true;
+        sound.addEventListener('ended', function () {
+            sound.playing = false;
+        }, false);
         sound.play();
     },
 
+    currentlyPlaying: function () {
+        var playing = values(this.sounds).map(function (channels) {
+            return channels.filter(function (sound) {
+                return sound.playing;
+            });
+        });
+        return Array.prototype.concat.apply([], playing);
+    },
+
     togglePause: function (paused) {
-        this.playing.forEach(function (sound) {
+        this.currentlyPlaying().forEach(function (sound) {
             if (paused) {
                 sound.pause();
             } else {
@@ -39,8 +71,12 @@ SoundManager.prototype = {
 
     enable: function (enabled) {
         if (!enabled) {
-            this.togglePause(true);
-            this.playing = [];
+            this.currentlyPlaying().forEach(function (sound) {
+                sound.playing = false;
+                // XXX: is there a better way to kill sounds?
+                sound.pause();
+                sound.currentTime = 0;
+            });
         }
         this.enabled = enabled;
     }
@@ -83,24 +119,26 @@ function loadImage(id, path, onLoad, onError) {
         onLoad(img);
     };
     img.onerror = function () {
-        debug('error loading image: %s', this.src);
-        onError(this.src);
+        onError(format('Error loading image: %s', this.src));
     };
     img.src = format('%s/%s.png', path, id);
 }
 
 function loadSound(id, path, onLoad, onError) {
     var aud = new Audio();
-    // guard against multiple onloads in Firefox
+    // guard against multiple onloads events
     var loaded;
-    $(aud).bind('canplaythrough', function () {
+    aud.addEventListener('canplaythrough', function (e) {
         if (!loaded) {
             loaded = true;
             debug('loaded audio: %s', this.src);
             onLoad(aud);
         }
-    });
-    // FIXME: error handler
+    }, false);
+    aud.addEventListener('error', function (e) {
+        debugger;
+        onError(format('Error loading audio: %s', e.src));
+    }, false);
     aud.src = format('%s/%s.ogg', path, id);
     aud.load();
 }
@@ -138,10 +176,10 @@ function loadResources(handler) {
     var aborted;
 
     function makeOnError(id) {
-        return function (src) {
+        return function (msg) {
             if (!aborted) {
                 aborted = true;
-                handler.onError(format('Unable to load resource %s (%s)', id, src));
+                handler.onError(format('Unable to load resource: %s\n%s', id, msg));
             }
         };
     }
