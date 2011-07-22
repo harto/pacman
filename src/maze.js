@@ -359,10 +359,12 @@ DotGroup.prototype = {
         // than doing an overlap check on all the dots, particularly near the
         // start of a level. (An average of 9 invalidated regions and ~200 dots
         // equates to nearly 2000 calls to intersecting() per frame. This
-        // solution computes the tiles in each invalidated region, which is a
-        // maximum of about 50 per frame, then does a constant-time lookup on
-        // the 2D array of dots for each tile.)
-        // TODO: profile sparse/dense array
+        // solution:
+        //   * finds the tiles touching each invalidated region (a maximum of
+        //     about 50 per frame),
+        //   * does a constant-time lookup on the 2D array of dots to find
+        //     possibly affected dots, then
+        //   * does a bounds check only on those dots that might be affected.
         var c1 = toCol(x),
             r1 = toRow(y),
             c2 = toCol(x + w),
@@ -370,7 +372,9 @@ DotGroup.prototype = {
         for (var r = r1; r <= r2; r++) {
             for (var c = c1; c <= c2; c++) {
                 var d = this.dotAt(c, r);
-                if (d && d.isVisible()) {
+                // This dot is in the vicinity of the affected region, so
+                // perform a full bounds check
+                if (d && d.isVisible() && d.intersects(x, y, w, h)) {
                     this.invalidated[r * COLS + c] = d;
                 }
             }
