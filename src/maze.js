@@ -234,12 +234,14 @@ function Dot(props) {
     copy(props, this);
 }
 
+Dot.SIZE = TILE_SIZE * 0.25;
+
 Dot.prototype = new Entity({
 
     value: 10,
     delay: 1,
-    w: 3,
-    h: 3,
+    w: Dot.SIZE,
+    h: Dot.SIZE,
     eatenEvent: 'dotEaten',
 
     place: function (col, row) {
@@ -249,23 +251,40 @@ Dot.prototype = new Entity({
 
     repaint: function (g) {
         g.save();
-        // FIXME
-        g.fillStyle = 'white';
-        g.fillRect(this.x, this.y, this.w, this.h);
+        g.drawImage(this.sprite, this.x, this.y);
         g.restore();
     }
 });
 
 function Energiser() {}
 
-Energiser.prototype = new Dot({
+Energiser.SIZE = TILE_SIZE * 0.75;
 
+Energiser.prototype = new Dot({
     value: 50,
     delay: 3,
-    w: TILE_SIZE - 2,
-    h: TILE_SIZE - 2,
+    w: Energiser.SIZE,
+    h: Energiser.SIZE,
     eatenEvent: 'energiserEaten',
     blinkDuration: toTicks(0.25)
+});
+
+// Pre-render dot sprites
+enqueueInitialiser(function () {
+    function createCircle(size) {
+        var sprite = new ScreenBuffer(size, size);
+        var g = sprite.getContext('2d');
+        g.beginPath();
+        var r = size / 2;
+        g.arc(r, r, r, 0, Math.PI * 2, true);
+        g.fillStyle = '#FC9';
+        g.fill();
+
+        return sprite;
+    }
+
+    Dot.prototype.sprite = createCircle(Dot.SIZE);
+    Energiser.prototype.sprite = createCircle(Energiser.SIZE);
 });
 
 function DotGroup() {
