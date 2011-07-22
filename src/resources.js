@@ -14,8 +14,14 @@ function SoundManager(sounds) {
     keys(sounds).forEach(function (k) {
         var sound = sounds[k];
         var channels = [sound];
-        // XXX: determine the optimal number of copies
-        for (var i = 0; i < 2; i++) {
+        // For this game, the number of channels is determined by the length
+        // of the dot-eaten sound effect and the rate at which Pac-Man may
+        // consume dots. With Pac-Man moving at 60px/sec, and dots about 8px
+        // apart, the sound effect could be played up to 8 times per second. The
+        // sound is just under a second long, so the number of required channels
+        // is 8.
+        var nCopies = 7;
+        for (var i = 0; i < nCopies; i++) {
             channels.push(sound.cloneNode(true));
         }
         this.sounds[k] = channels;
@@ -39,7 +45,7 @@ SoundManager.prototype = {
         });
 
         if (!sound) {
-            debug('can\'nt play %s; skipping', id);
+            debug('can\'t play %s; skipping', id);
             return;
         }
 

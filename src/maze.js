@@ -332,7 +332,7 @@ DotGroup.prototype = {
         }
 
         // FIXME: might not be the place for this
-        resources.playSound('tick' + Math.floor(Math.random() * 5));
+        resources.playSound('tick' + Math.floor(Math.random() * 4));
     },
 
     invalidateRegion: function (x, y, w, h) {
