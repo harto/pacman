@@ -87,6 +87,7 @@ var stats = {
 
     init: function () {
         this.panel = $('<pre id="stats"></pre>');
+        this.panel.css({ position: 'fixed', right: 0, top: 0 });
         $('#cruft').append(this.panel);
         this.inited = true;
     },
