@@ -242,7 +242,7 @@ Ghost.FRIGHT_TICKS = [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1
 // number of times to flash when becoming unfrightened, indexed by level
 Ghost.FRIGHT_FLASHES = [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3];
 
-Ghost.ANIM_FREQ = UPDATE_HZ / 4;
+Ghost.ANIM_FREQ = UPDATE_HZ / 6;
 Ghost.SPRITES = {};
 
 enqueueInitialiser(function () {
@@ -256,8 +256,8 @@ enqueueInitialiser(function () {
 
 Ghost.prototype = new Actor({
 
-    w: 12,
-    h: 12,
+    w: 28,
+    h: 28,
 
     z: 2,
 

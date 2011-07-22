@@ -5,7 +5,9 @@
 /*jslint bitwise: false */
 /*global $, bind, console, copy, dispatch, format, keys, noop, values */
 
-var TILE_SIZE = 8,
+var SCALE = 2,
+
+    TILE_SIZE = 8 * SCALE,
     TILE_CENTRE = TILE_SIZE / 2,
     COLS = 28,
     ROWS = 36,
@@ -14,7 +16,7 @@ var TILE_SIZE = 8,
     SCREEN_W = COLS * TILE_SIZE,
     SCREEN_H = ROWS * TILE_SIZE,
 
-    MAX_SPEED = 1,
+    MAX_SPEED = SCALE,
 
     DEBUG = true,
 
