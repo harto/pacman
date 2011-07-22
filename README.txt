@@ -3,9 +3,10 @@ An HTML5 Pac-Man clone.
 Todo:
 -----
 
- * Display points for ghost kill
- * Display points for fruit
+ * Improve text appearance
+ * Bonus symbol artwork
  * Cruise Elroy
- * Resource loader
- * Artwork
- * Sound effects
+ * Music
+ * Flashing maze on level-up
+ * High score
+ * Cookie for audio pref, high score
