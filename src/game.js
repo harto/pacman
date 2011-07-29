@@ -180,6 +180,7 @@ function reset() {
 }
 
 function levelUp() {
+    resources.killSounds();
     ++level;
     debug('starting level %s', level);
 

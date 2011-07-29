@@ -77,14 +77,18 @@ SoundManager.prototype = {
 
     enable: function (enabled) {
         if (!enabled) {
-            this.currentlyPlaying().forEach(function (sound) {
-                sound.playing = false;
-                // XXX: is there a better way to kill sounds?
-                sound.pause();
-                sound.currentTime = 0;
-            });
+            this.killAll();
         }
         this.enabled = enabled;
+    },
+
+    killAll: function () {
+        this.currentlyPlaying().forEach(function (sound) {
+            sound.playing = false;
+            // XXX: is there a better way to kill sounds?
+            sound.pause();
+            sound.currentTime = 0;
+        });
     }
 };
 
@@ -113,6 +117,10 @@ ResourceManager.prototype = {
 
     soundsEnabled: function () {
         return this.sounds.enabled;
+    },
+
+    killSounds: function () {
+        this.sounds.killAll();
     }
 };
 
