@@ -261,7 +261,7 @@ Energiser.prototype = new Dot({
     w: Energiser.SIZE,
     h: Energiser.SIZE,
     eatenEvent: 'energiserEaten',
-    blinkDuration: toTicks(0.25)
+    blinkDuration: toTicks(0.15)
 });
 
 // Pre-render dot sprites
