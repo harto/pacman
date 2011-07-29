@@ -8,5 +8,3 @@ Todo:
  * Cruise Elroy
  * Music
  * Flashing maze on level-up
- * High score
- * Cookie for high score

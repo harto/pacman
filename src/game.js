@@ -9,45 +9,82 @@
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
   EAST, Entity, EventManager, Ghost, Group, Inky, InlineScore, Maze,
   ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
-  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, bind, broadcast, cookies, debug,
-  drawPacman, format, initialisers, level:true, lives:true, loadResources,
-  lookup, resources:true, toTicks, wait, window */
+  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, bind, broadcast, cookies, copy,
+  debug, drawPacman, format, initialisers, level:true, lives:true,
+  loadResources, lookup, noop, resources:true, toTicks, wait, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
-var score;
+var highscore, score;
 
-function Scoreboard() {
-    this.w = 0; // updated when score changes
+function Text(props) {
+    this.w = 0; // updated when text is first drawn
+    copy(props, this);
 }
 
-Scoreboard.prototype = new Entity({
+Text.prototype = new Entity({
 
-    x: 6 * TILE_SIZE,
-    y: TILE_SIZE,
     h: TEXT_HEIGHT,
+    colour: 'white',
 
     repaint: function (g) {
         g.save();
-        g.fillStyle = 'white';
+        g.fillStyle = this.colour;
         g.textAlign = 'left';
         g.textBaseline = 'top';
         g.setFontSize(TEXT_HEIGHT);
+        var txt = this.getText();
         // track width to allow invalidation on next update
-        this.w = g.measureText(score).width;
-        g.fillText(score, this.x, this.y);
+        this.w = g.measureText(txt).width;
+        g.fillText(txt, this.x, this.y);
         g.restore();
     },
+
+    getText: noop
+});
+
+function Scoreboard(props) {
+    this.x = 6 * TILE_SIZE;
+    this.y = TILE_SIZE;
+
+    copy(props, this);
+}
+
+Scoreboard.prototype = new Text({
 
     objectEaten: function (o) {
         score += o.value;
         this.invalidate();
+    },
+
+    getText: function () {
+        return score;
     }
 });
 
 Scoreboard.prototype.dotEaten =
     Scoreboard.prototype.energiserEaten =
-    Scoreboard.prototype.bonusEaten =
-    Scoreboard.prototype.objectEaten;
+    Scoreboard.prototype.bonusEaten = function (o) {
+        this.objectEaten(o);
+    };
+
+function HighscoreBoard() {
+    this.x = 18 * TILE_SIZE;
+}
+
+HighscoreBoard.prototype = new Scoreboard({
+
+    objectEaten: function (_) {
+        if (score > highscore) {
+            highscore = score;
+            this.invalidate();
+        }
+    },
+
+    getText: function () {
+        return highscore;
+    }
+});
+
 
 function InfoText(txt) {
     this.txt = txt;
@@ -199,6 +236,7 @@ function levelUp() {
     all.set('maze', new Maze());
     all.set('dots', new DotGroup());
     all.set('scoreboard', new Scoreboard());
+    all.set('highscore', new HighscoreBoard());
     all.set('bonusDisplay', new BonusDisplay(level));
     all.set('dotCounter', new DotCounter(level));
     if (DEBUG) {
@@ -310,16 +348,17 @@ Mode = {
 
     DYING: function () {
         var pacman = lookup('pacman');
-        // if (!pacman.dead) {
-        //     // continue dying
-        //     // FIXME: separate method on pacman?
-        //     pacman.update();
-        // } else {
-            if (--lives) {
-                reset();
-            }
-            enterMode(lives ? Mode.REVIVING : Mode.FINISHED);
-        // }
+        // TODO: death animation
+        if (--lives) {
+            reset();
+            enterMode(Mode.REVIVING);
+        } else {
+            // game over
+            var prevBest = getPref('highscore') || 0;
+            setPref('highscore', Math.max(prevBest, highscore));
+
+            enterMode(Mode.FINISHED);
+        }
     },
 
     REVIVING: function () {
@@ -364,11 +403,13 @@ function newGame() {
     level = 0;
     lives = 3;
     score = 0;
+
     paused = false;
 
     levelUp();
+    var delay = toTicks(resources.soundsEnabled() ? 4 : 1);
     resources.playSound('intro');
-    wait(toTicks(4), function () {
+    wait(delay, function () {
         enterMode(Mode.RUNNING);
     });
     loop();
@@ -525,6 +566,7 @@ $(function () {
                 f();
             });
 
+            highscore = getPref('highscore') || 0;
             newGame();
         },
 
