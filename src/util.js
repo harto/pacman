@@ -64,9 +64,13 @@ function values(o) {
 }
 
 function copy(from, to) {
+    if (!to) {
+        to = {};
+    }
     keys(from).forEach(function (k) {
         to[k] = from[k];
     });
+    return to;
 }
 
 // Sends a message to an object. The object handles the message in one of the

@@ -7,162 +7,11 @@
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, Entity, EventManager, Ghost, Group, Inky, InlineScore, Maze,
+  EAST, EventManager, Ghost, Group, Header, InfoText, Inky, InlineScore, Maze,
   ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
-  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, bind, broadcast, cookies, copy,
-  debug, drawPacman, format, initialisers, level:true, lives:true,
-  loadResources, lookup, noop, resources:true, toTicks, wait, window */
-
-var TEXT_HEIGHT = TILE_SIZE;
-var highscore, score;
-
-function Text(props) {
-    this.w = 0; // updated when text is first drawn
-    copy(props, this);
-}
-
-Text.prototype = new Entity({
-
-    h: TEXT_HEIGHT,
-    colour: 'white',
-
-    repaint: function (g) {
-        g.save();
-        g.fillStyle = this.colour;
-        g.textAlign = 'left';
-        g.textBaseline = 'top';
-        g.setFontSize(TEXT_HEIGHT);
-        var txt = this.getText();
-        // track width to allow invalidation on next update
-        this.w = g.measureText(txt).width;
-        g.fillText(txt, this.x, this.y);
-        g.restore();
-    },
-
-    getText: noop
-});
-
-function Scoreboard(props) {
-    this.x = 6 * TILE_SIZE;
-    this.y = TILE_SIZE;
-
-    copy(props, this);
-}
-
-Scoreboard.prototype = new Text({
-
-    objectEaten: function (o) {
-        score += o.value;
-        this.invalidate();
-    },
-
-    getText: function () {
-        return score;
-    }
-});
-
-Scoreboard.prototype.dotEaten =
-    Scoreboard.prototype.energiserEaten =
-    Scoreboard.prototype.bonusEaten = function (o) {
-        this.objectEaten(o);
-    };
-
-function HighscoreBoard() {
-    this.x = 18 * TILE_SIZE;
-}
-
-HighscoreBoard.prototype = new Scoreboard({
-
-    objectEaten: function (_) {
-        if (score > highscore) {
-            highscore = score;
-            this.invalidate();
-        }
-    },
-
-    getText: function () {
-        return highscore;
-    }
-});
-
-
-function InfoText(txt) {
-    this.txt = txt;
-}
-
-InfoText.prototype = new Entity({
-    pad: TEXT_HEIGHT / 2,
-    z: 3,
-    repaint: function (g) {
-        g.save();
-        g.setFontSize(TEXT_HEIGHT);
-        if (this.x === undefined) {
-            this.w = g.measureText(this.txt).width + 2 * this.pad;
-            this.x = (SCREEN_W - this.w) / 2;
-        }
-        // frame
-        g.fillStyle = 'white';
-        g.fillRect(this.x, this.y, this.w, this.h);
-        // text
-        g.fillStyle = 'black';
-        g.textAlign = 'left';
-        g.textBaseline = 'top';
-        g.fillText(this.txt, this.x + this.pad, this.y + this.pad);
-        g.restore();
-    }
-});
-
-InfoText.prototype.h = TEXT_HEIGHT + 2 * InfoText.prototype.pad;
-InfoText.prototype.y = (SCREEN_H - InfoText.prototype.h) / 2;
-
-/// in-game score indicator
-
-function InlineScore(score, cx, cy) {
-    this.score = score;
-    this.cx = cx;
-    this.cy = cy;
-}
-
-InlineScore.prototype = new Entity({
-
-    h: TILE_SIZE / 2,
-
-    insert: function () {
-        this.id = all.add(this);
-        this.invalidate();
-    },
-
-    remove: function () {
-        all.remove(this.id);
-        this.invalidate();
-    },
-
-    showFor: function (ticks) {
-        this.insert();
-        all.get('events').delay(ticks, bind(this, function () {
-            this.remove();
-        }));
-    },
-
-    repaint: function (g) {
-        g.save();
-        g.setFontSize(this.h);
-        if (!this.w) {
-            // can't position until we know text width
-            this.w = g.measureText(this.score).width;
-            this.centreAt(this.cx, this.cy);
-        }
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillStyle = 'white';
-        g.fillText(this.score, this.cx, this.cy);
-        g.restore();
-    },
-
-    toString: function () {
-        return 'InlineScore';
-    }
-});
+  UPDATE_HZ, WEST, alert, all:true, broadcast, cookies, debug, drawPacman,
+  format, highscore:true, initialisers, level:true, lives:true, loadResources,
+  lookup, resources:true, score:true, toTicks, wait, window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -234,9 +83,8 @@ function levelUp() {
     all = new Group();
 
     all.set('maze', new Maze());
+    all.set('header', new Header());
     all.set('dots', new DotGroup());
-    all.set('scoreboard', new Scoreboard());
-    all.set('highscore', new HighscoreBoard());
     all.set('bonusDisplay', new BonusDisplay(level));
     all.set('dotCounter', new DotCounter(level));
     if (DEBUG) {
@@ -272,44 +120,15 @@ function wait(ticks, onResume) {
     });
 }
 
+function addPoints(points) {
+    score += points;
+    highscore = Math.max(score, highscore);
+    broadcast('scoreChanged');
+}
+
 function processCollisions() {
     var pacman = lookup('pacman');
-
-    var collidingGhosts = Ghost.all().filter(function (g) {
-        return g.colliding(pacman);
-    });
-    var deadGhosts = collidingGhosts.filter(function (g) {
-        return g.is(Ghost.STATE_FRIGHTENED);
-    });
-    if (deadGhosts.length !== collidingGhosts.length) {
-        pacman.kill();
-        broadcast('pacmanKilled');
-        enterMode(Mode.DYING);
-        return;
-    } else if (deadGhosts.length) {
-        pacman.setVisible(false);
-        var scoreValue, scoreCx, scoreCy;
-        deadGhosts.forEach(function (g) {
-            debug('%s: dying', g);
-            g.kill();
-            g.setVisible(false);
-            // FIXME: increase according to # ghosts eaten
-            scoreValue = 200;
-            scoreCx = g.cx;
-            scoreCy = g.cy;
-        });
-        // FIXME: show correct score, add to total
-        var score = new InlineScore(scoreValue, scoreCx, scoreCy);
-        score.insert();
-
-        wait(toTicks(0.5), function () {
-            score.remove();
-            pacman.setVisible(true);
-            deadGhosts.forEach(function (g) {
-                g.setVisible(true);
-            });
-        });
-    }
+    var points = 0;
 
     var dots = lookup('dots');
     var dot = dots.colliding(pacman);
@@ -317,6 +136,7 @@ function processCollisions() {
         dots.remove(dot);
         broadcast(dot.eatenEvent, [dot]);
         resources.playSound('tick' + Math.floor(Math.random() * 4));
+        addPoints(dot.value);
         if (dots.isEmpty()) {
             enterMode(Mode.LEVELUP);
             return;
@@ -328,8 +148,44 @@ function processCollisions() {
         debug('bonus eaten');
         broadcast('bonusEaten', [bonus]);
         bonus.remove();
-        var bonusScore = new InlineScore(bonus.value, bonus.cx, bonus.cy);
+        var bonusScore = new InlineScore(bonus.value, '#FBD', bonus.cx, bonus.cy);
         bonusScore.showFor(toTicks(1));
+        addPoints(bonus.value);
+    }
+
+    var collidingGhosts = Ghost.all().filter(function (g) {
+        return g.colliding(pacman);
+    });
+    var deadGhosts = collidingGhosts.filter(function (g) {
+        return g.is(Ghost.STATE_FRIGHTENED);
+    });
+    if (deadGhosts.length !== collidingGhosts.length) {
+        pacman.kill();
+        broadcast('pacmanKilled');
+        enterMode(Mode.DYING);
+    } else if (deadGhosts.length) {
+        pacman.setVisible(false);
+        var scoreValue, scoreCx, scoreCy;
+        deadGhosts.forEach(function (g) {
+            debug('%s: dying', g);
+            g.kill();
+            g.setVisible(false);
+            // FIXME: increase according to # ghosts eaten
+            scoreValue = 200;
+            scoreCx = g.cx;
+            scoreCy = g.cy;
+            addPoints(scoreValue);
+        });
+        var scoreText = new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy);
+        scoreText.insert();
+
+        wait(toTicks(0.5), function () {
+            scoreText.remove();
+            pacman.setVisible(true);
+            deadGhosts.forEach(function (g) {
+                g.setVisible(true);
+            });
+        });
     }
 }
 
@@ -432,12 +288,7 @@ $(function () {
     var canvas = $('canvas').get(0);
 
     ctx = canvas.getContext('2d');
-
     ctx.scale(canvas.width / SCREEN_W, canvas.height / SCREEN_H);
-    ctx.setFontSize = function (size) {
-        ctx.font = 'bold ' + size + 'px Helvetica, Arial, sans-serif';
-    };
-    ctx.setFontSize(TEXT_HEIGHT);
 
     function charCode(c) {
         return c.charCodeAt(0);
