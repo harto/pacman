@@ -9,7 +9,7 @@
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
   EAST, Entity, EventManager, Ghost, Group, Inky, InlineScore, Maze,
   ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
-  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, bind, broadcast, debug,
+  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, bind, broadcast, cookies, debug,
   drawPacman, format, initialisers, level:true, lives:true, loadResources,
   lookup, resources:true, toTicks, wait, window */
 
@@ -126,6 +126,16 @@ InlineScore.prototype = new Entity({
         return 'InlineScore';
     }
 });
+
+function getPref(key) {
+    return cookies.read(key);
+}
+
+function setPref(key, value) {
+    var expiry = new Date();
+    expiry.setFullYear(expiry.getFullYear() + 1);
+    cookies.set(key, value, { expires: expiry });
+}
 
 var stats = {
 
@@ -499,16 +509,22 @@ $(function () {
             // TODO: fade indicator
             resources = resourceManager;
 
+            // check for previous sound preference
+            var soundsEnabled = getPref('sound.enabled') !== 'false';
+            resources.enableSounds(soundsEnabled);
+
             var soundToggle = $('#enableSounds');
             soundToggle.attr('disabled', false);
             soundToggle.attr('checked', resources.soundsEnabled());
             soundToggle.click(function (e) {
                 resources.enableSounds(this.checked);
+                setPref('sound.enabled', this.checked);
             });
 
             initialisers.forEach(function (f) {
                 f();
             });
+
             newGame();
         },
 

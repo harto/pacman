@@ -9,4 +9,4 @@ Todo:
  * Music
  * Flashing maze on level-up
  * High score
- * Cookie for audio pref, high score
+ * Cookie for high score

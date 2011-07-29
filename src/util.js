@@ -2,6 +2,8 @@
  * Miscellaneous project-independent utilities
  */
 
+/*global document */
+
 // format a number (fmt = '3.1', '.4', etc)
 function formatNumber(num, fmt) {
     num += '';
@@ -112,6 +114,33 @@ Array.prototype.first = function (pred) {
         var x = this[i];
         if (pred(x)) {
             return x;
+        }
+    }
+};
+
+// Web stuff
+
+var cookies = {
+
+    set: function (name, value, opts) {
+        document.cookie =
+            name + '=' + value +
+            (opts.expires ? '; expires=' + opts.expires.toGMTString() : '') +
+            (opts.domain ? '; domain=' + opts.domain : '') +
+            (opts.path ? '; path=' + opts.path : '');
+    },
+
+    unset: function (name) {
+        this.set(name, '', { expires: new Date(0) });
+    },
+
+    read: function (name) {
+        var kvs = document.cookie.split('; ');
+        for (var i = 0; i < kvs.length; i++) {
+            var kv = kvs[i].split('=', 2);
+            if (kv[0] === name) {
+                return kv[1];
+            }
         }
     }
 };
