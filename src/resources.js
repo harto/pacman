@@ -2,7 +2,7 @@
  * Resource loader and manager
  */
 
-/*global Audio, Image, debug, format */
+/*global Audio, Image, debug, format, keys, values */
 
 /// managers
 
@@ -142,7 +142,6 @@ function loadSound(id, path, onLoad, onError) {
         }
     }, false);
     aud.addEventListener('error', function (e) {
-        debugger;
         onError(format('Error loading audio: %s', e.src));
     }, false);
     aud.src = format('%s/%s.ogg', path, id);
