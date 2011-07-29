@@ -3,11 +3,10 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, Dot, EAST, Entity, InlineScore, MAX_SPEED, Maze, Mode, NORTH,
-  ROWS, SOUTH, ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ,
-  WEST, all, bind, broadcast, copy, debug, distance, enqueueInitialiser,
-  enterMode, format, keys, level, lookup, noop, ordinal, resources, reverse,
-  toDx, toDy, toRow, toSeconds, toTicks, wait */
+/*global COLS, Dot, EAST, Entity, MAX_SPEED, Maze, Mode, NORTH, ROWS, SOUTH,
+  ScreenBuffer, SpriteMap, TILE_CENTRE, TILE_SIZE, UPDATE_HZ, WEST, all, bind,
+  copy, debug, distance, enqueueInitialiser, format, keys, level, lookup, noop,
+  ordinal, resources, reverse, toDx, toDy, toRow, toSeconds, toTicks */
 
 function Actor(props) {
     copy(props, this);
@@ -192,6 +191,10 @@ Pacman.prototype = new Actor({
         return true;
     },
 
+    kill: function () {
+        this.dead = true;
+    },
+
     toString: function () {
         return 'pacman';
     }
@@ -233,7 +236,7 @@ Ghost.all = function (state) {
     return ['blinky', 'pinky', 'inky', 'clyde'].map(function (id) {
         return lookup(id);
     }).filter(function (g) {
-        return g.is(state);
+        return !state || g.is(state);
     });
 };
 
@@ -462,29 +465,15 @@ Ghost.prototype = new Actor({
         return exitDirection;
     },
 
-    checkCollision: function (pacman) {
-        if (pacman.col !== this.col || pacman.row !== this.row || this.is(Ghost.STATE_DEAD)) {
-            return;
-        }
+    colliding: function (pacman) {
+        return pacman.col === this.col &&
+               pacman.row === this.row &&
+               !this.is(Ghost.STATE_DEAD) ? this : null;
+    },
 
-        if (this.is(Ghost.STATE_FRIGHTENED)) {
-            debug('%s: dying', this);
-            pacman.setVisible(false);
-            this.setVisible(false);
-            this.set(Ghost.STATE_DEAD);
-            // FIXME: add to actual score
-            var score = new InlineScore(200, this.cx, this.cy);
-            score.insert();
-            wait(toTicks(0.5), bind(this, function () {
-                score.remove();
-                pacman.setVisible(true);
-                this.setVisible(true);
-                this.unfrighten();
-            }));
-        } else {
-            broadcast('pacmanKilled');
-            enterMode(Mode.DYING);
-        }
+    kill: function () {
+        this.unfrighten();
+        this.set(Ghost.STATE_DEAD);
     },
 
     energiserEaten: function () {

@@ -3,10 +3,9 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, DEBUG, EAST, Entity, Group, InlineScore, Mode, NORTH, ROWS,
-  SCREEN_H, SCREEN_W, SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all,
-  bind, broadcast, copy, debug, enqueueInitialiser, enterMode, level, lookup,
-  resources, toCol, toRow, toTicks */
+/*global COLS, DEBUG, EAST, Entity, Group, NORTH, ROWS, SCREEN_H, SCREEN_W,
+  SOUTH, ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, all, bind, copy, debug,
+  enqueueInitialiser, level, lookup, resources, toCol, toRow, toTicks */
 
 /// maze
 
@@ -188,17 +187,13 @@ Bonus.prototype = new Entity({
         }));
     },
 
-    checkCollision: function (pacman) {
-        if (pacman.col === this.col && pacman.row === this.row) {
-            debug('bonus eaten');
-            broadcast('bonusEaten', [this]);
+    remove: function () {
+        all.remove('bonus');
+        lookup('events').cancel(this.timeout);
+    },
 
-            all.remove('bonus');
-            lookup('events').cancel(this.timeout);
-
-            var score = new InlineScore(this.value, this.cx, this.cy);
-            score.showFor(toTicks(1));
-        }
+    colliding: function (pacman) {
+        return pacman.col === this.col && pacman.row === this.row ? this : null;
     }
 });
 
@@ -329,29 +324,25 @@ DotGroup.prototype = {
         });
     },
 
+    isEmpty: function () {
+        return this.nDots === 0;
+    },
+
     dotAt: function (col, row) {
         var dots = this.dots[row];
         return dots ? dots[col] : null;
     },
 
-    checkCollision: function (pacman) {
-        var dot = this.dotAt(pacman.col, pacman.row);
-        if (!dot) {
-            return;
-        }
+    colliding: function (pacman) {
+        return this.dotAt(pacman.col, pacman.row);
+    },
 
-        broadcast(dot.eatenEvent, [dot]);
+    remove: function (dot) {
         delete this.dots[dot.row][dot.col];
         --this.nDots;
-
         if (this.nDots === 74 || this.nDots === 174) {
             Bonus.forLevel(level).insert();
-        } else if (this.nDots === 0) {
-            enterMode(Mode.LEVELUP);
         }
-
-        // FIXME: might not be the place for this
-        resources.playSound('tick' + Math.floor(Math.random() * 4));
     },
 
     invalidateRegion: function (x, y, w, h) {

@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise: false */
-/*global $, bind, console, copy, dispatch, format, keys, noop, values */
+/*global $, console, copy, dispatch, format, keys, noop, values */
 
 var SCALE = 2,
 
@@ -25,12 +25,10 @@ var SCALE = 2,
     EAST =  1 << 2,
     WEST =  1 << 3,
 
-    // top-level entity group
-    all,
+    // forward declarations
 
-    // resource manager
-    resources,
-
+    all,       // top-level entity group
+    resources, // resource manager
     lives,
     level;
 
@@ -353,52 +351,3 @@ var initialisers = [];
 function enqueueInitialiser(f) {
     initialisers.push(f);
 }
-
-/// in-game score indicator
-
-function InlineScore(score, cx, cy) {
-    this.score = score;
-    this.cx = cx;
-    this.cy = cy;
-}
-
-InlineScore.prototype = new Entity({
-
-    h: 5,
-
-    insert: function () {
-        this.id = all.add(this);
-        this.invalidate();
-    },
-
-    remove: function () {
-        all.remove(this.id);
-        this.invalidate();
-    },
-
-    showFor: function (ticks) {
-        this.insert();
-        all.get('events').delay(ticks, bind(this, function () {
-            this.remove();
-        }));
-    },
-
-    repaint: function (g) {
-        g.save();
-        g.setFontSize(this.h);
-        if (!this.w) {
-            // can't position until we know text width
-            this.w = g.measureText(this.score).width;
-            this.centreAt(this.cx, this.cy);
-        }
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillStyle = 'white';
-        g.fillText(this.score, this.cx, this.cy);
-        g.restore();
-    },
-
-    toString: function () {
-        return 'InlineScore';
-    }
-});

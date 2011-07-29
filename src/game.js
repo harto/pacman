@@ -7,10 +7,11 @@
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, Entity, EventManager, Inky, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
-  ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, UPDATE_HZ, WEST, alert,
-  all:true, broadcast, debug, drawPacman, format, initialisers, level:true,
-  lives:true, loadResources, lookup, resources:true, toTicks, window */
+  EAST, Entity, EventManager, Ghost, Group, Inky, InlineScore, Maze,
+  ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
+  TILE_SIZE, UPDATE_HZ, WEST, alert, all:true, bind, broadcast, debug,
+  drawPacman, format, initialisers, level:true, lives:true, loadResources,
+  lookup, resources:true, toTicks, wait, window */
 
 var TEXT_HEIGHT = TILE_SIZE;
 var score;
@@ -76,6 +77,55 @@ InfoText.prototype = new Entity({
 
 InfoText.prototype.h = TEXT_HEIGHT + 2 * InfoText.prototype.pad;
 InfoText.prototype.y = (SCREEN_H - InfoText.prototype.h) / 2;
+
+/// in-game score indicator
+
+function InlineScore(score, cx, cy) {
+    this.score = score;
+    this.cx = cx;
+    this.cy = cy;
+}
+
+InlineScore.prototype = new Entity({
+
+    h: TILE_SIZE / 2,
+
+    insert: function () {
+        this.id = all.add(this);
+        this.invalidate();
+    },
+
+    remove: function () {
+        all.remove(this.id);
+        this.invalidate();
+    },
+
+    showFor: function (ticks) {
+        this.insert();
+        all.get('events').delay(ticks, bind(this, function () {
+            this.remove();
+        }));
+    },
+
+    repaint: function (g) {
+        g.save();
+        g.setFontSize(this.h);
+        if (!this.w) {
+            // can't position until we know text width
+            this.w = g.measureText(this.score).width;
+            this.centreAt(this.cx, this.cy);
+        }
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillStyle = 'white';
+        g.fillText(this.score, this.cx, this.cy);
+        g.restore();
+    },
+
+    toString: function () {
+        return 'InlineScore';
+    }
+});
 
 var stats = {
 
@@ -161,27 +211,84 @@ function enterMode(m) {
 
 var Mode, prevMode, waitTimer;
 
-function wait(ticks, fn) {
-    if (waitTimer) {
-        // prevent deadlock
-        return;
-    }
+function wait(ticks, onResume) {
     prevMode = mode;
     enterMode(Mode.WAITING);
     waitTimer = new Delay(ticks, function () {
         enterMode(prevMode);
-        if (fn) {
-            fn();
+        if (onResume) {
+            onResume();
         }
         waitTimer = null;
     });
+}
+
+function processCollisions() {
+    var pacman = lookup('pacman');
+
+    var collidingGhosts = Ghost.all().filter(function (g) {
+        return g.colliding(pacman);
+    });
+    var deadGhosts = collidingGhosts.filter(function (g) {
+        return g.is(Ghost.STATE_FRIGHTENED);
+    });
+    if (deadGhosts.length !== collidingGhosts.length) {
+        pacman.kill();
+        broadcast('pacmanKilled');
+        enterMode(Mode.DYING);
+        return;
+    } else if (deadGhosts.length) {
+        pacman.setVisible(false);
+        var scoreValue, scoreCx, scoreCy;
+        deadGhosts.forEach(function (g) {
+            debug('%s: dying', g);
+            g.kill();
+            g.setVisible(false);
+            // FIXME: increase according to # ghosts eaten
+            scoreValue = 200;
+            scoreCx = g.cx;
+            scoreCy = g.cy;
+        });
+        // FIXME: show correct score, add to total
+        var score = new InlineScore(scoreValue, scoreCx, scoreCy);
+        score.insert();
+
+        wait(toTicks(0.5), function () {
+            score.remove();
+            pacman.setVisible(true);
+            deadGhosts.forEach(function (g) {
+                g.setVisible(true);
+            });
+        });
+    }
+
+    var dots = lookup('dots');
+    var dot = dots.colliding(pacman);
+    if (dot) {
+        dots.remove(dot);
+        broadcast(dot.eatenEvent, [dot]);
+        resources.playSound('tick' + Math.floor(Math.random() * 4));
+        if (dots.isEmpty()) {
+            enterMode(Mode.LEVELUP);
+            return;
+        }
+    }
+
+    var bonus = lookup('bonus');
+    if (bonus && bonus.colliding(pacman)) {
+        debug('bonus eaten');
+        broadcast('bonusEaten', [bonus]);
+        bonus.remove();
+        var bonusScore = new InlineScore(bonus.value, bonus.cx, bonus.cy);
+        bonusScore.showFor(toTicks(1));
+    }
 }
 
 Mode = {
 
     RUNNING: function () {
         broadcast('update');
-        broadcast('checkCollision', [lookup('pacman')]);
+        processCollisions();
     },
 
     LEVELUP: function () {
