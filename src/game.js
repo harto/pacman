@@ -166,12 +166,12 @@ function processCollisions() {
     } else if (deadGhosts.length) {
         pacman.setVisible(false);
         var scoreValue, scoreCx, scoreCy;
+        var nFrightened = Ghost.all(Ghost.STATE_FRIGHTENED).length;
         deadGhosts.forEach(function (g) {
             debug('%s: dying', g);
             g.kill();
             g.setVisible(false);
-            // FIXME: increase according to # ghosts eaten
-            scoreValue = 200;
+            scoreValue = Ghost.calcGhostScore(nFrightened--);
             scoreCx = g.cx;
             scoreCy = g.cy;
             addPoints(scoreValue);

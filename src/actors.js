@@ -240,6 +240,13 @@ Ghost.all = function (state) {
     });
 };
 
+// Gets the number of points that a ghost is worth. This is determined by the
+// number of ghosts killed, which is inferred from the number of currently
+// frightened ghosts.
+Ghost.calcGhostScore = function (nFrightened) {
+    return Math.pow(2, 4 - nFrightened) * 200;
+};
+
 // duration of frightened time, indexed by level
 Ghost.FRIGHT_TICKS = [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1].map(toTicks);
 // number of times to flash when becoming unfrightened, indexed by level
