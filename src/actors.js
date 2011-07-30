@@ -67,14 +67,30 @@ Actor.exitingTile = function (direction, lx, ly) {
 
 /// pacman
 
-function drawPacman(g, x, y, radius, fraction, startAngle) {
+// Draws a Pac-Man figure to the given context.
+//  - g: graphics context
+//  - x: centre x-coord
+//  - y: centre y-coord
+//  - radius: radius
+//  - fraction: proportion to draw [0, 1]
+//  - startAngle: angle at which mouth points
+//  - offsetHinge: true to offset hinge toward back of head
+function drawPacman(g, x, y, radius, fraction, startAngle, offsetHinge) {
     g.save();
     g.beginPath();
-    g.moveTo(x, y);
+    // offset hinge towards back of head
+    var centreOffset = radius / 5;
+    var xOffset = (startAngle === 0 ? -1 :
+                   startAngle === Math.PI ? 1 :
+                   0) * centreOffset;
+    var yOffset = (startAngle === Math.PI / 2 ? -1 :
+                   startAngle === 3 * Math.PI / 2 ? 1 :
+                   0) * centreOffset;
+    g.moveTo(x + xOffset, y + yOffset);
     var start = startAngle || 0;
     var angle = Math.PI - fraction * Math.PI;
     g.arc(x, y, radius, start + angle, start + (angle === 0 ? 2 * Math.PI : -angle));
-    g.moveTo(x, y);
+    g.moveTo(x + xOffset, y + yOffset);
     g.closePath();
     g.fillStyle = 'yellow';
     g.fill();
@@ -112,7 +128,7 @@ enqueueInitialiser(function () {
         y = ordinal(direction) * h + radius;
         for (col = 0; col < steps; col++) {
             drawPacman(g, col * w + radius, y, radius,
-                       (steps - col) / steps, startAngle);
+                       (steps - col) / steps, startAngle, true);
         }
     }
     Pacman.SPRITES = new SpriteMap(buf, w, h);
