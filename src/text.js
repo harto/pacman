@@ -3,27 +3,21 @@
  */
 
 /*global Entity, Group, SCREEN_H, SCREEN_W, TILE_SIZE, all, bind, copy, format,
-  highscore, score, toTicks */
+  highscore, merge, score, toTicks */
 
 function Text(props) {
     copy(props, this);
 }
 
-Text.prototype = new Entity({
+Text.STYLE_NORMAL = '"Helvetica Neue", Helvetica, sans-serif';
+Text.STYLE_FIXED_WIDTH = '"Press Start 2P"';
 
-    init: function () {
-        // track original x, y - we'll need these to recalculate
-        // graphical boundary if the text isn't left-aligned
-        this._x = this.x;
-        this._y = this.y;
-        // updated when text is first drawn
-        this.w = 0;
-    },
+Text.prototype = new Entity({
 
     repaint: function (g) {
         g.save();
 
-        this.recomputeLayout(g);
+        this.recomputeBoundary(g);
 
         g.textAlign = this.align || 'left';
         g.textBaseline = this.valign || 'top';
@@ -33,78 +27,68 @@ Text.prototype = new Entity({
         g.restore();
     },
 
-    recomputeLayout: function (g) {
+    recomputeBoundary: function (g) {
         g.font = format('%spx %s', this.size, this.style);
+
         this.w = g.measureText(this.txt).width;
         this.h = this.size;
 
-        switch (this.align) {
-        case 'center':
-            this.x = this._x - this.w / 2;
-            break;
-        case 'right':
-            this.x = this._x - this.w;
-            break;
-        default:
-            this.x = this._x;
+        // We initially allow the `x' and `y' properties to be interpreted
+        // according to the `align' and `valign' properties. However, an Entity
+        // must describe the top-left of the bounding rectangle with these
+        // properties. We therefore keep the original x- and y-coords in
+        // anticipation of overwriting them.
+        if (this._x === undefined) {
+            this._x = this.x;
+            this._y = this.y;
         }
 
-        switch (this.valign) {
-        case 'middle':
-            this.y = this._y - this.h / 2;
-            break;
-        case 'bottom':
-            this.y = this._y - this.h;
-            break;
-        default:
-            this.y = this._y;
-        }
+        this.x = this.align === 'center' ? this._x - this.w / 2 :
+                 this.align === 'right' ? this._x - this.w :
+                 this._x;
+
+        this.y = this.valign === 'middle' ? this._y - this.h / 2 :
+                 this.valign === 'bottom' ? this._y - this.h :
+                 this._y;
     },
 
     setText: function (txt) {
         this.txt = txt;
         this.invalidate();
-    }
-});
-
-function StandardText(props) {
-    copy(props, this);
-    this.init();
-}
-
-StandardText.prototype = new Text({
-
-    style: '"Press Start 2P"',
-    size: TILE_SIZE,
+    },
 
     toString: function () {
-        return format('StandardText [%s]', this.txt);
+        return format('Text [%s]', this.txt);
     }
 });
 
 function Header() {
-    this.set('1up', new StandardText({
+    var props = {
+        style: Text.STYLE_FIXED_WIDTH,
+        size: TILE_SIZE
+    };
+    this.set('1up', new Text(merge(props, {
         txt: '1UP',
         x: 4 * TILE_SIZE,
         y: 0
-    }));
-    this.add(new StandardText({
+    })));
+    this.add(new Text(merge(props, {
         txt: 'HIGH SCORE',
         x: 9 * TILE_SIZE,
         y: 0
-    }));
-    this.set('score', new StandardText({
+    })));
+    this.set('score', new Text(merge(props, {
         txt: score,
         align: 'right',
         x: 7 * TILE_SIZE,
         y: TILE_SIZE
-    }));
-    this.set('highscore', new StandardText({
+    })));
+    this.set('highscore', new Text(merge(props, {
         txt: highscore,
         align: 'right',
         x: 17 * TILE_SIZE,
         y: TILE_SIZE
-    }));
+    })));
 }
 
 Header.prototype = new Group({
@@ -125,8 +109,10 @@ Header.prototype = new Group({
 /// overlay for pause, new game
 
 function InfoText(txt) {
-    this.txt = new StandardText({
+    this.txt = new Text({
         txt: txt,
+        style: Text.STYLE_NORMAL,
+        size: TILE_SIZE,
         colour: 'black',
         align: 'center',
         valign: 'middle',
@@ -146,7 +132,7 @@ InfoText.prototype = new Entity({
         g.save();
 
         if (!this.w) {
-            this.txt.recomputeLayout(g);
+            this.txt.recomputeBoundary(g);
             this.w = this.txt.w + 2 * this.pad;
             this.h = this.txt.h + 2 * this.pad;
             this.x = this.txt.x - this.pad;
@@ -168,13 +154,12 @@ function InlineScore(score, colour, cx, cy) {
     this.colour = colour;
     this.x = cx;
     this.y = cy;
-    this.init();
 }
 
 InlineScore.prototype = new Text({
 
     size: TILE_SIZE * 0.9,
-    style: '"Helvetica Neue", Helvetica, sans-serif',
+    style: Text.STYLE_NORMAL,
     align: 'center',
     valign: 'middle',
 

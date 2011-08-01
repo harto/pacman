@@ -73,6 +73,14 @@ function copy(from, to) {
     return to;
 }
 
+function merge(/*objects...*/) {
+    var into = {};
+    for (var i = 0; i < arguments.length; i++) {
+        copy(arguments[i], into);
+    }
+    return into;
+}
+
 // Sends a message to an object. The object handles the message in one of the
 // following ways:
 //   - If msg is a property of the object, returns the result of invoking the
