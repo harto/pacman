@@ -284,12 +284,7 @@ function togglePause() {
     pauseText.invalidate();
 }
 
-$(function () {
-    var canvas = $('canvas').get(0);
-
-    ctx = canvas.getContext('2d');
-    ctx.scale(canvas.width / SCREEN_W, canvas.height / SCREEN_H);
-
+function initKeyBindings() {
     function charCode(c) {
         return c.charCodeAt(0);
     }
@@ -342,10 +337,7 @@ $(function () {
         case keys.right:
         case keys.up:
         case keys.down:
-            var pacman = lookup('pacman');
-            if (pacman) {
-                pacman.turning = directions[k];
-            }
+            lookup('pacman').turning = directions[k];
             break;
         case keys.togglePause:
             togglePause();
@@ -366,13 +358,17 @@ $(function () {
 
     $(window).keyup(function (e) {
         var pacman = lookup('pacman');
-        if (pacman) {
-            var k = getKeyCode(e);
-            if (pacman.turning === directions[k]) {
-                pacman.turning = null;
-            }
+        var k = getKeyCode(e);
+        if (pacman.turning === directions[k]) {
+            pacman.turning = null;
         }
     });
+}
+
+$(function () {
+    var canvas = $('canvas').get(0);
+    ctx = canvas.getContext('2d');
+    ctx.scale(canvas.width / SCREEN_W, canvas.height / SCREEN_H);
 
     loadResources({
         base: 'res',
@@ -424,6 +420,7 @@ $(function () {
             });
 
             highscore = getPref('highscore') || 0;
+            initKeyBindings();
             newGame();
         },
 
