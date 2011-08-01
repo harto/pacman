@@ -230,6 +230,7 @@ function Dot(props) {
 }
 
 Dot.SIZE = TILE_SIZE * 0.25;
+Dot.COLOUR = '#FCC';
 
 Dot.prototype = new Entity({
 
@@ -254,6 +255,7 @@ Dot.prototype = new Entity({
 function Energiser() {}
 
 Energiser.SIZE = TILE_SIZE * 0.75;
+Energiser.COLOUR = '#FFB6AD';
 
 Energiser.prototype = new Dot({
     value: 50,
@@ -266,20 +268,20 @@ Energiser.prototype = new Dot({
 
 // Pre-render dot sprites
 enqueueInitialiser(function () {
-    function createCircle(size) {
+    function createCircle(size, colour) {
         var sprite = new ScreenBuffer(size, size);
         var g = sprite.getContext('2d');
         g.beginPath();
         var r = size / 2;
         g.arc(r, r, r, 0, Math.PI * 2, true);
-        g.fillStyle = '#FC9';
+        g.fillStyle = colour;
         g.fill();
 
         return sprite;
     }
 
-    Dot.prototype.sprite = createCircle(Dot.SIZE);
-    Energiser.prototype.sprite = createCircle(Energiser.SIZE);
+    Dot.prototype.sprite = createCircle(Dot.SIZE, Dot.COLOUR);
+    Energiser.prototype.sprite = createCircle(Energiser.SIZE, Energiser.COLOUR);
 });
 
 function DotGroup() {
