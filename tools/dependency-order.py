@@ -1,86 +1,102 @@
 """
-Determines the order in which scripts should be concatenated by scanning JSLint
-/*global ... */ declarations.
+Determines the order in which JavaScript files should be concatenated by
+scanning JSLint /*global ... */ declarations.
 """
 
 import re
 import sys
 
-def slurp(path):
-    with open(path) as f: return f.read()
+### Graph construction
+
+def slurp(filename):
+    with open(filename) as f: return f.read()
 
 DEPS_RE = re.compile(r'/\*global ([^*]+)\*/', re.M)
 
-def js_dependencies(src):
+def js_dependencies(filename):
     "Finds a script's dependencies as declared in a /*global...*/ block."
-    match = DEPS_RE.search(slurp(src))
-    return match and [dep.strip().split(':')[0] for dep in
-                      match.group(1).split(',')]
+    match = DEPS_RE.search(slurp(filename))
+    return match and [dep.strip().split(':')[0] for dep in match.group(1).split(',')]
 
-def declaration_re(names):
+def declaration_re(js_identifiers):
+    "Constructs a regexp that matches declarations of JavaScript identifiers."
     return re.compile(r'^var [^;]%(names)s|^function %(names)s' %
-                        {'names': r'\b(%s)\b' % '|'.join(names)}, re.M)
+                        {'names': r'\b(%s)\b' % '|'.join(js_identifiers)}, re.M)
 
-def declaring_scripts(vars, scripts):
-    "Finds the scripts that declare one or more of `vars'."
-    if not vars: return []
-    decl_re = declaration_re(vars)
+def declaring_scripts(js_identifiers, filenames):
+    "Finds the scripts that declare one or more of `js_identifiers'."
+    if not js_identifiers: return []
+    decl_re = declaration_re(js_identifiers)
     decls = {}
-    for script in scripts:
-        matches = decl_re.findall(slurp(script))
-        if matches: decls[script] = [m[1] for m in matches]
+    for f in filenames:
+        matches = decl_re.findall(slurp(f))
+        if matches: decls[f] = [m[1] for m in matches]
     return decls
 
-def remove(L, o):
-    "Non-destructive list removal"
-    copy = L[:]
-    copy.remove(o)
-    return copy
-
-def dependency_graph(scripts):
-    "Determines how scripts depend on each other."
+def dependency_graph(filenames):
+    "Returns a map of filenames to their dependencies."
     graph = {}
-    for script in scripts:
-        graph[script] = {}
-        graph[script]['dependencies'] = \
-            set(declaring_scripts(js_dependencies(script),
-                                  remove(scripts, script)))
-    for script in graph:
-        graph[script]['dependents'] = \
-            set(dependent for dependent in remove(graph.keys(), script)
-                if script in graph[dependent]['dependencies'])
-        # This is a bit crude, it only checks direct circular dependencies
-        circular = graph[script]['dependencies'].intersection(graph[script]['dependents'])
-        if circular:
-            raise Exception('Circular dependency: %s contains %s '
-                            'in dependents and dependencies' % (script, circular))
+    for f in filenames:
+        others = filenames[:]
+        others.remove(f)
+        graph[f] = set(declaring_scripts(js_dependencies(f), others))
     return graph
 
-def index(L, value, default=None):
-    "Returns L.index(value) or default"
-    try: return L.index(value)
-    except ValueError: return default
+### Graph utilities
+
+def circular_ref(node, graph, path=None):
+    deps = graph[node]
+    if not deps:
+        # resolved all dependencies
+        return None
+
+    path = [] if path is None else path[:]
+    path.append(node)
+
+    for dep in deps:
+        if dep in path:
+            circular = path[path.index(dep):]
+            circular.append(dep)
+            return circular
+        circular = circular_ref(dep, graph, path)
+        if circular:
+            return circular
+
+def check_circular_refs(graph):
+    "Returns true if a graph contains any direct or indirect circular references."
+    for node in graph:
+        path = circular_ref(node, graph)
+        if path:
+            raise Exception('circular dependency: %s' % ' -> '.join(path))
+
+### Determine script output order
+
+def insertion_index(filename, graph, order):
+    deps = set(order).intersection(graph[filename])
+    return 0 if not deps else max(order.index(dep) for dep in deps) + 1
+
+# XXX: this seems very inefficient - there's probably a better way to do it
+def order_insert(filename, graph, order):
+    index = insertion_index(filename, graph, order)
+    order.insert(index, filename)
+    # did this invalidate any indirect dependencies?
+    invalidated = [f for f in order
+                   if order.index(f) < insertion_index(f, graph, order)]
+    for invalid in invalidated:
+        order.remove(invalid)
+        order_insert(invalid, graph, order)
 
 def concatenation_order(graph):
     """
-    Determines the order in which scripts must be concatenated to satisfy
-    inter-script dependencies.
+    Determines the order in which files must be concatenated to satisfy all
+    dependencies. Each file is inserted after all its dependencies. If this
+    invalidates the order, the dependencies of the inserted file are recursively
+    reinserted.
     """
+    check_circular_refs(graph)
     order = []
-    for script in graph:
-        # Insert after all dependencies
-        dependency_indexes = [index(order, dependency, -1)
-                              for dependency in graph[script]['dependencies']]
-        min_index = max(dependency_indexes) + 1 if dependency_indexes else 0
-        # ... and before all dependents
-        dependent_indexes = [index(order, dependent, len(order))
-                             for dependent in graph[script]['dependents']]
-        max_index = min(dependent_indexes) if dependent_indexes else len(order)
-        if max_index < min_index:
-            # Shouldn't happen if dependency_graph is correct
-            raise Exception('%s: max=%s, min=%s' % (script, max_index, min_index))
-        # Either index is valid
-        order.insert(min_index, script)
+    for f in graph:
+        order_insert(f, graph, order)
     return order
 
 if __name__ == '__main__':
