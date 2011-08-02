@@ -10,8 +10,8 @@
   EAST, EventManager, Ghost, Group, Header, InfoText, Inky, InlineScore, Maze,
   ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
   TILE_SIZE, Text, UPDATE_HZ, WEST, alert, all:true, broadcast, cookies, debug,
-  drawPacman, format, highscore:true, initialisers, level:true, lives:true,
-  loadResources, lookup, resources:true, score:true, toTicks, wait, window */
+  format, highscore:true, initialisers, level:true, lives:true, loadResources,
+  lookup, resources:true, score:true, toTicks, wait, window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -395,7 +395,7 @@ $(function () {
             });
             percentage.repaint(g);
 
-            drawPacman(g, ox, oy, SCREEN_W / 8, completed);
+            Pacman.draw(g, ox, oy, SCREEN_W / 8, completed);
             g.restore();
         },
 
