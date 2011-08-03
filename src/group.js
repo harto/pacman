@@ -47,6 +47,7 @@ Group.prototype = {
             }
         }
         zIndex.splice(i, 0, o);
+        dispatch(o, 'invalidate');
     },
 
     // Add a group member and return its auto-generated ID.
@@ -58,6 +59,7 @@ Group.prototype = {
 
     remove: function (id) {
         var o = this.members[id];
+        dispatch(o, 'invalidate');
         this.zIndex.remove(o);
         delete this.members[id];
     },

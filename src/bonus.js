@@ -29,7 +29,6 @@ Bonus.prototype = new Entity({
         this.timeout = lookup('events').delay(toTicks(secs), bind(this, function () {
             debug('bonus timeout');
             all.remove('bonus');
-            this.invalidate();
         }));
     },
 
