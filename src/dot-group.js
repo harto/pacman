@@ -30,8 +30,10 @@ function DotGroup() {
 DotGroup.prototype = {
 
     start: function () {
-        this.dots.forEach(function (d) {
-            dispatch(d, 'start');
+        this.dots.forEach(function (row) {
+            row.forEach(function (d) {
+                dispatch(d, 'start');
+            });
         });
     },
 
