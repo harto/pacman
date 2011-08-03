@@ -10,7 +10,6 @@ Energiser.SIZE = TILE_SIZE * 0.75;
 Energiser.COLOUR = '#FFB6AD';
 Energiser.BLINK_DURATION = toTicks(0.15);
 
-
 Energiser.prototype = new Dot({
 
     value: 50,
