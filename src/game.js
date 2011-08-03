@@ -7,11 +7,12 @@
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, EventManager, Ghost, Group, Header, InfoText, Inky, InlineScore, Maze,
-  ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer, SCREEN_H, SCREEN_W, SOUTH,
-  TILE_SIZE, Text, UPDATE_HZ, WEST, alert, all:true, broadcast, cookies, debug,
-  format, highscore:true, initialisers, level:true, lives:true, loadResources,
-  lookup, resources:true, score:true, toTicks, wait, window */
+  EAST, EventManager, Ghost, Group, Header, InfoText, Inky, InlineScore,
+  LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer,
+  SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text, UPDATE_HZ, WEST, alert, all:true,
+  broadcast, cookies, debug, format, highscore:true, initialisers, level:true,
+  lives:true, loadResources, lookup, resources:true, score:true, toTicks, wait,
+  window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -70,6 +71,7 @@ function reset() {
     all.set('clyde', new Clyde());
     all.set('modeSwitcher', new ModeSwitcher(level));
     all.set('releaseTimer', new ReleaseTimer(level));
+    all.set('lifeDisplay', new LifeDisplay(lives));
 
     broadcast('start');
     broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
