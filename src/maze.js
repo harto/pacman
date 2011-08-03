@@ -9,6 +9,7 @@
 
 function Maze() {
     this.invalidatedRegions = [];
+    this.img = Maze.BG;
 }
 
 // house entry/exit tile
@@ -106,17 +107,31 @@ Maze.prototype = {
     draw: function (g) {
         this.invalidatedRegions.forEach(function (r) {
             var x = r.x, y = r.y, w = r.w, h = r.h;
-            g.drawImage(Maze.bg, x, y, w, h, x, y, w, h);
+            g.drawImage(this.img, x, y, w, h, x, y, w, h);
         }, this);
         this.invalidatedRegions = [];
+    },
+
+    isFlashing: function (g) {
+        return this.img === Maze.BG_FLASH;
+    },
+
+    setFlashing: function (flashing) {
+        this.img = flashing ? Maze.BG_FLASH : Maze.BG;
+        this.invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
     }
 };
 
 enqueueInitialiser(function () {
-    var img = resources.getImage('bg');
-    Maze.bg = new ScreenBuffer(SCREEN_W, SCREEN_H);
-    var g = Maze.bg.getContext('2d');
-    g.drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
+    function createBuffer(imgName) {
+        var img = resources.getImage(imgName);
+        var buf = new ScreenBuffer(SCREEN_W, SCREEN_H);
+        buf.getContext('2d').drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
+        return buf;
+    }
+
+    Maze.BG = createBuffer('bg', SCREEN_W, SCREEN_H);
+    var g = Maze.BG.getContext('2d');
 
     // FIXME: should this be toggleable?
     if (DEBUG) {
@@ -152,4 +167,6 @@ enqueueInitialiser(function () {
         g.fillRect(Maze.HOME_COL * TILE_SIZE, Maze.HOME_ROW * TILE_SIZE,
                    TILE_SIZE, TILE_SIZE);
     }
+
+    Maze.BG_FLASH = createBuffer('bg-flash');
 });

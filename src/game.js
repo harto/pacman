@@ -128,8 +128,26 @@ function addPoints(points) {
     broadcast('scoreChanged');
 }
 
-function processCollisions() {
-    var pacman = lookup('pacman');
+function levelComplete() {
+    var maze = lookup('maze');
+    var events = new EventManager();
+
+    var flashDuration = toTicks(0.5);
+    var nFlashes = 8;
+    events.repeat(flashDuration, function () {
+        maze.setFlashing(!maze.isFlashing());
+    }, nFlashes);
+    events.delay(flashDuration * (nFlashes + 1), function () {
+        levelUp();
+    });
+
+    all = new Group();
+    all.set('events', events);
+    all.set('maze', maze);
+
+}
+
+function processCollisions(pacman) {
     var points = 0;
 
     var dots = lookup('dots');
@@ -140,7 +158,7 @@ function processCollisions() {
         resources.playSound('tick' + Math.floor(Math.random() * 4));
         addPoints(dot.value);
         if (dots.isEmpty()) {
-            enterMode(Mode.LEVELUP);
+            wait(toTicks(1), levelComplete);
             return;
         }
     }
@@ -195,7 +213,10 @@ Mode = {
 
     RUNNING: function () {
         broadcast('update');
-        processCollisions();
+        var pacman = lookup('pacman');
+        if (pacman) {
+            processCollisions(pacman);
+        }
     },
 
     LEVELUP: function () {
@@ -292,17 +313,17 @@ function initKeyBindings() {
     }
 
     var keys = {
-        left:        37, // left arrow
-        right:       39, // right arrow
-        up:          38, // up arrow
-        down:        40, // down arrow
+        left:          37, // left arrow
+        right:         39, // right arrow
+        up:            38, // up arrow
+        down:          40, // down arrow
 
-        togglePause: charCode('P'),
-        newGame:     charCode('N'),
+        togglePause:   charCode('P'),
+        newGame:       charCode('N'),
 
         // development helpers
-        kill:        charCode('K'),
-        levelUp:     107  // +
+        kill:          charCode('K'),
+        levelComplete: 107 // +
     };
 
     // reverse-lookup
@@ -339,7 +360,10 @@ function initKeyBindings() {
         case keys.right:
         case keys.up:
         case keys.down:
-            lookup('pacman').turning = directions[k];
+            var pacman = lookup('pacman');
+            if (pacman) {
+                pacman.turning = directions[k];
+            }
             break;
         case keys.togglePause:
             togglePause();
@@ -350,8 +374,8 @@ function initKeyBindings() {
         case keys.kill:
             window.clearTimeout(timer);
             break;
-        case keys.levelUp:
-            levelUp();
+        case keys.levelComplete:
+            levelComplete();
             break;
         default:
             throw new Error('unhandled: ' + keycodes[k]);
@@ -361,7 +385,7 @@ function initKeyBindings() {
     $(window).keyup(function (e) {
         var pacman = lookup('pacman');
         var k = getKeyCode(e);
-        if (pacman.turning === directions[k]) {
+        if (pacman && pacman.turning === directions[k]) {
             pacman.turning = null;
         }
     });
@@ -374,7 +398,8 @@ $(function () {
 
     loadResources({
         base: 'res',
-        images: ['bg', 'blinky', 'pinky', 'inky', 'clyde', 'frightened', 'flashing', 'dead'],
+        images: ['bg', 'bg-flash', 'blinky', 'pinky', 'inky',
+                 'clyde', 'frightened', 'flashing', 'dead'],
         sounds: ['intro', 'tick0', 'tick1', 'tick2', 'tick3'],
 
         onUpdate: function (completed) {
