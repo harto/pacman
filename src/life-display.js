@@ -1,23 +1,29 @@
 /*
- * Gutter panel displaying the remaining number of lives
+ * Gutter panel displaying remaining number of lives
  */
 
 /*global Entity, Pacman, SCREEN_H, ScreenBuffer, TILE_SIZE, enqueueInitialiser */
 
 function LifeDisplay(lives) {
-    this.lives = lives;
-
-    var gridSize = LifeDisplay.GRID_SIZE;
-    this.x = TILE_SIZE * 2;
-    this.y = SCREEN_H - gridSize;
-    this.w = gridSize * lives;
-    this.h = gridSize;
+    this.setLives(lives);
 }
 
 LifeDisplay.GRID_SIZE = 2 * TILE_SIZE;
 LifeDisplay.ICON_SIZE = Math.floor(1.4 * TILE_SIZE);
 
 LifeDisplay.prototype = new Entity({
+
+    setLives: function (lives) {
+        this.invalidate();
+        
+        this.lives = lives;
+
+        var gridSize = LifeDisplay.GRID_SIZE;
+        this.x = TILE_SIZE * 2;
+        this.y = SCREEN_H - gridSize;
+        this.w = gridSize * lives;
+        this.h = gridSize;
+    },
 
     repaint: function (g) {
         g.save();

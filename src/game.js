@@ -62,22 +62,28 @@ var stats = {
     }
 };
 
-function reset() {
-    all.set('events', new EventManager());
+function resetActors() {
     all.set('pacman', new Pacman());
     all.set('blinky', new Blinky());
     all.set('pinky', new Pinky());
     all.set('inky', new Inky());
     all.set('clyde', new Clyde());
+}
+
+function reset(starting) {
+    all.set('events', new EventManager());
+    if (!starting) {
+        resetActors();
+    }
     all.set('modeSwitcher', new ModeSwitcher(level));
     all.set('releaseTimer', new ReleaseTimer(level));
-    all.set('lifeDisplay', new LifeDisplay(lives));
+    all.set('lifeDisplay', new LifeDisplay(lives - (starting ? 0 : 1)));
 
     broadcast('start');
     broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
 }
 
-function levelUp() {
+function levelUp(starting) {
     resources.killSounds();
     ++level;
     debug('starting level %s', level);
@@ -93,7 +99,7 @@ function levelUp() {
         all.set('stats', stats);
     }
 
-    reset();
+    reset(starting);
 }
 
 var mode, paused;
@@ -118,7 +124,6 @@ function wait(ticks, onResume) {
         if (onResume) {
             onResume();
         }
-        waitTimer = null;
     });
 }
 
@@ -144,7 +149,6 @@ function levelComplete() {
     all = new Group();
     all.set('events', events);
     all.set('maze', maze);
-
 }
 
 function processCollisions(pacman) {
@@ -285,12 +289,35 @@ function newGame() {
 
     paused = false;
 
-    levelUp();
-    var delay = toTicks(resources.soundsEnabled() ? 4 : 1);
+    levelUp(true);
+
+    var textProps = { size: TILE_SIZE, style: Text.STYLE_FIXED_WIDTH };
+    var ready = new Text(merge(textProps, {
+        txt: 'READY!',
+        colour: 'yellow',
+        x: 11 * TILE_SIZE,
+        y: 20 * TILE_SIZE
+    }));
+    var playerOne = new Text(merge(textProps, {
+        txt: 'PLAYER ONE',
+        colour: 'cyan',
+        x: 9 * TILE_SIZE,
+        y: 14 * TILE_SIZE
+    }));
+    all.set('readyText', ready);
+    all.set('playerOneText', playerOne);
     resources.playSound('intro');
-    wait(delay, function () {
-        enterMode(Mode.RUNNING);
+    wait(toTicks(2), function () {
+        lookup('lifeDisplay').setLives(lives - 1);
+        all.remove('playerOneText');
+        resetActors();
+        wait(toTicks(2), function() {
+            all.remove('readyText');
+            enterMode(Mode.RUNNING);
+        });
     });
+
+    draw();
     loop();
 }
 
