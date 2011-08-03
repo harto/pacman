@@ -1,1 +1,1 @@
-((js2-mode . ((directory-hooks . ((after-save-hook . project-make))))))
+((js2-mode . ((directory-hooks-alist . ((after-save-hook . project-make))))))
