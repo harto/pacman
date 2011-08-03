@@ -11,8 +11,8 @@
   LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer,
   SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text, UPDATE_HZ, WEST, alert, all:true,
   broadcast, cookies, debug, format, highscore:true, initialisers, level:true,
-  lives:true, loadResources, lookup, resources:true, score:true, toTicks, wait,
-  window */
+  lives:true, loadResources, lookup, merge, resources:true, score:true,
+  toTicks, wait, window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -62,25 +62,58 @@ var stats = {
     }
 };
 
-function resetActors() {
-    all.set('pacman', new Pacman());
-    all.set('blinky', new Blinky());
-    all.set('pinky', new Pinky());
-    all.set('inky', new Inky());
-    all.set('clyde', new Clyde());
+function showStartupText(id, props) {
+    all.set(id, new Text(merge(props, {
+        size: TILE_SIZE,
+        style: Text.STYLE_FIXED_WIDTH
+    })));
 }
 
 function reset(starting) {
+    broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
+    enterMode(Mode.RUNNING);
+
     all.set('events', new EventManager());
-    if (!starting) {
-        resetActors();
-    }
     all.set('modeSwitcher', new ModeSwitcher(level));
     all.set('releaseTimer', new ReleaseTimer(level));
-    all.set('lifeDisplay', new LifeDisplay(lives - (starting ? 0 : 1)));
+    var lifeDisplay = new LifeDisplay(lives - (starting ? 0 : 1));
+    all.set('lifeDisplay', lifeDisplay);
 
-    broadcast('start');
-    broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
+    showStartupText('readyText', {
+        txt: 'READY!',
+        colour: 'yellow',
+        x: 11 * TILE_SIZE,
+        y: 20 * TILE_SIZE
+    });
+
+    function start() {
+        all.set('pacman', new Pacman());
+        all.set('blinky', new Blinky());
+        all.set('pinky', new Pinky());
+        all.set('inky', new Inky());
+        all.set('clyde', new Clyde());
+        wait(toTicks(starting ? 2 : 1), function () {
+            all.remove('readyText');
+            broadcast('start');
+        });
+    }
+
+    if (starting) {
+        showStartupText('playerOneText', {
+            txt: 'PLAYER ONE',
+            colour: 'cyan',
+            x: 9 * TILE_SIZE,
+            y: 14 * TILE_SIZE
+        });
+        wait(toTicks(2), function () {
+            lifeDisplay.setLives(lives - 1);
+            all.remove('playerOneText');
+            start();
+        });
+        resources.playSound('intro');
+    } else {
+        start();
+    }
 }
 
 function levelUp(starting) {
@@ -114,17 +147,24 @@ function enterMode(m) {
     mode = m;
 }
 
-var Mode, prevMode, waitTimer;
+var Mode, waitStack = [];
+
+function currentWaitTimer() {
+    return waitStack[waitStack.length - 1].waitTimer;
+}
 
 function wait(ticks, onResume) {
-    prevMode = mode;
-    enterMode(Mode.WAITING);
-    waitTimer = new Delay(ticks, function () {
-        enterMode(prevMode);
-        if (onResume) {
-            onResume();
-        }
+    waitStack.push({
+        mode: mode,
+        waitTimer: new Delay(ticks, function () {
+            var prevState = waitStack.pop();
+            enterMode(prevState.mode);
+            if (onResume) {
+                onResume();
+            }
+        })
     });
+    enterMode(Mode.WAITING);
 }
 
 function addPoints(points) {
@@ -223,18 +263,11 @@ Mode = {
         }
     },
 
-    LEVELUP: function () {
-        // FIXME: flashing maze, delay
-        levelUp();
-        enterMode(Mode.RUNNING);
-    },
-
     DYING: function () {
         var pacman = lookup('pacman');
         // TODO: death animation
         if (--lives) {
             reset();
-            enterMode(Mode.REVIVING);
         } else {
             // game over
             var prevBest = getPref('highscore') || 0;
@@ -244,13 +277,8 @@ Mode = {
         }
     },
 
-    REVIVING: function () {
-        // FIXME: is this any different from starting a level?
-        enterMode(Mode.RUNNING);
-    },
-
     WAITING: function () {
-        waitTimer.update();
+        currentWaitTimer().update();
     }
 };
 
@@ -286,38 +314,9 @@ function newGame() {
     level = 0;
     lives = 3;
     score = 0;
-
     paused = false;
 
     levelUp(true);
-
-    var textProps = { size: TILE_SIZE, style: Text.STYLE_FIXED_WIDTH };
-    var ready = new Text(merge(textProps, {
-        txt: 'READY!',
-        colour: 'yellow',
-        x: 11 * TILE_SIZE,
-        y: 20 * TILE_SIZE
-    }));
-    var playerOne = new Text(merge(textProps, {
-        txt: 'PLAYER ONE',
-        colour: 'cyan',
-        x: 9 * TILE_SIZE,
-        y: 14 * TILE_SIZE
-    }));
-    all.set('readyText', ready);
-    all.set('playerOneText', playerOne);
-    resources.playSound('intro');
-    wait(toTicks(2), function () {
-        lookup('lifeDisplay').setLives(lives - 1);
-        all.remove('playerOneText');
-        resetActors();
-        wait(toTicks(2), function() {
-            all.remove('readyText');
-            enterMode(Mode.RUNNING);
-        });
-    });
-
-    draw();
     loop();
 }
 
