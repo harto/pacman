@@ -58,7 +58,7 @@ Ghost.FRIGHT_TICKS = [null, 6, 5, 4, 3, 2, 5, 2, 2, 1, 5, 2, 1, 1, 3, 1, 1, 0, 1
 // number of times to flash when becoming unfrightened, indexed by level
 Ghost.FRIGHT_FLASHES = [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0, 3];
 
-Ghost.ANIM_FREQ = UPDATE_HZ / 6;
+Ghost.ANIM_FREQ = UPDATE_HZ / 10;
 Ghost.SPRITES = {};
 
 enqueueInitialiser(function () {
@@ -110,7 +110,7 @@ Ghost.prototype = new Actor({
                                                    Ghost.SPRITES.frightened) :
                 Ghost.SPRITES[this.name],
             spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % sprites.cols,
-            spriteRow = ordinal(this.direction);
+            spriteRow = ordinal(this.currTileDirection);
         g.save();
         sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
         g.restore();
