@@ -2,7 +2,7 @@
  * Gutter panel displaying remaining number of lives
  */
 
-/*global Entity, Pacman, SCREEN_H, ScreenBuffer, TILE_SIZE, enqueueInitialiser */
+/*global Entity, Pacman, SCREEN_H, GraphicsBuffer, TILE_SIZE, enqueueInitialiser */
 
 function LifeDisplay(lives) {
     this.setLives(lives);
@@ -46,7 +46,7 @@ LifeDisplay.prototype = new Entity({
 
 enqueueInitialiser(function () {
     var size = LifeDisplay.ICON_SIZE;
-    var icon = new ScreenBuffer(size, size);
+    var icon = new GraphicsBuffer(size, size);
     var r = size / 2;
     var angle = Math.PI;
     Pacman.draw(icon.getContext('2d'), r, r, r, 0.8, angle, true);

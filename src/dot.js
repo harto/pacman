@@ -2,7 +2,7 @@
  * An edible maze dot.
  */
 
-/*global Entity, ScreenBuffer, TILE_SIZE, copy, enqueueInitialiser */
+/*global Entity, GraphicsBuffer, TILE_SIZE, copy, enqueueInitialiser */
 
 function Dot(props) {
     copy(props, this);
@@ -12,7 +12,7 @@ Dot.SIZE = TILE_SIZE * 0.25;
 Dot.COLOUR = '#FCC';
 
 Dot.createSprite = function (size, colour) {
-    var sprite = new ScreenBuffer(size, size);
+    var sprite = new GraphicsBuffer(size, size);
     var g = sprite.getContext('2d');
     g.beginPath();
     var r = size / 2;

@@ -4,7 +4,7 @@
 
 /*jslint bitwise: false */
 /*global COLS, DEBUG, EAST, NORTH, ROWS, SCREEN_H, SCREEN_W, SOUTH,
-  ScreenBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser,
+  GraphicsBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser,
   resources */
 
 function Maze() {
@@ -125,7 +125,7 @@ Maze.prototype = {
 enqueueInitialiser(function () {
     function createBuffer(imgName) {
         var img = resources.getImage(imgName);
-        var buf = new ScreenBuffer(SCREEN_W, SCREEN_H);
+        var buf = new GraphicsBuffer(SCREEN_W, SCREEN_H);
         buf.getContext('2d').drawImage(img, 0, 0, SCREEN_W, SCREEN_H);
         return buf;
     }

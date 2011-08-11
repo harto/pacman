@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise:false */
-/*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, ScreenBuffer, SpriteMap,
+/*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, GraphicsBuffer, SpriteMap,
   TILE_CENTRE, TILE_SIZE, WEST, bind, enqueueInitialiser, level, lookup, noop,
   ordinal, toDx, toDy */
 
@@ -58,7 +58,7 @@ enqueueInitialiser(function () {
         // iterate through directions in increasing-degrees order
         directions = [EAST, SOUTH, WEST, NORTH],
         steps = Pacman.ANIM_STEPS,
-        buf = new ScreenBuffer(w * steps, h * directions.length),
+        buf = new GraphicsBuffer(w * steps, h * directions.length),
         g = buf.getContext('2d'),
         radius = w / 2,
         direction, angle, startAngle, x, y, col, row;

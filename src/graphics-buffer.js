@@ -4,7 +4,7 @@
 
 /*global $, DEBUG */
 
-function ScreenBuffer(w, h) {
+function GraphicsBuffer(w, h) {
     var canvas = $('<canvas></canvas>').attr({ width: w, height: h });
     if (!DEBUG) {
         canvas.hide();
