@@ -2,7 +2,7 @@
  * A flashing dot that bestows ghost-eating powers.
  */
 
-/*global Dot, TILE_SIZE, enqueueInitialiser, toTicks */
+/*global Dot, TILE_SIZE, bind, enqueueInitialiser, lookup, toTicks */
 
 function Energiser() {}
 

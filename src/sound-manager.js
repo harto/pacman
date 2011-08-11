@@ -2,7 +2,7 @@
  * Sound manager.
  */
 
-/*global Audio, debug, keys, noop, values */
+/*global Audio, debug, format, keys, noop, values */
 
 // Hack for browsers that don't support audio requirements
 function DummySoundManager() {}

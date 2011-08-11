@@ -3,6 +3,7 @@
  */
 
 /*global EAST, Entity, Maze, NORTH, SOUTH, TILE_CENTRE, TILE_SIZE, WEST, copy */
+
 function Actor(props) {
     copy(props, this);
 }
