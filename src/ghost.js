@@ -211,7 +211,7 @@ Ghost.prototype = new Actor({
         this.moveBy(toDx(this.direction) * speed, toDy(this.direction) * speed);
         if (this.enteringTile()) {
             this.setNextDirection(this.nextTileDirection);
-        } else {
+        } else if (this.direction !== this.currTileDirection) {
             // Change direction if at or beyond tile centre
             var cDx = this.lx - TILE_CENTRE;
             var cDy = this.ly - TILE_CENTRE;
