@@ -9,10 +9,10 @@
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
   EAST, EventManager, Ghost, Group, Header, InfoText, Inky, InlineScore,
   LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer,
-  SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text, UPDATE_HZ, WEST, alert, all:true,
-  broadcast, cookies, debug, format, highscore:true, initialisers, level:true,
-  lives:true, loadResources, lookup, merge, resources:true, score:true,
-  toTicks, wait, window */
+  ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text, UPDATE_HZ, WEST,
+  alert, all:true, broadcast, cookies, debug, format, highscore:true,
+  initialisers, level:true, lives:true, lookup, merge, resources:true,
+  score:true, toTicks, wait, window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -421,7 +421,7 @@ $(function () {
     ctx = canvas.getContext('2d');
     ctx.scale(canvas.width / SCREEN_W, canvas.height / SCREEN_H);
 
-    loadResources({
+    ResourceManager.load({
         base: 'res',
         images: ['bg', 'bg-flash', 'blinky', 'pinky', 'inky',
                  'clyde', 'frightened', 'flashing', 'dead'],

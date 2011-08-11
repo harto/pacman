@@ -2,9 +2,24 @@
  * Sound manager.
  */
 
-/*global debug, keys, values */
+/*global Audio, debug, keys, noop, values */
+
+// Hack for browsers that don't support audio requirements
+function DummySoundManager() {}
+
+DummySoundManager.prototype = {
+    play: noop,
+    togglePause: noop,
+    enable: noop,
+    killAll: noop
+};
 
 function SoundManager(sounds) {
+    // XXX: hack for Safari testing
+    if (values(sounds).some(function (sound) { return !sound; })) {
+        return new DummySoundManager();
+    }
+
     // Copies of each sound are made in case a play request occurs while the
     // original is playing. Borrowed from
     // http://www.phoboslab.org/log/2011/03/multiple-channels-for-html5-audio
@@ -29,6 +44,41 @@ function SoundManager(sounds) {
     this.enabled = true;
     this.nclones = 0;
 }
+
+SoundManager.formats = {
+    ogg: 'audio/ogg; codecs="vorbis"'
+};
+
+SoundManager.load = function (id, path, onLoad, onError) {
+    var aud = new Audio();
+
+    var exts = keys(SoundManager.formats);
+    var ext = exts.first(function (ext) {
+        return aud.canPlayType(SoundManager.formats[ext]);
+    });
+
+    if (!ext) {
+        // onError(format('No required audio formats (%s) are supported',
+        //                exts.join(', ')));
+        onLoad(null);
+        return;
+    }
+
+    // guard against multiple onload events
+    var loaded;
+    aud.addEventListener('canplaythrough', function (e) {
+        if (!loaded) {
+            loaded = true;
+            debug('loaded audio: %s', this.src);
+            onLoad(aud);
+        }
+    }, false);
+    aud.addEventListener('error', function (e) {
+        onError(format('Error loading audio: %s', e.src));
+    }, false);
+    aud.src = format('%s/%s.ogg', path, id);
+    aud.load();
+};
 
 SoundManager.prototype = {
 
