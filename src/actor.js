@@ -25,10 +25,10 @@ Actor.prototype = new Entity({
     },
 
     moveBy: function (dx, dy) {
-        // Actors can only move in whole-pixel offsets. This avoids dealing with
-        // sub-pixel values when rendering and calculating in-tile locations. To
-        // allow for variable speeds, any fractional amount of movement is
-        // accumulated and added to the actor's next move.
+        // Actors can only move in whole-pixel offsets, but speeds (and hence
+        // movements) may be provided as non-integral amounts. When such values
+        // are given, the fractional amount of movement is accumulated and added
+        // to the actor's next move.
 
         // reset accumulated value when changing direction
         if (!dx || Math.sign(dx) !== Math.sign(this.accX)) {
