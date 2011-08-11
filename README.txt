@@ -4,7 +4,8 @@ Todo:
 -----
 
  * Improve text appearance
+ * Maze artwork
+ * Ghost jostling
  * Bonus symbol artwork
  * Cruise Elroy
  * Music
- * Flashing maze on level-up
