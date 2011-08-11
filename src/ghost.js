@@ -140,6 +140,7 @@ Ghost.prototype = new Actor({
     },
 
     calcSpeed: function () {
+        // XXX: entry/exit speed should be slower than ordinary speed
         return (this.is(Ghost.STATE_DEAD) || this.is(Ghost.STATE_ENTERING) ? 2 :
                 Maze.inTunnel(this.col, this.row) ?
                     (level === 1 ? 0.4 :
@@ -155,71 +156,96 @@ Ghost.prototype = new Actor({
     },
 
     update: function () {
-        var speed = this.calcSpeed();
-        var dx, dy;
-        this.nTicks++;
         if (this.is(Ghost.STATE_INSIDE)) {
-            // FIXME: jostle
-            this.invalidate();
+            this.jostle();
         } else if (this.is(Ghost.STATE_ENTERING) || this.is(Ghost.STATE_EXITING)) {
-            // follow path into/out of house
-            var point = this.path.shift();
-            dx = point.x - this.cx;
-            dy = point.y - this.cy;
-            if (point && !(Math.abs(dx) < speed && Math.abs(dy) < speed)) {
-                this.moveBy(Math.sign(dx) * speed, Math.sign(dy) * speed);
-                this.path.unshift(point);
-            }
-            if (!this.path.length) {
-                if (this.is(Ghost.STATE_ENTERING)) {
-                    this.unset(Ghost.STATE_ENTERING);
-                    this.set(Ghost.STATE_INSIDE);
-                } else {
-                    this.unset(Ghost.STATE_EXITING);
-                }
-            }
-            return;
-        } else if (this.is(Ghost.STATE_DEAD) &&
-                   this.row === Maze.HOME_ROW &&
-                   Math.abs(this.cx - Maze.HOME_COL * TILE_SIZE) < speed) {
-            debug('%s: entering house', this);
-            this.unset(Ghost.STATE_DEAD);
-            this.set(Ghost.STATE_ENTERING);
-            this.path = this.calcEntryPath();
-            return;
+            this.enterExitHouse();
+        } else if (this.shouldEnterHouse()) {
+            this.startEnteringHouse();
         } else {
-            this.moveBy(toDx(this.direction) * speed, toDy(this.direction) * speed);
-            if (this.enteringTile()) {
-                this.setNextDirection(this.nextTileDirection);
+            this.move();
+        }
+        this.nTicks++;
+    },
+
+    jostle: function () {
+        // FIXME
+        this.invalidate();
+    },
+
+    // follow path into/out of house
+    enterExitHouse: function () {
+        var point = this.path.shift(),
+            dx = point.x - this.cx,
+            dy = point.y - this.cy,
+            speed = this.calcSpeed();
+        if (point && !(Math.abs(dx) < speed && Math.abs(dy) < speed)) {
+            this.moveBy(Math.sign(dx) * speed, Math.sign(dy) * speed);
+            this.path.unshift(point);
+        }
+        if (!this.path.length) {
+            if (this.is(Ghost.STATE_ENTERING)) {
+                this.unset(Ghost.STATE_ENTERING);
+                this.set(Ghost.STATE_INSIDE);
             } else {
-                // turn at tile centre, ensuring no overshoot at >1 speed
-                dx = this.lx - TILE_CENTRE;
-                dy = this.ly - TILE_CENTRE;
-                if (Math.abs(dx) < speed && Math.abs(dy) < speed) {
-                    this.moveTo(this.x - dx, this.y - dy);
-                    this.direction = this.currTileDirection;
-                }
+                this.unset(Ghost.STATE_EXITING);
             }
         }
     },
 
+    shouldEnterHouse: function () {
+        return this.is(Ghost.STATE_DEAD) &&
+               this.row === Maze.HOME_ROW &&
+               Math.abs(this.cx - Maze.HOME_COL * TILE_SIZE) < this.calcSpeed();
+    },
+
+    startEnteringHouse: function () {
+        debug('%s: entering house', this);
+        this.unset(Ghost.STATE_DEAD);
+        this.set(Ghost.STATE_ENTERING);
+        this.path = this.calcEntryPath();
+    },
+
+    move: function () {
+        var speed = this.calcSpeed();
+        this.moveBy(toDx(this.direction) * speed, toDy(this.direction) * speed);
+        if (this.enteringTile()) {
+            this.setNextDirection(this.nextTileDirection);
+        } else {
+            // Change direction if at or beyond tile centre
+            var cDx = this.lx - TILE_CENTRE;
+            var cDy = this.ly - TILE_CENTRE;
+            if (Math.abs(cDx) < speed && Math.abs(cDy) < speed) {
+                this.moveTo(this.x - cDx, this.y - cDy);
+                this.direction = this.currTileDirection;
+            }
+        }
+    },
+
+    // Sets the direction to be taken when the centre of a tile is next reached.
+    // This method is most frequently called when a ghost enters a new tile, but
+    // is also invoked on mode switches (scatter->chase and vice-versa,
+    // frightened) and on initialisation.
+    //
+    // The following properties track ghost direction:
+    //   direction:         current direction
+    //   currTileDirection: direction to take when current tile centre is reached
+    //   nextTileDirection: direction to take when next tile centre is reached
     setNextDirection: function (nextDirection) {
-        // Direction is computed on tile entry, but not enacted until the tile
-        // centre is reached. If a ghost has not yet reached the tile centre,
-        // update the direction it leaves this tile. Otherwise, wait until the
-        // next tile is reached.
         if (this.is(Ghost.STATE_ENTERING) ||
             this.is(Ghost.STATE_INSIDE) ||
             this.is(Ghost.STATE_EXITING)) {
-            // Set the direction to be taken when ghost gets outside the house.
+            // Set the direction to be taken when ghost leaves the house.
+            // FIXME: needs work to support in-house jostling
             this.direction = this.currTileDirection = nextDirection;
             this.nextTileDirection = this.calcNextDirection(Maze.HOME_COL,
                                                             Maze.HOME_ROW,
                                                             nextDirection);
         } else if (Actor.exitingTile(this.direction, this.lx, this.ly)) {
-            // wait until next tile
+            // Too late to change in this tile; wait until next one
             this.nextTileDirection = nextDirection;
         } else {
+            // Set direction to leave current tile
             this.currTileDirection = nextDirection;
             this.nextTileDirection = this.calcNextDirection(this.col + toDx(nextDirection),
                                                             this.row + toDy(nextDirection),
