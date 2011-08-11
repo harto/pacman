@@ -69,6 +69,29 @@ function showStartupText(id, props) {
     })));
 }
 
+var Mode, mode, paused, waitTimer;
+
+function enterMode(m) {
+    mode = m;
+}
+
+function update() {
+    if (!paused) {
+        mode();
+    }
+}
+
+function wait(ticks, onResume) {
+    waitTimer = (function (prevMode, prevTimer) {
+        return new Delay(ticks, function () {
+            enterMode(prevMode);
+            waitTimer = prevTimer;
+            onResume();
+        });
+    }(mode, waitTimer));
+    enterMode(Mode.WAITING);
+}
+
 function reset(starting) {
     broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
     enterMode(Mode.RUNNING);
@@ -133,38 +156,6 @@ function levelUp(starting) {
     }
 
     reset(starting);
-}
-
-var mode, paused;
-
-function update() {
-    if (!paused) {
-        mode();
-    }
-}
-
-function enterMode(m) {
-    mode = m;
-}
-
-var Mode, waitStack = [];
-
-function currentWaitTimer() {
-    return waitStack[waitStack.length - 1].waitTimer;
-}
-
-function wait(ticks, onResume) {
-    waitStack.push({
-        mode: mode,
-        waitTimer: new Delay(ticks, function () {
-            var prevState = waitStack.pop();
-            enterMode(prevState.mode);
-            if (onResume) {
-                onResume();
-            }
-        })
-    });
-    enterMode(Mode.WAITING);
 }
 
 function addPoints(points) {
@@ -254,7 +245,6 @@ function processCollisions(pacman) {
 }
 
 Mode = {
-
     RUNNING: function () {
         broadcast('update');
         var pacman = lookup('pacman');
@@ -278,7 +268,7 @@ Mode = {
     },
 
     WAITING: function () {
-        currentWaitTimer().update();
+        waitTimer.update();
     }
 };
 
