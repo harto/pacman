@@ -24,28 +24,25 @@ Actor.prototype = new Entity({
         this.ly = Math.abs(this.cy % TILE_SIZE);
     },
 
+    // Actors can only move in whole-pixel offsets, but speeds (and hence
+    // movements) may be provided as non-integral amounts. When such values
+    // are given, the fractional amount of movement is accumulated and added
+    // to the actor's next move.
+
     moveBy: function (dx, dy) {
-        // Actors can only move in whole-pixel offsets, but speeds (and hence
-        // movements) may be provided as non-integral amounts. When such values
-        // are given, the fractional amount of movement is accumulated and added
-        // to the actor's next move.
-
-        // reset accumulated value when changing direction
-        if (!dx || Math.sign(dx) !== Math.sign(this.accX)) {
-            this.accX = 0;
-        }
-        if (!dy || Math.sign(dy) !== Math.sign(this.accY)) {
-            this.accY = 0;
+        function addAccumulated(v, acc) {
+            // Discard accumulated value when changing direction
+            return v + (v && Math.sign(v) === Math.sign(acc) ? acc : 0);
         }
 
-        var x = dx + (this.accX || 0);
-        var y = dy + (this.accY || 0);
-        var actualX = Math.trunc(x);
-        var actualY = Math.trunc(y);
+        var realDx = addAccumulated(dx, this.accDx);
+        var realDy = addAccumulated(dy, this.accDy);
+        var integralDx = Math.trunc(realDx);
+        var integralDy = Math.trunc(realDy);
 
-        this.moveTo(this.x + actualX, this.y + actualY);
-        this.accX = x - actualX;
-        this.accY = y - actualY;
+        this.moveTo(this.x + integralDx, this.y + integralDy);
+        this.accDx = realDx - integralDx;
+        this.accDy = realDy - integralDy;
     },
 
     enteringTile: function () {
