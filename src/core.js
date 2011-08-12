@@ -18,7 +18,7 @@ var SCALE = 2,
 
     MAX_SPEED = SCALE,
 
-    DEBUG = true,
+    DEBUG = false,
 
     NORTH = 1 << 0,
     SOUTH = 1 << 1,
