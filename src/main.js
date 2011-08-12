@@ -411,61 +411,67 @@ $(function () {
     ctx = canvas.getContext('2d');
     ctx.scale(canvas.width / SCREEN_W, canvas.height / SCREEN_H);
 
+    function drawProgress(proportion) {
+        var g = ctx;
+        g.save();
+        g.fillStyle = 'black';
+        g.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+        var cx = SCREEN_W / 2;
+
+        var percentage = new Text({
+            txt: format('%.1n%', proportion * 100),
+            colour: 'white',
+            style: Text.STYLE_NORMAL,
+            size: TILE_SIZE,
+            align: 'center',
+            x: cx,
+            y: SCREEN_H / 3
+        });
+        percentage.repaint(g);
+
+        if (proportion) {
+            Pacman.draw(g, cx, SCREEN_H / 2, SCREEN_W / 8, proportion);
+        }
+
+        g.restore();
+    }
+
+    function init() {
+        // check for previous sound preference
+        var soundsEnabled = getPref('sound.enabled') !== 'false';
+        resources.enableSounds(soundsEnabled);
+
+        var soundToggle = $('#enableSounds');
+        soundToggle.attr('disabled', false);
+        soundToggle.attr('checked', resources.soundsEnabled());
+        soundToggle.click(function (e) {
+            resources.enableSounds(this.checked);
+            setPref('sound.enabled', this.checked);
+        });
+
+        initialisers.forEach(function (f) {
+            f();
+        });
+
+        highscore = getPref('highscore') || 0;
+        initKeyBindings();
+        newGame();
+    }
+
     ResourceManager.load({
         base: 'res',
         images: ['bg', 'bg-flash', 'blinky', 'pinky', 'inky',
                  'clyde', 'frightened', 'flashing', 'dead'],
         sounds: ['intro', 'tick0', 'tick1', 'tick2', 'tick3'],
+        fonts: { stylesheet: 'fonts.css',
+                 families: [Text.STYLE_FIXED_WIDTH] },
 
-        onUpdate: function (completed) {
-            var g = ctx;
-            g.save();
-            g.fillStyle = 'black';
-            g.fillRect(0, 0, SCREEN_W, SCREEN_H);
-
-            var ox = SCREEN_W / 2,
-                oy = SCREEN_H / 2;
-
-            var percentage = new Text({
-                txt: format('%.1n%', completed * 100),
-                colour: 'white',
-                style: '"Helvetica Neue", Helvetica, sans-serif',
-                size: TILE_SIZE,
-                align: 'center',
-                x: ox,
-                y: SCREEN_H / 3
-            });
-            percentage.repaint(g);
-
-            Pacman.draw(g, ox, oy, SCREEN_W / 8, completed);
-            g.restore();
-        },
-
+        onUpdate: drawProgress,
         onComplete: function (resourceManager) {
-            // TODO: fade indicator
             resources = resourceManager;
-
-            // check for previous sound preference
-            var soundsEnabled = getPref('sound.enabled') !== 'false';
-            resources.enableSounds(soundsEnabled);
-
-            var soundToggle = $('#enableSounds');
-            soundToggle.attr('disabled', false);
-            soundToggle.attr('checked', resources.soundsEnabled());
-            soundToggle.click(function (e) {
-                resources.enableSounds(this.checked);
-                setPref('sound.enabled', this.checked);
-            });
-
-            initialisers.forEach(function (f) {
-                f();
-            });
-
-            highscore = getPref('highscore') || 0;
-            initKeyBindings();
-            newGame();
+            init();
         },
-
         onError: function (msg) {
             alert(msg);
             throw new Error(msg);
