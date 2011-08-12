@@ -62,13 +62,6 @@ var stats = {
     }
 };
 
-function showStartupText(id, props) {
-    all.set(id, new Text(merge(props, {
-        size: TILE_SIZE,
-        style: Text.STYLE_FIXED_WIDTH
-    })));
-}
-
 var Mode, mode, paused, waitTimer;
 
 function enterMode(m) {
@@ -96,13 +89,22 @@ function reset(starting) {
     broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
     enterMode(Mode.RUNNING);
 
+    // Note: it's important for these entities to have predictable IDs, since
+    // they're overwritten whenever a life is lost.
     all.set('events', new EventManager());
     all.set('modeSwitcher', new ModeSwitcher(level));
     all.set('releaseTimer', new ReleaseTimer(level));
     var lifeDisplay = new LifeDisplay(lives - (starting ? 0 : 1));
     all.set('lifeDisplay', lifeDisplay);
 
-    showStartupText('readyText', {
+    function insertStartupText(props) {
+        return all.add(new Text(merge(props, {
+            size: TILE_SIZE,
+            style: Text.STYLE_FIXED_WIDTH
+        })));
+    }
+
+    var readyTextId = insertStartupText({
         txt: 'READY!',
         colour: 'yellow',
         x: 11 * TILE_SIZE,
@@ -116,13 +118,13 @@ function reset(starting) {
         all.set('inky', new Inky());
         all.set('clyde', new Clyde());
         wait(toTicks(starting ? 2 : 1), function () {
-            all.remove('readyText');
+            all.remove(readyTextId);
             broadcast('start');
         });
     }
 
     if (starting) {
-        showStartupText('playerOneText', {
+        var playerOneTextId = insertStartupText({
             txt: 'PLAYER ONE',
             colour: 'cyan',
             x: 9 * TILE_SIZE,
@@ -130,7 +132,7 @@ function reset(starting) {
         });
         wait(toTicks(2), function () {
             lifeDisplay.setLives(lives - 1);
-            all.remove('playerOneText');
+            all.remove(playerOneTextId);
             start();
         });
         resources.playSound('intro');
@@ -147,10 +149,10 @@ function levelUp(starting) {
     all = new Group();
 
     all.set('maze', new Maze());
-    all.set('header', new Header());
     all.set('dots', new DotGroup());
-    all.set('bonusDisplay', new BonusDisplay(level));
-    all.set('dotCounter', new DotCounter(level));
+    all.add(new Header());
+    all.add(new BonusDisplay(level));
+    all.add(new DotCounter(level));
     if (DEBUG) {
         all.set('stats', stats);
     }
@@ -183,8 +185,6 @@ function levelComplete() {
 }
 
 function processCollisions(pacman) {
-    var points = 0;
-
     var dots = lookup('dots');
     var dot = dots.colliding(pacman);
     if (dot) {
@@ -231,11 +231,9 @@ function processCollisions(pacman) {
             scoreCy = g.cy;
             addPoints(scoreValue);
         });
-        var scoreText = new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy);
-        scoreText.insert();
-
+        var scoreTextId = all.add(new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
         wait(toTicks(0.5), function () {
-            scoreText.remove();
+            all.remove(scoreTextId);
             pacman.setVisible(true);
             deadGhosts.forEach(function (g) {
                 g.setVisible(true);
@@ -310,15 +308,15 @@ function newGame() {
     loop();
 }
 
-var pauseText = new InfoText('Paused');
+var pauseTextId;
 
 function togglePause() {
     paused = !paused;
     resources.togglePause(paused);
     if (paused) {
-        all.set('pauseText', pauseText);
+        pauseTextId = all.add(new InfoText('Paused'));
     } else {
-        all.remove('pauseText');
+        all.remove(pauseTextId);
     }
 }
 

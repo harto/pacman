@@ -18,21 +18,15 @@ InlineScore.prototype = new Text({
     align: 'center',
     valign: 'middle',
 
-    insert: function () {
-        this.id = all.add(this);
-        this.invalidate();
-    },
-
-    remove: function () {
-        all.remove(this.id);
-        this.invalidate();
-    },
-
     showFor: function (ticks) {
-        this.insert();
+        this.id = all.add(this);
         all.get('events').delay(ticks, bind(this, function () {
-            this.remove();
+            all.remove(this.id);
         }));
+    },
+
+    pacmanKilled: function () {
+        all.remove(this.id);
     },
 
     toString: function () {
