@@ -5,15 +5,13 @@
 /*global Ghost, Maze, lookup, toDx, toDy */
 
 function Pinky() {
-    this.init();
+    this.name = 'pinky';
+    this.startCol = Maze.HOME_COL;
+    this.startRow = Maze.HOME_ROW + 3;
+    this.scatterTile = { col: 2, row: 0 };
 }
 
 Pinky.prototype = new Ghost({
-    name: 'pinky',
-    startCol: Maze.HOME_COL,
-    startRow: Maze.HOME_ROW + 3,
-    scatterCol: 2,
-    scatterRow: 0,
 
     calcTarget: function () {
         // target 4 tiles ahead of pacman's current direction

@@ -5,15 +5,13 @@
 /*global Ghost, Maze, ROWS, distance, lookup */
 
 function Clyde() {
-    this.init();
+    this.name = 'clyde';
+    this.startCol = Maze.HOME_COL + 2;
+    this.startRow = Maze.HOME_ROW + 3;
+    this.scatterTile = { col: 0, row: ROWS - 2 };
 }
 
 Clyde.prototype = new Ghost({
-    name: 'clyde',
-    startCol: Maze.HOME_COL + 2,
-    startRow: Maze.HOME_ROW + 3,
-    scatterCol: 0,
-    scatterRow: ROWS - 2,
 
     calcTarget: function () {
         // target pacman directly when further than 8 tiles from him, otherwise

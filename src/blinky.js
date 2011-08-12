@@ -5,16 +5,13 @@
 /*global COLS, Ghost, Maze, lookup */
 
 function Blinky() {
-    this.init();
-    this.unset(Ghost.STATE_INSIDE);
+    this.name = 'blinky';
+    this.startCol = Maze.HOME_COL;
+    this.startRow = Maze.HOME_ROW;
+    this.scatterTile = { col: COLS - 3, row: 0 };
 }
 
 Blinky.prototype = new Ghost({
-    name: 'blinky',
-    startCol: Maze.HOME_COL,
-    startRow: Maze.HOME_ROW,
-    scatterCol: COLS - 3,
-    scatterRow: 0,
 
     calcTarget: function () {
         // target pacman directly

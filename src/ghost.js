@@ -12,10 +12,8 @@ function Ghost(props) {
     copy(props, this);
     // XXX: call this animTicks or something
     this.nTicks = 0;
-    this.state = 0;
-    this.startCx = this.startCol * TILE_SIZE;
-    this.startCy = this.startRow * TILE_SIZE + TILE_CENTRE;
-    this.scatterTile = { col: this.scatterCol, row: this.scatterRow };
+    this.w = this.h = Ghost.SIZE;
+    this.z = 2;
 }
 
 Ghost.STATE_ENTERING   = 1 << 0;
@@ -60,10 +58,11 @@ Ghost.FRIGHT_FLASHES = [null, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 3, 3, 5, 3, 3, 0,
 
 Ghost.ANIM_FREQ = UPDATE_HZ / 10;
 Ghost.SPRITES = {};
+Ghost.SIZE = 28;
 
 enqueueInitialiser(function () {
-    var w = Ghost.prototype.w,
-        h = Ghost.prototype.h,
+    var w = Ghost.SIZE,
+        h = Ghost.SIZE,
         ids = ['blinky', 'pinky', 'inky', 'clyde', 'frightened', 'flashing', 'dead'];
     ids.forEach(function (id) {
         Ghost.SPRITES[id] = new SpriteMap(resources.getImage(id), w, h);
@@ -72,15 +71,16 @@ enqueueInitialiser(function () {
 
 Ghost.prototype = new Actor({
 
-    w: 28,
-    h: 28,
-
-    z: 2,
-
-    init: function () {
-        this.set(Ghost.STATE_INSIDE);
-        this.set(Ghost.STATE_SCATTERING);
+    start: function () {
+        this.startCx = this.startCol * TILE_SIZE;
+        this.startCy = this.startRow * TILE_SIZE + TILE_CENTRE;
         this.centreAt(this.startCx, this.startCy);
+
+        if (toRow(this.startCy) !== Maze.HOME_ROW) {
+            this.set(Ghost.STATE_INSIDE);
+        }
+        this.set(Ghost.STATE_SCATTERING);
+
         this.setNextDirection(WEST);
     },
 
@@ -233,8 +233,8 @@ Ghost.prototype = new Actor({
     //   nextTileDirection: direction to take when next tile centre is reached
     setNextDirection: function (nextDirection) {
         if (this.is(Ghost.STATE_ENTERING) ||
-            this.is(Ghost.STATE_INSIDE) ||
-            this.is(Ghost.STATE_EXITING)) {
+            this.is(Ghost.STATE_EXITING) ||
+            this.direction === undefined) {
             // Set the direction to be taken when ghost leaves the house.
             // FIXME: needs work to support in-house jostling
             this.direction = this.currTileDirection = nextDirection;

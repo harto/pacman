@@ -5,15 +5,13 @@
 /*global COLS, Ghost, Maze, ROWS, lookup, toDx, toDy */
 
 function Inky() {
-    this.init();
+    this.name = 'inky';
+    this.startCol = Maze.HOME_COL - 2;
+    this.startRow = Maze.HOME_ROW + 3;
+    this.scatterTile = { col: COLS - 1, row: ROWS - 2 };
 }
 
 Inky.prototype = new Ghost({
-    name: 'inky',
-    startCol: Maze.HOME_COL - 2,
-    startRow: Maze.HOME_ROW + 3,
-    scatterCol: COLS - 1,
-    scatterRow: ROWS - 2,
 
     calcTarget: function () {
         // target tile at vector extending from blinky with midpoint 2 tiles

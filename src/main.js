@@ -117,9 +117,9 @@ function reset(starting) {
         all.set('pinky', new Pinky());
         all.set('inky', new Inky());
         all.set('clyde', new Clyde());
+        broadcast('start');
         wait(toTicks(starting ? 2 : 1), function () {
             all.remove(readyTextId);
-            broadcast('start');
         });
     }
 
