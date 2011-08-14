@@ -3,18 +3,20 @@
  */
 
 /*jslint bitwise:false */
-/*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, GraphicsBuffer, SpriteMap,
-  TILE_CENTRE, TILE_SIZE, WEST, bind, enqueueInitialiser, level, lookup, noop,
-  ordinal, toDx, toDy */
+/*global Actor, EAST, Ghost, GraphicsBuffer, MAX_SPEED, Maze, NORTH, SOUTH,
+  SpriteMap, TILE_CENTRE, TILE_SIZE, WEST, bind, enqueueInitialiser, level,
+  lookup, noop, ordinal, toDx, toDy */
 
 function Pacman() {
-    this.centreAt(Maze.PACMAN_X, Maze.PACMAN_Y);
     this.direction = WEST;
+
     this.frameIndex = 0;
     this.animStepInc = 1;
-    this.speed = (level === 1 ? 0.8 :
-                  level < 5 || level > 20 ? 0.9 :
-                  1) * MAX_SPEED;
+
+    this.w = this.h = Pacman.SIZE;
+    this.centreAt(Maze.PACMAN_X, Maze.PACMAN_Y);
+
+    this.z = 1;
 }
 
 // Draws a Pac-Man figure to the given context.
@@ -76,10 +78,6 @@ enqueueInitialiser(function () {
 
 Pacman.prototype = new Actor({
 
-    w: Pacman.SIZE,
-    h: Pacman.SIZE,
-    z: 1,
-
     dotEaten: function (d) {
         // stub update() for duration of dot delay
         this.update = noop;
@@ -111,12 +109,22 @@ Pacman.prototype = new Actor({
         }
     },
 
+    calcSpeed: function () {
+        var frightened = Ghost.all(Ghost.STATE_FRIGHTENED).length;
+        return (frightened ? (level === 1 ? 0.9 :
+                              level < 5 ? 0.95 :
+                              1) :
+                             (level === 1 ? 0.8 :
+                              level < 5 || level > 20 ? 0.9 :
+                              1)) * MAX_SPEED;
+    },
+
     move: function (direction) {
         var dx = 0,
             dy = 0,
             lx = this.lx,
             ly = this.ly,
-            speed = this.speed;
+            speed = this.calcSpeed();
 
         // Move in the given direction iff before tile centrepoint or
         // an adjacent tile lies beyond.
