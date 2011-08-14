@@ -3,8 +3,8 @@ An HTML5 Pac-Man clone.
 Todo:
 -----
 
- * Improve text appearance
+ * Pick better fonts
  * Maze artwork
- * Ghost jostling
+ * Ghost jostling & proper entry/exit
  * Bonus symbol artwork
  * Music
