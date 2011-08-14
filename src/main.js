@@ -7,12 +7,12 @@
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, EventManager, Ghost, Group, Header, InfoText, Inky, InlineScore,
-  LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer,
-  ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text, UPDATE_HZ, WEST,
-  alert, all:true, broadcast, cookies, debug, format, highscore:true,
-  initialisers, level:true, lives:true, lookup, merge, resources:true,
-  score:true, toTicks, wait, window */
+  EAST, ElroyCounter, EventManager, Ghost, Group, Header, InfoText, Inky,
+  InlineScore, LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
+  ReleaseTimer, ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text,
+  UPDATE_HZ, WEST, alert, all:true, broadcast, cookies, debug, format,
+  highscore:true, initialisers, level:true, lives:true, lookup, merge,
+  resources:true, score:true, toTicks, wait, window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -117,6 +117,7 @@ function reset(starting) {
         all.set('pinky', new Pinky());
         all.set('inky', new Inky());
         all.set('clyde', new Clyde());
+        all.set('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
         broadcast('start');
         wait(toTicks(starting ? 2 : 1), function () {
             all.remove(readyTextId);

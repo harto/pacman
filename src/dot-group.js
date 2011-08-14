@@ -37,8 +37,12 @@ DotGroup.prototype = {
         });
     },
 
+    dotsRemaining: function () {
+        return this.nDots;
+    },
+
     isEmpty: function () {
-        return this.nDots === 0;
+        return this.dotsRemaining() === 0;
     },
 
     dotAt: function (col, row) {

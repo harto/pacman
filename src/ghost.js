@@ -23,6 +23,8 @@ Ghost.STATE_FRIGHTENED = 1 << 3;
 Ghost.STATE_DEAD       = 1 << 4;
 Ghost.STATE_CHASING    = 1 << 5;
 Ghost.STATE_SCATTERING = 1 << 6;
+Ghost.STATE_ELROY_1    = 1 << 7;
+Ghost.STATE_ELROY_2    = 1 << 8;
 
 Ghost.STATE_LABELS = (function () {
     var labels = {};
@@ -140,19 +142,22 @@ Ghost.prototype = new Actor({
     },
 
     calcSpeed: function () {
-        // XXX: entry/exit speed should be slower than ordinary speed
-        return (this.is(Ghost.STATE_DEAD) || this.is(Ghost.STATE_ENTERING) ? 2 :
-                Maze.inTunnel(this.col, this.row) ?
-                    (level === 1 ? 0.4 :
-                     2 <= level && level <= 4 ? 0.45 :
-                     0.5) :
-                this.is(Ghost.STATE_FRIGHTENED) ?
-                    (level === 1 ? 0.5 :
-                     2 <= level && level <= 4 ? 0.55 :
-                     0.6) :
-                (level === 1 ? 0.75 :
-                 2 <= level && level <= 4 ? 0.85 :
-                 0.95)) * MAX_SPEED;
+        // XXX: entry/exit and dead speeds are just estimates
+        return (this.is(Ghost.STATE_ENTERING) || this.is(Ghost.STATE_EXITING) ? 0.6 :
+                this.is(Ghost.STATE_DEAD) ? 2 :
+                Maze.inTunnel(this.col, this.row) ? (level === 1 ? 0.4 :
+                                                     level < 5 ? 0.45 :
+                                                     0.5) :
+                this.is(Ghost.STATE_FRIGHTENED) ? (level === 1 ? 0.5 :
+                                                   level < 5 ? 0.55 :
+                                                   0.6) :
+                this.is(Ghost.STATE_ELROY_2) ? (level === 1 ? 0.85 :
+                                                level < 5 ? 0.95 :
+                                                1.05) :
+                this.is(Ghost.STATE_ELROY_1) ? (level === 1 ? 0.8 :
+                                                level < 5 ? 0.9 :
+                                                1) :
+                (level === 1 ? 0.75 : level < 5 ? 0.85 : 0.95)) * MAX_SPEED;
     },
 
     update: function () {

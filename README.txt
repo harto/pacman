@@ -7,5 +7,4 @@ Todo:
  * Maze artwork
  * Ghost jostling
  * Bonus symbol artwork
- * Cruise Elroy
  * Music
