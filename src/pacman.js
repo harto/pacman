@@ -5,13 +5,13 @@
 /*jslint bitwise:false */
 /*global Actor, EAST, Ghost, GraphicsBuffer, MAX_SPEED, Maze, NORTH, SOUTH,
   SpriteMap, TILE_CENTRE, TILE_SIZE, WEST, bind, enqueueInitialiser, level,
-  lookup, noop, ordinal, toDx, toDy */
+  lookup, noop, ordinal, toDx, toDy, toTicks */
 
 function Pacman() {
     this.direction = WEST;
 
     this.frameIndex = 0;
-    this.animStepInc = 1;
+    this.frameInc = 1;
 
     this.w = this.h = Pacman.SIZE;
     this.centreAt(Maze.PACMAN_X, Maze.PACMAN_Y);
@@ -24,14 +24,17 @@ function Pacman() {
 //  - x: centre x-coord
 //  - y: centre y-coord
 //  - radius: radius
-//  - fraction: proportion to draw [0, 1]
 //  - startAngle: angle at which mouth points
+//  - proportion: proportion to draw [0, 1]
 //  - offsetHinge: true to offset hinge toward back of head
-Pacman.draw = function (g, x, y, radius, fraction, startAngle, offsetHinge) {
+Pacman.draw = function (g, x, y, radius, startAngle, proportion, offsetHinge) {
+    if (!proportion) {
+        return;
+    }
     g.save();
     g.beginPath();
     // offset hinge towards back of head
-    var centreOffset = radius / 5;
+    var centreOffset = offsetHinge ? radius / 4 : 0;
     var xOffset = (startAngle === 0 ? -1 :
                    startAngle === Math.PI ? 1 :
                    0) * centreOffset;
@@ -40,7 +43,7 @@ Pacman.draw = function (g, x, y, radius, fraction, startAngle, offsetHinge) {
                    0) * centreOffset;
     g.moveTo(x + xOffset, y + yOffset);
     var start = startAngle || 0;
-    var angle = Math.PI - fraction * Math.PI;
+    var angle = Math.PI - proportion * Math.PI;
     g.arc(x, y, radius, start + angle, start + (angle === 0 ? 2 * Math.PI : -angle));
     g.moveTo(x + xOffset, y + yOffset);
     g.closePath();
@@ -50,30 +53,43 @@ Pacman.draw = function (g, x, y, radius, fraction, startAngle, offsetHinge) {
 };
 
 Pacman.SIZE = Math.floor(1.5 * TILE_SIZE);
-Pacman.ANIM_STEPS = 12;
-Pacman.MAX_ANIM_STEP = Math.floor(Pacman.ANIM_STEPS * 1 / 3);
 
-// programmatically pre-render frames
+// Programmatically pre-render frames
 enqueueInitialiser(function () {
-    var w = Pacman.SIZE,
-        h = Pacman.SIZE,
-        // iterate through directions in increasing-degrees order
-        directions = [EAST, SOUTH, WEST, NORTH],
-        steps = Pacman.ANIM_STEPS,
-        buf = new GraphicsBuffer(w * steps, h * directions.length),
-        g = buf.getContext('2d'),
-        radius = w / 2,
-        direction, angle, startAngle, x, y, col, row;
-    for (row = 0; row < directions.length; row++) {
-        direction = directions[row];
-        startAngle = row * Math.PI / 2;
-        y = ordinal(direction) * h + radius;
-        for (col = 0; col < steps; col++) {
-            Pacman.draw(g, col * w + radius, y, radius,
-                        (steps - col) / steps, startAngle, true);
-        }
+    // Two sprite maps are produced: one for regular maze movement and one for
+    // the death sequence. The animation runs faster during regular maze
+    // movement (i.e. contains fewer frames) and only limits mouth angle to
+    // 40% of the maximum.
+
+    function createSpriteMap(steps, stepProportion) {
+        var size = Pacman.SIZE,
+            // iterate through directions in increasing-angle order
+            directions = [EAST, SOUTH, WEST, NORTH],
+            buf = new GraphicsBuffer(size * steps, size * directions.length),
+            g = buf.getContext('2d'),
+            radius = size / 2;
+
+        directions.forEach(function (direction, row) {
+            var startAngle = row * Math.PI / 2;
+            //var stepProportion = minProportion / steps;
+            var y = ordinal(direction) * size + radius;
+            for (var col = 0; col < steps; col++) {
+                Pacman.draw(g, col * size + radius, y, radius,
+                            startAngle,
+                            1 - col * stepProportion,
+                            true);
+            }
+        });
+
+        return new SpriteMap(buf, size, size);
     }
-    Pacman.SPRITES = new SpriteMap(buf, w, h);
+
+    var steps = toTicks(0.08);
+    Pacman.SPRITES = createSpriteMap(steps, 0.4 / steps);
+    steps = toTicks(1);
+    Pacman.SPRITES_DYING = createSpriteMap(steps, 1 / steps);
+
+    // TODO: create dead 'blink'
 });
 
 Pacman.prototype = new Actor({
@@ -91,16 +107,32 @@ Pacman.prototype = new Actor({
     },
 
     repaint: function (g) {
-        Pacman.SPRITES.draw(g, this.x, this.y, this.frameIndex, ordinal(this.direction));
+        var self = this;
+        function drawSprite(map, col) {
+            map.draw(g, self.x, self.y, col, ordinal(self.direction));
+        }
+
+        if (this.dying) {
+            var nFrames = Pacman.SPRITES_DYING.cols;
+            if (this.deathTicks < nFrames) {
+                drawSprite(Pacman.SPRITES_DYING, this.deathTicks);
+            } else if (this.deathTicks < nFrames + toTicks(0.2)) {
+                // hide momentarily
+            }
+        } else {
+            drawSprite(Pacman.SPRITES, this.frameIndex);
+        }
+    },
+
+    // replaces update on kill
+    deathSequence: function () {
+        if (this.deathTicks++ > Pacman.SPRITES_DYING.cols + toTicks(0.5)) {
+            this.dead = true;
+        }
+        this.invalidate();
     },
 
     update: function () {
-        if (this.dying) {
-            // TODO: death sequence
-            this.dead = true;
-            return;
-        }
-
         var newDirection = this.turning || this.direction;
         if (this.move(newDirection)) {
             this.direction = newDirection;
@@ -142,15 +174,17 @@ Pacman.prototype = new Actor({
 
         this.applyMove(move);
         // update animation cycle
-        this.frameIndex += this.animStepInc;
-        if (this.frameIndex === 0 || this.frameIndex === Pacman.MAX_ANIM_STEP) {
-            this.animStepInc *= -1;
+        this.frameIndex += this.frameInc;
+        if (this.frameIndex === 0 || this.frameIndex === Pacman.SPRITES.cols - 1) {
+            this.frameInc *= -1;
         }
         return true;
     },
 
     kill: function () {
-        this.dead = true;
+        this.dying = true;
+        this.deathTicks = 0;
+        this.update = this.deathSequence;
     },
 
     toString: function () {

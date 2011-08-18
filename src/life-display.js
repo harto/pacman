@@ -15,7 +15,7 @@ LifeDisplay.prototype = new Entity({
 
     setLives: function (lives) {
         this.invalidate();
-        
+
         this.lives = lives;
 
         var gridSize = LifeDisplay.GRID_SIZE;
@@ -48,7 +48,6 @@ enqueueInitialiser(function () {
     var size = LifeDisplay.ICON_SIZE;
     var icon = new GraphicsBuffer(size, size);
     var r = size / 2;
-    var angle = Math.PI;
-    Pacman.draw(icon.getContext('2d'), r, r, r, 0.8, angle, true);
+    Pacman.draw(icon.getContext('2d'), r, r, r, Math.PI, 0.8, true);
     LifeDisplay.ICON = icon;
 });

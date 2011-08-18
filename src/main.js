@@ -185,6 +185,17 @@ function levelComplete() {
     all.set('maze', maze);
 }
 
+function killPacman() {
+    lookup('pacman').kill();
+
+    broadcast('stop');
+
+    all.remove('events');
+    Ghost.all().forEach(function (g) {
+        all.remove(g.name);
+    });
+}
+
 function processCollisions(pacman) {
     var dots = lookup('dots');
     var dot = dots.colliding(pacman);
@@ -216,9 +227,7 @@ function processCollisions(pacman) {
         return g.is(Ghost.STATE_FRIGHTENED);
     });
     if (deadGhosts.length !== collidingGhosts.length) {
-        pacman.kill();
-        broadcast('pacmanKilled');
-        enterMode(Mode.DYING);
+        wait(toTicks(1), killPacman);
     } else if (deadGhosts.length) {
         pacman.setVisible(false);
         var scoreValue, scoreCx, scoreCy;
@@ -243,26 +252,26 @@ function processCollisions(pacman) {
     }
 }
 
+function lifeLost() {
+    if (--lives) {
+        reset();
+    } else {
+        // game over
+        var prevBest = getPref('highscore') || 0;
+        setPref('highscore', Math.max(prevBest, highscore));
+        enterMode(Mode.FINISHED);
+    }
+}
+
 Mode = {
     RUNNING: function () {
         broadcast('update');
         var pacman = lookup('pacman');
-        if (pacman) {
+
+        if (pacman.dead) {
+            lifeLost();
+        } else if (!pacman.dying) {
             processCollisions(pacman);
-        }
-    },
-
-    DYING: function () {
-        var pacman = lookup('pacman');
-        // TODO: death animation
-        if (--lives) {
-            reset();
-        } else {
-            // game over
-            var prevBest = getPref('highscore') || 0;
-            setPref('highscore', Math.max(prevBest, highscore));
-
-            enterMode(Mode.FINISHED);
         }
     },
 
@@ -429,9 +438,7 @@ $(function () {
         });
         percentage.repaint(g);
 
-        if (proportion) {
-            Pacman.draw(g, cx, SCREEN_H / 2, SCREEN_W / 8, proportion);
-        }
+        Pacman.draw(g, cx, SCREEN_H / 2, SCREEN_W / 8, 0, proportion, false);
 
         g.restore();
     }

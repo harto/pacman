@@ -23,6 +23,13 @@ ModeSwitcher.prototype = {
         this.enqueueSwitch(0);
     },
 
+    stop: function () {
+        // cleanup
+        var events = lookup('events');
+        events.cancel(this.resumeTimer);
+        events.cancel(this.scatterChaseTimer);
+    },
+
     enqueueSwitch: function (n) {
         var delay = this.switchDelays[n++];
         if (!delay) {
@@ -68,12 +75,5 @@ ModeSwitcher.prototype = {
                 this.scatterChaseTimer.resume();
             }));
         }
-    },
-
-    pacmanKilled: function () {
-        // cleanup
-        var events = lookup('events');
-        events.cancel(this.resumeTimer);
-        events.cancel(this.scatterChaseTimer);
     }
 };

@@ -27,6 +27,16 @@ function DotCounter(level) {
 
 DotCounter.prototype = {
 
+    start: function () {
+        this.running = true;
+    },
+
+    stop: function () {
+        this.running = false;
+        this.useGlobalCounter = true;
+        this.globalCounter = 0;
+    },
+
     dotEaten: function () {
         if (this.useGlobalCounter && ++this.globalCounter === 32 &&
             lookup('clyde').is(Ghost.STATE_INSIDE)) {
@@ -43,6 +53,9 @@ DotCounter.prototype = {
     // a dot is eaten, to ensure that ghosts with a zero dot count are instantly
     // released.
     update: function () {
+        if (!this.running) {
+            return;
+        }
         var ghost,
             blinky = lookup('blinky');
         // The Pac-Man Dossier suggests that Blinky isn't affected by the global
@@ -67,11 +80,6 @@ DotCounter.prototype = {
         if (ghost) {
             ghost.release();
         }
-    },
-
-    pacmanKilled: function () {
-        this.useGlobalCounter = true;
-        this.globalCounter = 0;
     }
 };
 
