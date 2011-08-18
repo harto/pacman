@@ -81,9 +81,9 @@ Ghost.prototype = new Actor({
         if (toRow(this.startCy) !== Maze.HOME_ROW) {
             this.set(Ghost.STATE_INSIDE);
         }
-        this.set(Ghost.STATE_SCATTERING);
 
-        this.setNextDirection(WEST);
+        this.set(Ghost.STATE_SCATTERING);
+        this.setOutsideDirection(WEST);
     },
 
     toString: function () {
@@ -112,7 +112,7 @@ Ghost.prototype = new Actor({
                                                    Ghost.SPRITES.frightened) :
                 Ghost.SPRITES[this.name],
             spriteCol = Math.floor(this.nTicks / Ghost.ANIM_FREQ) % sprites.cols,
-            spriteRow = ordinal(this.currTileDirection);
+            spriteRow = ordinal(this.pendingDirection);
         g.save();
         sprites.draw(g, this.x, this.y, spriteCol, spriteRow);
         g.restore();
@@ -179,6 +179,7 @@ Ghost.prototype = new Actor({
     },
 
     // follow path into/out of house
+    // FIXME: need to set direction for correct sprite display
     enterExitHouse: function () {
         var point = this.path.shift(),
             dx = point.x - this.cx,
@@ -211,55 +212,70 @@ Ghost.prototype = new Actor({
         this.path = this.calcEntryPath();
     },
 
-    move: function () {
-        var speed = this.calcSpeed();
-        this.moveBy(toDx(this.direction) * speed, toDy(this.direction) * speed);
-        if (this.enteringTile()) {
-            this.setNextDirection(this.nextTileDirection);
-        } else if (this.direction !== this.currTileDirection) {
-            // Change direction if at or beyond tile centre
-            var cDx = this.lx - TILE_CENTRE;
-            var cDy = this.ly - TILE_CENTRE;
-            if (Math.abs(cDx) < speed && Math.abs(cDy) < speed) {
-                this.moveTo(this.x - cDx, this.y - cDy);
-                this.direction = this.currTileDirection;
-            }
-        }
-    },
-
-    // Sets the direction to be taken when the centre of a tile is next reached.
-    // This method is most frequently called when a ghost enters a new tile, but
-    // is also invoked on mode switches (scatter->chase and vice-versa,
-    // frightened) and on initialisation.
+    // Ghosts can only change direction at the centre of a tile. They compute
+    // their moves one tile in advance.
     //
     // The following properties track ghost direction:
     //   direction:         current direction
-    //   currTileDirection: direction to take when current tile centre is reached
+    //   pendingDirection:  direction to take when current tile centre is reached
     //   nextTileDirection: direction to take when next tile centre is reached
-    setNextDirection: function (nextDirection) {
+
+    // set direction to be taken on house exit
+    setOutsideDirection: function (direction) {
+        this.direction = this.pendingDirection = direction;
+        this.nextTileDirection = this.calcExitDirection(Maze.HOME_COL,
+                                                        Maze.HOME_ROW,
+                                                        direction);
+    },
+
+    move: function () {
+        var speed = this.calcSpeed();
+        var move = this.calcMove(toDx(this.direction) * speed,
+                                 toDy(this.direction) * speed);
+
+        if (this.pendingDirection !== this.direction &&
+            this.movesPastTileCentre(move, this.direction)) {
+            // centre on tile to avoid under/overshoot
+            this.moveBy(TILE_CENTRE - this.lx, TILE_CENTRE - this.ly);
+            this.direction = this.pendingDirection;
+        } else {
+            if (this.moveSwitchesTile(this.cx, this.cy, move)) {
+                var pending = this.nextTileDirection;
+                // prepare for current tile move
+                this.pendingDirection = pending;
+                // compute next tile move
+                this.nextTileDirection =
+                    this.calcExitDirection(toCol(this.cx + move.dx) + toDx(pending),
+                                           toRow(this.cy + move.dy) + toDy(pending),
+                                           pending);
+            }
+            this.applyMove(move);
+        }
+    },
+
+    // Reverses the ghost at the next available opportunity. Directional changes
+    // only take effect when a tile centre is reached.
+    reverse: function (direction) {
+        direction = reverse(this.direction);
+
         if (this.is(Ghost.STATE_ENTERING) ||
-            this.is(Ghost.STATE_EXITING) ||
-            this.direction === undefined) {
-            // Set the direction to be taken when ghost leaves the house.
-            // FIXME: needs work to support in-house jostling
-            this.direction = this.currTileDirection = nextDirection;
-            this.nextTileDirection = this.calcNextDirection(Maze.HOME_COL,
-                                                            Maze.HOME_ROW,
-                                                            nextDirection);
-        } else if (Actor.exitingTile(this.direction, this.lx, this.ly)) {
+            this.is(Ghost.STATE_INSIDE) ||
+            this.is(Ghost.STATE_EXITING)) {
+            this.setOutsideDirection(direction);
+        } else if (this.pastTileCentre()) {
             // Too late to change in this tile; wait until next one
-            this.nextTileDirection = nextDirection;
+            this.nextTileDirection = direction;
         } else {
             // Set direction to leave current tile
-            this.currTileDirection = nextDirection;
-            this.nextTileDirection = this.calcNextDirection(this.col + toDx(nextDirection),
-                                                            this.row + toDy(nextDirection),
-                                                            nextDirection);
+            this.pendingDirection = direction;
+            this.nextTileDirection = this.calcExitDirection(this.col + toDx(direction),
+                                                            this.row + toDy(direction),
+                                                            direction);
         }
     },
 
     // calculates direction to exit a tile
-    calcNextDirection: function (col, row, entryDirection) {
+    calcExitDirection: function (col, row, entryDirection) {
         var exits = Maze.exitsFrom(col, row);
         // exclude illegal moves
         exits &= ~reverse(entryDirection);
@@ -362,9 +378,5 @@ Ghost.prototype = new Actor({
         events.cancel(this.startFlashTimer);
         events.cancel(this.flashTimer);
         this.unset(Ghost.STATE_FRIGHTENED);
-    },
-
-    reverse: function () {
-        this.setNextDirection(reverse(this.direction));
     }
 });

@@ -120,33 +120,27 @@ Pacman.prototype = new Actor({
     },
 
     move: function (direction) {
-        var dx = 0,
-            dy = 0,
-            lx = this.lx,
-            ly = this.ly,
-            speed = this.calcSpeed();
+        var speed = this.calcSpeed();
+
+        // cornering - centre on axis of movement
+        var dx = toDx(direction) * speed;
+        var dy = toDy(direction) * speed;
+        if (toDx(direction)) {
+            dy = (this.ly > TILE_CENTRE ? -1 : this.ly < TILE_CENTRE ? 1 : 0) * speed;
+        } else if (toDy(direction)) {
+            dx = (this.lx > TILE_CENTRE ? -1 : this.lx < TILE_CENTRE ? 1 : 0) * speed;
+        }
+
+        var move = this.calcMove(dx, dy);
 
         // Move in the given direction iff before tile centrepoint or
         // an adjacent tile lies beyond.
-        //
-        // FIXME: consider accumulated sub-pixel movement
-
-        dx = toDx(direction) * speed;
-        dy = toDy(direction) * speed;
-
-        if (Actor.exitingTile(direction, lx + dx, ly + dy) &&
+        if (this.movesPastTileCentre(move, direction) &&
             !(direction & Maze.exitsFrom(this.col, this.row))) {
             return false;
         }
 
-        // cornering
-        if (dx) {
-            dy = (ly > TILE_CENTRE ? -1 : ly < TILE_CENTRE ? 1 : 0) * speed;
-        } else if (dy) {
-            dx = (lx > TILE_CENTRE ? -1 : lx < TILE_CENTRE ? 1 : 0) * speed;
-        }
-
-        this.moveBy(dx, dy);
+        this.applyMove(move);
         // update animation cycle
         this.frameIndex += this.animStepInc;
         if (this.frameIndex === 0 || this.frameIndex === Pacman.MAX_ANIM_STEP) {
