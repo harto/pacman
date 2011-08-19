@@ -26,10 +26,10 @@ Bonus.prototype = new Entity({
         var secs = 9 + Math.random();
         debug('displaying bonus for %.3ns', secs);
         objects.set('bonus', this);
-        this.timeout = lookup('events').delay(toTicks(secs), bind(this, function () {
+        this.timeout = lookup('events').delay(this, toTicks(secs), function () {
             debug('bonus timeout');
             objects.remove('bonus');
-        }));
+        });
     },
 
     remove: function () {

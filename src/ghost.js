@@ -4,9 +4,9 @@
 
 /*jslint bitwise:false */
 /*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, SpriteMap, TILE_CENTRE,
-  TILE_SIZE, UPDATE_HZ, WEST, bind, copy, debug, distance, enqueueInitialiser,
-  format, keys, level, lookup, ordinal, resources, reverse, toDx, toDy, toRow,
-  toTicks */
+  TILE_SIZE, UPDATE_HZ, WEST, copy, debug, distance, enqueueInitialiser,
+  format, keys, level, lookup, ordinal, resources, reverse, toCol, toDx, toDy,
+  toRow, toTicks */
 
 function Ghost(props) {
     copy(props, this);
@@ -355,9 +355,9 @@ Ghost.prototype = new Actor({
 
         var events = lookup('events');
 
-        this.unfrightenTimer = events.delay(frightTicks, bind(this, function () {
+        this.unfrightenTimer = events.delay(this, frightTicks, function () {
             this.unfrighten();
-        }));
+        });
 
         var flashes = 2 * Ghost.FRIGHT_FLASHES[level],
             // FIXME: won't work for later levels
@@ -365,11 +365,11 @@ Ghost.prototype = new Actor({
             flashStart = frightTicks - (flashes + 1) * flashDuration;
 
         this.flashing = false;
-        this.startFlashTimer = events.delay(flashStart, bind(this, function () {
-            this.flashTimer = events.repeat(flashDuration, bind(this, function () {
+        this.startFlashTimer = events.delay(this, flashStart, function () {
+            this.flashTimer = events.repeat(this, flashDuration, function () {
                 this.flashing = !this.flashing;
-            }), flashes);
-        }));
+            }, flashes);
+        });
     },
 
     unfrighten: function () {

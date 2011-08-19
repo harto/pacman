@@ -170,10 +170,10 @@ function levelComplete() {
 
     var flashDuration = toTicks(0.4);
     var nFlashes = 8;
-    events.repeat(flashDuration, function () {
-        maze.setFlashing(!maze.isFlashing());
+    events.repeat(maze, flashDuration, function () {
+        this.setFlashing(!this.isFlashing());
     }, nFlashes);
-    events.delay(flashDuration * (nFlashes + 1), function () {
+    events.delay(maze, flashDuration * (nFlashes + 1), function () {
         levelUp();
     });
 

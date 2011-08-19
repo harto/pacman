@@ -19,9 +19,9 @@ Energiser.prototype = new Dot({
     eatenEvent: 'energiserEaten',
 
     start: function () {
-        lookup('events').repeat(Energiser.BLINK_DURATION, bind(this, function () {
+        lookup('events').repeat(this, Energiser.BLINK_DURATION, function () {
             this.setVisible(!this.isVisible());
-        }));
+        });
     }
 });
 

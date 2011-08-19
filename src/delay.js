@@ -5,21 +5,12 @@
 function Delay(ticks, fn) {
     this.ticks = this.remaining = ticks;
     this.fn = fn;
-    this.running = true;
 }
 
 Delay.prototype = {
 
-    suspend: function () {
-        this.running = false;
-    },
-
-    resume: function () {
-        this.running = true;
-    },
-
-    reset: function (ticks) {
-        this.remaining = ticks || this.ticks;
+    reset: function () {
+        this.remaining = this.ticks;
     },
 
     update: function () {

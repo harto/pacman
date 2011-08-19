@@ -24,9 +24,9 @@ InlineScore.prototype = new Text({
 
     showFor: function (ticks) {
         this.id = objects.add(this);
-        objects.get('events').delay(ticks, bind(this, function () {
+        objects.get('events').delay(this, ticks, function () {
             objects.remove(this.id);
-        }));
+        });
     },
 
     toString: function () {

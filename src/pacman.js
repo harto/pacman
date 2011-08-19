@@ -97,9 +97,9 @@ Pacman.prototype = new Actor({
     dotEaten: function (d) {
         // stub update() for duration of dot delay
         this.update = noop;
-        lookup('events').delay(d.delay, bind(this, function () {
+        lookup('events').delay(this, d.delay, function () {
             delete this.update;
-        }));
+        });
     },
 
     energiserEaten: function (e) {

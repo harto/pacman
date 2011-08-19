@@ -37,8 +37,8 @@ Header.prototype = new Group({
 
     start: function () {
         var oneup = this.get('1up');
-        objects.get('events').repeat(toTicks(0.25), function () {
-            oneup.setVisible(!oneup.isVisible());
+        objects.get('events').repeat(oneup, toTicks(0.25), function () {
+            this.setVisible(!this.isVisible());
         });
     },
 

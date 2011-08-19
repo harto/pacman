@@ -38,7 +38,7 @@ ModeSwitcher.prototype = {
         }
 
         debug('next mode switch in %ns', toSeconds(delay));
-        this.scatterChaseTimer = lookup('events').delay(delay, bind(this, function () {
+        this.scatterChaseTimer = lookup('events').delay(this, delay, function () {
             var newState, oldState;
             if (n % 2) {
                 oldState = Ghost.STATE_SCATTERING;
@@ -58,7 +58,7 @@ ModeSwitcher.prototype = {
                 g.reverse();
             });
             this.enqueueSwitch(n);
-        }));
+        });
     },
 
     energiserEaten: function () {
@@ -68,12 +68,7 @@ ModeSwitcher.prototype = {
             debug('%s for %ss',
                   Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED],
                   toSeconds(frightTicks));
-            var events = lookup('events');
-            events.cancel(this.resumeTimer);
-            this.scatterChaseTimer.suspend();
-            this.resumeTimer = events.delay(frightTicks, bind(this, function () {
-                this.scatterChaseTimer.resume();
-            }));
+            lookup('events').suspend(this.scatterChaseTimer, frightTicks);
         }
     }
 };

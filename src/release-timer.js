@@ -13,7 +13,7 @@ ReleaseTimer.prototype = {
 
     start: function () {
         var events = lookup('events');
-        this.timer = events.repeat(this.frequency, function () {
+        this.timer = events.repeat(this, this.frequency, function () {
             var ghost = Ghost.all(Ghost.STATE_INSIDE)[0];
             if (ghost) {
                 debug('dot-eaten timeout');
@@ -23,6 +23,6 @@ ReleaseTimer.prototype = {
     },
 
     dotEaten: function () {
-        this.timer.reset();
+        lookup('events').reset(this.timer);
     }
 };
