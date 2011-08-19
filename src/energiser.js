@@ -2,7 +2,7 @@
  * A flashing dot that bestows ghost-eating powers.
  */
 
-/*global Dot, TILE_SIZE, bind, enqueueInitialiser, lookup, toTicks */
+/*global Dot, TILE_SIZE, enqueueInitialiser, events, toTicks */
 
 function Energiser() {}
 
@@ -19,7 +19,7 @@ Energiser.prototype = new Dot({
     eatenEvent: 'energiserEaten',
 
     start: function () {
-        lookup('events').repeat(this, Energiser.BLINK_DURATION, function () {
+        events.repeat(this, Energiser.BLINK_DURATION, function () {
             this.setVisible(!this.isVisible());
         });
     }

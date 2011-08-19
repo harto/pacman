@@ -59,14 +59,34 @@ Group.prototype = {
 
     remove: function (id) {
         var o = this.members[id];
-        dispatch(o, 'invalidate');
-        this.zIndex.remove(o);
-        delete this.members[id];
+        if (o) {
+            delete this.members[id];
+            this.zIndex.remove(o);
+            dispatch(o, 'invalidate');
+        }
+        return o;
     },
 
     // Return group members in z-index order.
     all: function () {
         return this.zIndex;
+    },
+
+    // Update all active group members
+    update: function () {
+        this.all().filter(function (o) {
+            return 'update' in o && o._active !== false;
+        }).forEach(function (o) {
+            o.update();
+        });
+    },
+
+    suspend: function (id) {
+        this.get(id)._active = false;
+    },
+
+    resume: function (id) {
+        this.get(id)._active = true;
     },
 
     // Returns the result of dispatching the given message to all members of the

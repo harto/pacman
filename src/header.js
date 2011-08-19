@@ -2,7 +2,7 @@
  * Text bits and pieces appearing in the header area
  */
 
-/*global Group, TILE_SIZE, Text, objects, highscore, merge, score, toTicks */
+/*global Group, TILE_SIZE, Text, events, highscore, merge, score, toTicks */
 
 function Header() {
     var props = {
@@ -37,7 +37,7 @@ Header.prototype = new Group({
 
     start: function () {
         var oneup = this.get('1up');
-        objects.get('events').repeat(oneup, toTicks(0.25), function () {
+        events.repeat(oneup, toTicks(0.25), function () {
             this.setVisible(!this.isVisible());
         });
     },

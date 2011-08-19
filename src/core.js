@@ -18,7 +18,7 @@ var SCALE = 2,
 
     MAX_SPEED = SCALE,
 
-    DEBUG = false,
+    DEBUG = true,
 
     NORTH = 1 << 0,
     SOUTH = 1 << 1,
@@ -28,6 +28,7 @@ var SCALE = 2,
     // forward declarations
 
     objects,   // top-level entity group
+    events,    // event manager
     resources, // resource manager
     lives,
     level;
@@ -78,12 +79,37 @@ function debug(/*msg, args*/) {
     }
 }
 
-function broadcast(event, args) {
-    return dispatch(objects, event, args);
+function insert(id, o) {
+    objects.set(id, o);
 }
 
 function lookup(id) {
     return objects.get(id);
+}
+
+function suspend(id) {
+    objects.suspend(id);
+    events.suspendAll(lookup(id));
+}
+
+function resume(id) {
+    objects.resume(id);
+    events.resumeAll(lookup(id));
+}
+
+function remove(id) {
+    var o = objects.remove(id);
+    if (o) {
+        events.cancelAll(o);
+    }
+}
+
+function broadcast(event, args) {
+    return dispatch(objects, event, args);
+}
+
+function invalidateRegion(x, y, w, h) {
+    broadcast('invalidateRegion', [x, y, w, h]);
 }
 
 // once-off initialisation

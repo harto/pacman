@@ -39,6 +39,13 @@ function format(msg/*, args*/) {
     });
 }
 
+function assert(test, msg) {
+    if (!test) {
+        //throw new Error(format('Assertion failed: %s', msg));
+        debugger;
+    }
+}
+
 function noop() {}
 
 function bind(o, f) {

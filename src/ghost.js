@@ -5,8 +5,8 @@
 /*jslint bitwise:false */
 /*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, SpriteMap, TILE_CENTRE,
   TILE_SIZE, UPDATE_HZ, WEST, copy, debug, distance, enqueueInitialiser,
-  format, keys, level, lookup, ordinal, resources, reverse, toCol, toDx, toDy,
-  toRow, toTicks */
+  events, format, keys, level, lookup, ordinal, resources, reverse, toCol,
+  toDx, toDy, toRow, toTicks */
 
 function Ghost(props) {
     copy(props, this);
@@ -353,8 +353,6 @@ Ghost.prototype = new Actor({
         // FIXME: might be unnecessary
         this.invalidate();
 
-        var events = lookup('events');
-
         this.unfrightenTimer = events.delay(this, frightTicks, function () {
             this.unfrighten();
         });
@@ -373,7 +371,6 @@ Ghost.prototype = new Actor({
     },
 
     unfrighten: function () {
-        var events = lookup('events');
         events.cancel(this.unfrightenTimer);
         events.cancel(this.startFlashTimer);
         events.cancel(this.flashTimer);

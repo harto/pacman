@@ -3,9 +3,9 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, DEBUG, EAST, NORTH, ROWS, SCREEN_H, SCREEN_W, SOUTH,
-  GraphicsBuffer, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser,
-  resources */
+/*global COLS, DEBUG, EAST, GraphicsBuffer, NORTH, ROWS, SCREEN_H, SCREEN_W,
+  SOUTH, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser, events,
+  invalidateRegion, resources */
 
 function Maze() {
     this.invalidatedRegions = [];
@@ -100,6 +100,10 @@ Maze.prototype = {
     // always draw first
     z: -Infinity,
 
+    invalidate: function () {
+        invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
+    },
+
     invalidateRegion: function (x, y, w, h) {
         this.invalidatedRegions.push({ x: x, y: y, w: w, h: h });
     },
@@ -118,7 +122,13 @@ Maze.prototype = {
 
     setFlashing: function (flashing) {
         this.img = flashing ? Maze.BG_FLASH : Maze.BG;
-        this.invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
+        this.invalidate();
+    },
+
+    flash: function (times, duration) {
+        events.repeat(this, duration, function () {
+            this.setFlashing(!this.isFlashing());
+        }, times);
     }
 };
 

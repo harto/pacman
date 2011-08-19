@@ -10,9 +10,9 @@
   EAST, ElroyCounter, EventManager, Ghost, Group, Header, InfoText, Inky,
   InlineScore, LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
   ReleaseTimer, ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text,
-  UPDATE_HZ, WEST, alert, broadcast, cookies, debug, format, highscore:true,
-  initialisers, level:true, lives:true, lookup, merge, objects:true, remove,
-  resources:true, score:true, toTicks, wait, window */
+  UPDATE_HZ, WEST, alert, broadcast, cookies, debug, events:true, format,
+  highscore:true, initialisers, level:true, lives:true, lookup, merge,
+  objects:true, remove, resources:true, score:true, toTicks, wait, window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -87,7 +87,7 @@ function reset(starting) {
 
     // These objects (and those in `start()' below) are replaced each time a
     // life is lost, and on levelup.
-    objects.set('events', new EventManager());
+    events = new EventManager();
     objects.set('modeSwitcher', new ModeSwitcher(level));
     objects.set('releaseTimer', new ReleaseTimer(level));
     var lifeDisplay = new LifeDisplay(starting ? lives : lives - 1);
@@ -148,9 +148,9 @@ function levelUp(starting) {
     // These objects persist between lost lives.
     objects.set('maze', new Maze());
     objects.set('dots', new DotGroup());
+    objects.set('dotCounter', new DotCounter(level));
     objects.add(new Header());
     objects.add(new BonusDisplay(level));
-    objects.add(new DotCounter(level));
     if (DEBUG) {
         objects.set('stats', stats);
     }
@@ -165,21 +165,20 @@ function addPoints(points) {
 }
 
 function levelComplete() {
-    var maze = lookup('maze');
-    var events = new EventManager();
+    broadcast('levelCompleted');
+
+    Ghost.all().forEach(remove);
+    remove('bonus');
+    remove('dots');
+    suspend('pacman');
+    // FIXME
+    broadcast('stop');
+    events.cancelAll(lookup('dotCounter'));
 
     var flashDuration = toTicks(0.4);
     var nFlashes = 8;
-    events.repeat(maze, flashDuration, function () {
-        this.setFlashing(!this.isFlashing());
-    }, nFlashes);
-    events.delay(maze, flashDuration * (nFlashes + 1), function () {
-        levelUp();
-    });
-
-    objects = new Group();
-    objects.set('events', events);
-    objects.set('maze', maze);
+    lookup('maze').flash(nFlashes, flashDuration);
+    events.delay(this, flashDuration * (nFlashes + 1), levelUp);
 
     mode = MODE_LEVELUP;
 }
@@ -200,8 +199,7 @@ function processDotCollisions(pacman, dots) {
 function processBonusCollisions(pacman, bonus) {
     if (bonus && bonus.colliding(pacman)) {
         debug('bonus eaten');
-        broadcast('bonusEaten', [bonus]);
-        bonus.remove();
+        remove('bonus');
         var bonusScore = new InlineScore(bonus.value, '#FBD', bonus.cx, bonus.cy);
         bonusScore.showFor(toTicks(1));
         addPoints(bonus.value);
@@ -210,7 +208,8 @@ function processBonusCollisions(pacman, bonus) {
 
 function killPacman() {
     lookup('pacman').kill();
-    objects.remove('events');
+    // FIXME
+    events.cancelAll();
     Ghost.all().forEach(function (g) {
         objects.remove(g.name);
     });
@@ -276,12 +275,19 @@ function update() {
         return;
     }
 
-    broadcast('update');
+    objects.update();
+    events.update();
+
     var pacman = lookup('pacman');
+
     if (mode === MODE_RUNNING) {
         processDotCollisions(pacman, lookup('dots'));
         processBonusCollisions(pacman, lookup('bonus'));
         processGhostCollisions(pacman, Ghost.all());
+        var waitingGhost = lookup('dotCounter').waitingGhost();
+        if (waitingGhost) {
+            waitingGhost.release();
+        }
     } else if (mode === MODE_DYING && pacman.dead) {
         lifeLost();
     }

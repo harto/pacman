@@ -4,8 +4,8 @@
 
 /*jslint bitwise:false */
 /*global Actor, EAST, Ghost, GraphicsBuffer, MAX_SPEED, Maze, NORTH, SOUTH,
-  SpriteMap, TILE_CENTRE, TILE_SIZE, WEST, bind, enqueueInitialiser, level,
-  lookup, noop, ordinal, toDx, toDy, toTicks */
+  SpriteMap, TILE_CENTRE, TILE_SIZE, WEST, enqueueInitialiser, events, level,
+  noop, ordinal, toDx, toDy, toTicks */
 
 function Pacman() {
     this.direction = WEST;
@@ -97,7 +97,7 @@ Pacman.prototype = new Actor({
     dotEaten: function (d) {
         // stub update() for duration of dot delay
         this.update = noop;
-        lookup('events').delay(this, d.delay, function () {
+        events.delay(this, d.delay, function () {
             delete this.update;
         });
     },

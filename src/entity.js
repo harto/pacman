@@ -2,7 +2,7 @@
  * Default implementation of objects that can be updated and drawn.
  */
 
-/*global SCREEN_H, SCREEN_W, broadcast, copy, noop, toCol, toRow */
+/*global SCREEN_H, SCREEN_W, copy, invalidateRegion, noop, toCol, toRow */
 
 function Entity(props) {
     this._invalidated = true;
@@ -35,7 +35,7 @@ Entity.prototype = {
             nw -= Math.max(0, nx + nw - SCREEN_W);
             nh -= Math.max(0, ny + nh - SCREEN_H);
             if (nw > 0 && nh > 0) {
-                broadcast('invalidateRegion', [nx, ny, nw, nh]);
+                invalidateRegion(nx, ny, nw, nh);
             }
         }
     },

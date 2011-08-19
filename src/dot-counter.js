@@ -49,36 +49,28 @@ DotCounter.prototype = {
         }
     },
 
-    // Check counters and maybe release. This happens every frame, not just when
-    // a dot is eaten, to ensure that ghosts with a zero dot count are instantly
-    // released.
-    update: function () {
-        if (!this.running) {
-            return;
-        }
-        var ghost,
-            blinky = lookup('blinky');
+    // Check counters and return first ghost waiting for release. This happens
+    // every frame, not just when a dot is eaten, to ensure that ghosts with a
+    // zero dot count are instantly released.
+    waitingGhost: function () {
+        var blinky = lookup('blinky');
         // The Pac-Man Dossier suggests that Blinky isn't affected by the global
         // dot counter, so just release him as soon as he comes inside.
         if (blinky.is(Ghost.STATE_INSIDE)) {
-            ghost = blinky;
+            return blinky;
         } else if (this.useGlobalCounter) {
             var pinky = lookup('pinky'),
                 inky = lookup('inky'),
                 clyde = lookup('clyde');
-            ghost = this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
-                    this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
-                    this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
-                    null;
+            return this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
+                   this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
+                   this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :
+                   null;
         } else {
             var counters = this.counters;
-            ghost = Ghost.all(Ghost.STATE_INSIDE).first(function (g) {
+            return Ghost.all(Ghost.STATE_INSIDE).first(function (g) {
                 return counters[g.name] <= 0;
             });
-        }
-
-        if (ghost) {
-            ghost.release();
         }
     }
 };

@@ -3,7 +3,7 @@
  * modes.
  */
 
-/*global Ghost, bind, debug, level, lookup, toSeconds, toTicks */
+/*global Ghost, debug, events, level, lookup, toSeconds, toTicks */
 
 function ModeSwitcher(level) {
     this.switchDelays = [
@@ -25,7 +25,6 @@ ModeSwitcher.prototype = {
 
     stop: function () {
         // cleanup
-        var events = lookup('events');
         events.cancel(this.resumeTimer);
         events.cancel(this.scatterChaseTimer);
     },
@@ -38,7 +37,7 @@ ModeSwitcher.prototype = {
         }
 
         debug('next mode switch in %ns', toSeconds(delay));
-        this.scatterChaseTimer = lookup('events').delay(this, delay, function () {
+        this.scatterChaseTimer = events.delay(this, delay, function () {
             var newState, oldState;
             if (n % 2) {
                 oldState = Ghost.STATE_SCATTERING;
@@ -68,7 +67,7 @@ ModeSwitcher.prototype = {
             debug('%s for %ss',
                   Ghost.STATE_LABELS[Ghost.STATE_FRIGHTENED],
                   toSeconds(frightTicks));
-            lookup('events').suspend(this.scatterChaseTimer, frightTicks);
+            events.suspend(this.scatterChaseTimer, frightTicks);
         }
     }
 };
