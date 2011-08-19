@@ -100,9 +100,9 @@ ResourceManager.load = function (props) {
 
     // Loading fonts is different to loading other resources: objects aren't
     // returned and all fonts begin loading at the same time.
-    FontLoader.load(base, fonts.stylesheet, fonts.families, resourceLoaded,
-                    function onFontError(family) {
-                        resourceFailed('Unable to load font: %s', family);
-                    });
+    function onFontError(family) {
+        resourceFailed('Unable to load font: %s', family);
+    }
+    FontLoader.load(base, fonts.stylesheet, fonts.families, resourceLoaded, onFontError);
 };
 
