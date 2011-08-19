@@ -196,8 +196,7 @@ function killPacman() {
     mode = MODE_DYING;
 }
 
-function processCollisions(pacman) {
-    var dots = lookup('dots');
+function processDotCollisions(pacman, dots) {
     var dot = dots.colliding(pacman);
     if (dot) {
         dots.remove(dot);
@@ -206,11 +205,11 @@ function processCollisions(pacman) {
         addPoints(dot.value);
         if (dots.isEmpty()) {
             wait(1, levelComplete);
-            return;
         }
     }
+}
 
-    var bonus = lookup('bonus');
+function processBonusCollisions(pacman, bonus) {
     if (bonus && bonus.colliding(pacman)) {
         debug('bonus eaten');
         broadcast('bonusEaten', [bonus]);
@@ -219,8 +218,33 @@ function processCollisions(pacman) {
         bonusScore.showFor(toTicks(1));
         addPoints(bonus.value);
     }
+}
 
-    var collidingGhosts = Ghost.all().filter(function (g) {
+function killGhosts(pacman, deadGhosts) {
+    pacman.setVisible(false);
+    var scoreValue, scoreCx, scoreCy;
+    var nFrightened = Ghost.all(Ghost.STATE_FRIGHTENED).length;
+    deadGhosts.forEach(function (g) {
+        debug('%s: dying', g);
+        g.kill();
+        g.setVisible(false);
+        scoreValue = Ghost.calcGhostScore(nFrightened--);
+        scoreCx = g.cx;
+        scoreCy = g.cy;
+        addPoints(scoreValue);
+    });
+    var scoreTextId = objects.add(new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
+    wait(0.5, function () {
+        objects.remove(scoreTextId);
+        pacman.setVisible(true);
+        deadGhosts.forEach(function (g) {
+            g.setVisible(true);
+        });
+    });
+}
+
+function processGhostCollisions(pacman, ghosts) {
+    var collidingGhosts = ghosts.filter(function (g) {
         return g.colliding(pacman);
     });
     var deadGhosts = collidingGhosts.filter(function (g) {
@@ -229,26 +253,7 @@ function processCollisions(pacman) {
     if (deadGhosts.length !== collidingGhosts.length) {
         wait(1, killPacman);
     } else if (deadGhosts.length) {
-        pacman.setVisible(false);
-        var scoreValue, scoreCx, scoreCy;
-        var nFrightened = Ghost.all(Ghost.STATE_FRIGHTENED).length;
-        deadGhosts.forEach(function (g) {
-            debug('%s: dying', g);
-            g.kill();
-            g.setVisible(false);
-            scoreValue = Ghost.calcGhostScore(nFrightened--);
-            scoreCx = g.cx;
-            scoreCy = g.cy;
-            addPoints(scoreValue);
-        });
-        var scoreTextId = objects.add(new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
-        wait(0.5, function () {
-            objects.remove(scoreTextId);
-            pacman.setVisible(true);
-            deadGhosts.forEach(function (g) {
-                g.setVisible(true);
-            });
-        });
+        killGhosts(pacman, deadGhosts);
     }
 }
 
@@ -276,7 +281,9 @@ function update() {
     broadcast('update');
     var pacman = lookup('pacman');
     if (mode === MODE_RUNNING) {
-        processCollisions(pacman);
+        processDotCollisions(pacman, lookup('dots'));
+        processBonusCollisions(pacman, lookup('bonus'));
+        processGhostCollisions(pacman, Ghost.all());
     } else if (mode === MODE_DYING && pacman.dead) {
         lifeLost();
     }
