@@ -196,7 +196,7 @@ function processDotCollisions(pacman, dots) {
     }
 }
 
-function processBonusCollisions(pacman, bonus) {
+function processBonusCollision(pacman, bonus) {
     if (bonus && bonus.colliding(pacman)) {
         debug('bonus eaten');
         remove('bonus');
@@ -282,7 +282,7 @@ function update() {
 
     if (mode === MODE_RUNNING) {
         processDotCollisions(pacman, lookup('dots'));
-        processBonusCollisions(pacman, lookup('bonus'));
+        processBonusCollision(pacman, lookup('bonus'));
         processGhostCollisions(pacman, Ghost.all());
         var waitingGhost = lookup('dotCounter').waitingGhost();
         if (waitingGhost) {
