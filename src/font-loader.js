@@ -15,11 +15,11 @@ var FontLoader = {
                 urls: [format('%s/%s', base, stylesheet)]
             },
             fontactive: function (family, _) {
-                debug('active: %s', family);
+                //debug('active: %s', family);
                 onload(family);
             },
             fontinactive: function (family, _) {
-                debug('inactive: %s', family);
+                //debug('inactive: %s', family);
                 onerror(family);
             }
         };
