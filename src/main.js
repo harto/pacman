@@ -62,32 +62,29 @@ var stats = {
     }
 };
 
-var Mode, mode, paused, waitTimer;
 
-function enterMode(m) {
-    mode = m;
-}
+var MODE_RUNNING  = 'running',
+    MODE_WAITING  = 'waiting',
+    MODE_DYING    = 'dying',
+    MODE_LEVELUP  = 'levelup',
+    MODE_FINISHED = 'finished';
 
-function update() {
-    if (!paused) {
-        mode();
-    }
-}
+var mode, paused, waitTimer;
 
-function wait(ticks, onResume) {
+function wait(secs, onResume) {
     waitTimer = (function (prevMode, prevTimer) {
-        return new Delay(ticks, function () {
-            enterMode(prevMode);
+        return new Delay(toTicks(secs), function () {
+            mode = prevMode;
             waitTimer = prevTimer;
             onResume();
         });
     }(mode, waitTimer));
-    enterMode(Mode.WAITING);
+    mode = MODE_WAITING;
 }
 
 function reset(starting) {
     broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
-    enterMode(Mode.RUNNING);
+    mode = MODE_RUNNING;
 
     // Note: it's important for these entities to have predictable IDs, since
     // they're overwritten whenever a life is lost.
@@ -119,7 +116,7 @@ function reset(starting) {
         all.set('clyde', new Clyde());
         all.set('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
         broadcast('start');
-        wait(toTicks(starting ? 2 : 1), function () {
+        wait(starting ? 2 : 1, function () {
             all.remove(readyTextId);
         });
     }
@@ -131,7 +128,7 @@ function reset(starting) {
             x: 9 * TILE_SIZE,
             y: 14 * TILE_SIZE
         });
-        wait(toTicks(2), function () {
+        wait(2, function () {
             lifeDisplay.setLives(lives - 1);
             all.remove(playerOneTextId);
             start();
@@ -171,7 +168,7 @@ function levelComplete() {
     var maze = lookup('maze');
     var events = new EventManager();
 
-    var flashDuration = toTicks(0.5);
+    var flashDuration = toTicks(0.4);
     var nFlashes = 8;
     events.repeat(flashDuration, function () {
         maze.setFlashing(!maze.isFlashing());
@@ -183,17 +180,20 @@ function levelComplete() {
     all = new Group();
     all.set('events', events);
     all.set('maze', maze);
+
+    mode = MODE_LEVELUP;
 }
 
 function killPacman() {
     lookup('pacman').kill();
-
     broadcast('stop');
 
     all.remove('events');
     Ghost.all().forEach(function (g) {
         all.remove(g.name);
     });
+
+    mode = MODE_DYING;
 }
 
 function processCollisions(pacman) {
@@ -205,7 +205,7 @@ function processCollisions(pacman) {
         resources.playSound('tick' + Math.floor(Math.random() * 4));
         addPoints(dot.value);
         if (dots.isEmpty()) {
-            wait(toTicks(1), levelComplete);
+            wait(1, levelComplete);
             return;
         }
     }
@@ -227,7 +227,7 @@ function processCollisions(pacman) {
         return g.is(Ghost.STATE_FRIGHTENED);
     });
     if (deadGhosts.length !== collidingGhosts.length) {
-        wait(toTicks(1), killPacman);
+        wait(1, killPacman);
     } else if (deadGhosts.length) {
         pacman.setVisible(false);
         var scoreValue, scoreCx, scoreCy;
@@ -242,7 +242,7 @@ function processCollisions(pacman) {
             addPoints(scoreValue);
         });
         var scoreTextId = all.add(new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
-        wait(toTicks(0.5), function () {
+        wait(0.5, function () {
             all.remove(scoreTextId);
             pacman.setVisible(true);
             deadGhosts.forEach(function (g) {
@@ -259,26 +259,28 @@ function lifeLost() {
         // game over
         var prevBest = getPref('highscore') || 0;
         setPref('highscore', Math.max(prevBest, highscore));
-        enterMode(Mode.FINISHED);
+        mode = MODE_FINISHED;
     }
 }
 
-Mode = {
-    RUNNING: function () {
-        broadcast('update');
-        var pacman = lookup('pacman');
-
-        if (pacman.dead) {
-            lifeLost();
-        } else if (!pacman.dying) {
-            processCollisions(pacman);
-        }
-    },
-
-    WAITING: function () {
-        waitTimer.update();
+function update() {
+    if (paused) {
+        return;
     }
-};
+
+    if (mode === MODE_WAITING) {
+        waitTimer.update();
+        return;
+    }
+
+    broadcast('update');
+    var pacman = lookup('pacman');
+    if (mode === MODE_RUNNING) {
+        processCollisions(pacman);
+    } else if (mode === MODE_DYING && pacman.dead) {
+        lifeLost();
+    }
+}
 
 var ctx;
 
@@ -299,7 +301,7 @@ function loop() {
 
     var elapsed = new Date() - now;
     stats.totalTickTime += elapsed;
-    if (mode !== Mode.FINISHED) {
+    if (mode !== MODE_FINISHED) {
         timer = window.setTimeout(loop, Math.max(0, UPDATE_DELAY - elapsed));
     }
 }
