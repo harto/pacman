@@ -1,6 +1,6 @@
 /*
  * A way to group entities into a tree-like structure. The top-level group
- * is the global variable `all'.
+ * is the global variable `objects'.
  *
  * Groups provide a relatively simple way to organise objects and send them
  * 'messages' (i.e. invoke methods on them).

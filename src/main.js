@@ -10,7 +10,7 @@
   EAST, ElroyCounter, EventManager, Ghost, Group, Header, InfoText, Inky,
   InlineScore, LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
   ReleaseTimer, ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text,
-  UPDATE_HZ, WEST, alert, all:true, broadcast, cookies, debug, format,
+  UPDATE_HZ, WEST, alert, objects:true, broadcast, cookies, debug, format,
   highscore:true, initialisers, level:true, lives:true, lookup, merge,
   resources:true, score:true, toTicks, wait, window */
 
@@ -88,14 +88,14 @@ function reset(starting) {
 
     // Note: it's important for these entities to have predictable IDs, since
     // they're overwritten whenever a life is lost.
-    all.set('events', new EventManager());
-    all.set('modeSwitcher', new ModeSwitcher(level));
-    all.set('releaseTimer', new ReleaseTimer(level));
+    objects.set('events', new EventManager());
+    objects.set('modeSwitcher', new ModeSwitcher(level));
+    objects.set('releaseTimer', new ReleaseTimer(level));
     var lifeDisplay = new LifeDisplay(lives - (starting ? 0 : 1));
-    all.set('lifeDisplay', lifeDisplay);
+    objects.set('lifeDisplay', lifeDisplay);
 
     function insertStartupText(props) {
-        return all.add(new Text(merge(props, {
+        return objects.add(new Text(merge(props, {
             size: TILE_SIZE,
             style: Text.STYLE_FIXED_WIDTH
         })));
@@ -109,15 +109,15 @@ function reset(starting) {
     });
 
     function start() {
-        all.set('pacman', new Pacman());
-        all.set('blinky', new Blinky());
-        all.set('pinky', new Pinky());
-        all.set('inky', new Inky());
-        all.set('clyde', new Clyde());
-        all.set('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
+        objects.set('pacman', new Pacman());
+        objects.set('blinky', new Blinky());
+        objects.set('pinky', new Pinky());
+        objects.set('inky', new Inky());
+        objects.set('clyde', new Clyde());
+        objects.set('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
         broadcast('start');
         wait(starting ? 2 : 1, function () {
-            all.remove(readyTextId);
+            objects.remove(readyTextId);
         });
     }
 
@@ -130,7 +130,7 @@ function reset(starting) {
         });
         wait(2, function () {
             lifeDisplay.setLives(lives - 1);
-            all.remove(playerOneTextId);
+            objects.remove(playerOneTextId);
             start();
         });
         resources.playSound('intro');
@@ -144,15 +144,15 @@ function levelUp(starting) {
     ++level;
     debug('starting level %s', level);
 
-    all = new Group();
+    objects = new Group();
 
-    all.set('maze', new Maze());
-    all.set('dots', new DotGroup());
-    all.add(new Header());
-    all.add(new BonusDisplay(level));
-    all.add(new DotCounter(level));
+    objects.set('maze', new Maze());
+    objects.set('dots', new DotGroup());
+    objects.add(new Header());
+    objects.add(new BonusDisplay(level));
+    objects.add(new DotCounter(level));
     if (DEBUG) {
-        all.set('stats', stats);
+        objects.set('stats', stats);
     }
 
     reset(starting);
@@ -177,9 +177,9 @@ function levelComplete() {
         levelUp();
     });
 
-    all = new Group();
-    all.set('events', events);
-    all.set('maze', maze);
+    objects = new Group();
+    objects.set('events', events);
+    objects.set('maze', maze);
 
     mode = MODE_LEVELUP;
 }
@@ -188,9 +188,9 @@ function killPacman() {
     lookup('pacman').kill();
     broadcast('stop');
 
-    all.remove('events');
+    objects.remove('events');
     Ghost.all().forEach(function (g) {
-        all.remove(g.name);
+        objects.remove(g.name);
     });
 
     mode = MODE_DYING;
@@ -241,9 +241,9 @@ function processCollisions(pacman) {
             scoreCy = g.cy;
             addPoints(scoreValue);
         });
-        var scoreTextId = all.add(new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
+        var scoreTextId = objects.add(new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
         wait(0.5, function () {
-            all.remove(scoreTextId);
+            objects.remove(scoreTextId);
             pacman.setVisible(true);
             deadGhosts.forEach(function (g) {
                 g.setVisible(true);
@@ -326,9 +326,9 @@ function togglePause() {
     paused = !paused;
     resources.togglePause(paused);
     if (paused) {
-        pauseTextId = all.add(new InfoText('Paused'));
+        pauseTextId = objects.add(new InfoText('Paused'));
     } else {
-        all.remove(pauseTextId);
+        objects.remove(pauseTextId);
     }
 }
 

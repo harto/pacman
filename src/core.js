@@ -27,7 +27,7 @@ var SCALE = 2,
 
     // forward declarations
 
-    all,       // top-level entity group
+    objects,   // top-level entity group
     resources, // resource manager
     lives,
     level;
@@ -79,11 +79,11 @@ function debug(/*msg, args*/) {
 }
 
 function broadcast(event, args) {
-    return dispatch(all, event, args);
+    return dispatch(objects, event, args);
 }
 
 function lookup(id) {
-    return all.get(id);
+    return objects.get(id);
 }
 
 // once-off initialisation

@@ -2,7 +2,7 @@
  * In-maze score indicators
  */
 
-/*global TILE_SIZE, Text, all, bind, format */
+/*global TILE_SIZE, Text, objects, bind, format */
 
 function InlineScore(score, colour, cx, cy) {
     this.txt = score;
@@ -19,13 +19,13 @@ InlineScore.prototype = new Text({
     valign: 'middle',
 
     stop: function () {
-        all.remove(this.id);
+        objects.remove(this.id);
     },
 
     showFor: function (ticks) {
-        this.id = all.add(this);
-        all.get('events').delay(ticks, bind(this, function () {
-            all.remove(this.id);
+        this.id = objects.add(this);
+        objects.get('events').delay(ticks, bind(this, function () {
+            objects.remove(this.id);
         }));
     },
 
