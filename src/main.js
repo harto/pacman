@@ -10,8 +10,8 @@
   EAST, ElroyCounter, EventManager, Ghost, Group, Header, InfoText, Inky,
   InlineScore, LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
   ReleaseTimer, ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text,
-  UPDATE_HZ, WEST, alert, objects:true, broadcast, cookies, debug, format,
-  highscore:true, initialisers, level:true, lives:true, lookup, merge,
+  UPDATE_HZ, WEST, alert, broadcast, cookies, debug, format, highscore:true,
+  initialisers, level:true, lives:true, lookup, merge, objects:true, remove,
   resources:true, score:true, toTicks, wait, window */
 
 function getPref(key) {
@@ -62,7 +62,6 @@ var stats = {
     }
 };
 
-
 var MODE_RUNNING  = 'running',
     MODE_WAITING  = 'waiting',
     MODE_DYING    = 'dying',
@@ -86,12 +85,12 @@ function reset(starting) {
     broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
     mode = MODE_RUNNING;
 
-    // Note: it's important for these entities to have predictable IDs, since
-    // they're overwritten whenever a life is lost.
+    // These objects (and those in `start()' below) are replaced each time a
+    // life is lost, and on levelup.
     objects.set('events', new EventManager());
     objects.set('modeSwitcher', new ModeSwitcher(level));
     objects.set('releaseTimer', new ReleaseTimer(level));
-    var lifeDisplay = new LifeDisplay(lives - (starting ? 0 : 1));
+    var lifeDisplay = new LifeDisplay(starting ? lives : lives - 1);
     objects.set('lifeDisplay', lifeDisplay);
 
     function insertStartupText(props) {
@@ -146,6 +145,7 @@ function levelUp(starting) {
 
     objects = new Group();
 
+    // These objects persist between lost lives.
     objects.set('maze', new Maze());
     objects.set('dots', new DotGroup());
     objects.add(new Header());
@@ -184,18 +184,6 @@ function levelComplete() {
     mode = MODE_LEVELUP;
 }
 
-function killPacman() {
-    lookup('pacman').kill();
-    broadcast('stop');
-
-    objects.remove('events');
-    Ghost.all().forEach(function (g) {
-        objects.remove(g.name);
-    });
-
-    mode = MODE_DYING;
-}
-
 function processDotCollisions(pacman, dots) {
     var dot = dots.colliding(pacman);
     if (dot) {
@@ -218,6 +206,16 @@ function processBonusCollisions(pacman, bonus) {
         bonusScore.showFor(toTicks(1));
         addPoints(bonus.value);
     }
+}
+
+function killPacman() {
+    lookup('pacman').kill();
+    objects.remove('events');
+    Ghost.all().forEach(function (g) {
+        objects.remove(g.name);
+    });
+
+    mode = MODE_DYING;
 }
 
 function killGhosts(pacman, deadGhosts) {
