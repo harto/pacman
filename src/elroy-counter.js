@@ -31,7 +31,7 @@ ElroyCounter.prototype = {
         lookup('blinky').set(n === 1 ? Ghost.STATE_ELROY_1 : Ghost.STATE_ELROY_2);
     },
 
-    dotEaten: function () {
+    onDotEaten: function () {
         var dots = lookup('dots').dotsRemaining();
         var threshold = this.threshold(level);
         if (dots === threshold) {
@@ -39,9 +39,5 @@ ElroyCounter.prototype = {
         } else if (dots === threshold * 2) {
             this.trigger(1);
         }
-    },
-
-    energiserEaten: function () {
-        this.dotEaten();
     }
 };

@@ -334,7 +334,7 @@ Ghost.prototype = new Actor({
         this.set(Ghost.STATE_DEAD);
     },
 
-    energiserEaten: function () {
+    onEnergiserEaten: function () {
         if (!this.is(Ghost.STATE_DEAD)) {
             this.reverse();
         }

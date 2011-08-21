@@ -54,7 +54,7 @@ ModeSwitcher.prototype = new Entity({
         });
     },
 
-    energiserEaten: function () {
+    onEnergiserEaten: function () {
         // suspend scatter/chase timer for duration of fright
         var frightTicks = Ghost.FRIGHT_TICKS[level];
         if (frightTicks) {

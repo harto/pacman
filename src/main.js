@@ -7,12 +7,13 @@
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, ElroyCounter, Ghost, Group, Header, InfoText, Inky, InlineScore,
-  LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer,
-  ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text, UPDATE_HZ, WEST,
-  alert, broadcast, cookies, debug, format, highscore:true, initialisers,
-  insert, invalidateScreen, level:true, lives:true, lookup, merge,
-  objects:true, remove, resources:true, score:true, toTicks, wait, window */
+  EAST, ElroyCounter, Energiser, Ghost, Group, Header, InfoText, Inky,
+  InlineScore, LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
+  ReleaseTimer, ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text,
+  UPDATE_HZ, WEST, alert, broadcast, cookies, debug, format, highscore:true,
+  initialisers, insert, invalidateScreen, level:true, lives:true, lookup,
+  merge, objects:true, remove, resources:true, score:true, toTicks, wait,
+  window */
 
 function getPref(key) {
     return cookies.read(key);
@@ -171,7 +172,10 @@ function processDotCollisions(pacman, dots) {
     var dot = dots.colliding(pacman);
     if (dot) {
         dots.remove(dot);
-        broadcast(dot.eatenEvent, [dot]);
+        broadcast('onDotEaten', [dot]);
+        if (dot instanceof Energiser) {
+            broadcast('onEnergiserEaten', [dot]);
+        }
         resources.playSound('tick' + Math.floor(Math.random() * 4));
         addPoints(dot.value);
         if (dots.isEmpty()) {

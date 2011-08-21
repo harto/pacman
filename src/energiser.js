@@ -9,7 +9,6 @@ function Energiser() {
     this.delay = 3;
     this.w = Energiser.SIZE;
     this.h = Energiser.SIZE;
-    this.eatenEvent = 'energiserEaten';
 }
 
 Energiser.SIZE = TILE_SIZE * 0.75;

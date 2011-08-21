@@ -36,7 +36,7 @@ DotCounter.prototype = {
         this._globalCounter = 0;
     },
 
-    dotEaten: function () {
+    onDotEaten: function () {
         if (this._usingGlobalCounter && ++this._globalCounter === 32 &&
             lookup('clyde').is(Ghost.STATE_INSIDE)) {
             this._usingGlobalCounter = false;
@@ -46,10 +46,6 @@ DotCounter.prototype = {
                 --this.counters[first.name];
             }
         }
-    },
-
-    energiserEaten: function () {
-        this.dotEaten();
     },
 
     // Check counters and return first ghost waiting for release. This happens

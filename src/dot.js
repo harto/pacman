@@ -6,6 +6,10 @@
 
 function Dot(props) {
     copy(props, this);
+    this.value = 10;
+    this.delay = 1;
+    this.w = Dot.SIZE;
+    this.h = Dot.SIZE;
 }
 
 Dot.SIZE = TILE_SIZE * 0.25;
@@ -24,12 +28,6 @@ Dot.createSprite = function (size, colour) {
 };
 
 Dot.prototype = new Sprite({
-
-    value: 10,
-    delay: 1,
-    w: Dot.SIZE,
-    h: Dot.SIZE,
-    eatenEvent: 'dotEaten',
 
     place: function (col, row) {
         this.centreAt(col * TILE_SIZE + TILE_SIZE / 2,

@@ -94,12 +94,8 @@ enqueueInitialiser(function () {
 
 Pacman.prototype = new Actor({
 
-    dotEaten: function (d) {
+    onDotEaten: function (d) {
         this.wait(d.delay);
-    },
-
-    energiserEaten: function (e) {
-        this.dotEaten(e);
     },
 
     repaint: function (g) {
