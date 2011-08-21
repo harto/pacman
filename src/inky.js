@@ -2,7 +2,7 @@
  * The blue ghost.
  */
 
-/*global COLS, Ghost, Maze, ROWS, lookup, toDx, toDy */
+/*global COLS, Ghost, Maze, ROWS, getObject, toDx, toDy */
 
 function Inky() {
     this.name = 'inky';
@@ -16,8 +16,8 @@ Inky.prototype = new Ghost({
     calcTarget: function () {
         // target tile at vector extending from blinky with midpoint 2 tiles
         // ahead of pacman
-        var pacman = lookup('pacman'),
-            blinky = lookup('blinky');
+        var pacman = getObject('pacman'),
+            blinky = getObject('blinky');
         var cx = pacman.col + toDx(pacman.direction) * 2;
         var cy = pacman.row + toDy(pacman.direction) * 2;
         return { col: cx + cx - blinky.col,

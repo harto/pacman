@@ -2,7 +2,7 @@
  * In-maze score indicators
  */
 
-/*global TILE_SIZE, Text, format, insert, remove */
+/*global TILE_SIZE, Text, format */
 
 function InlineScore(score, colour, cx, cy) {
     this.txt = score;

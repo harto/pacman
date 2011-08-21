@@ -14,7 +14,7 @@
  * as previously described. Otherwise, the global counter remains in effect.
  */
 
-/*global Ghost, lookup */
+/*global Ghost, getObject */
 
 function DotCounter(level) {
     this.counters = {
@@ -38,7 +38,7 @@ DotCounter.prototype = {
 
     onDotEaten: function () {
         if (this._usingGlobalCounter && ++this._globalCounter === 32 &&
-            lookup('clyde').is(Ghost.STATE_INSIDE)) {
+            getObject('clyde').is(Ghost.STATE_INSIDE)) {
             this._usingGlobalCounter = false;
         } else {
             var first = Ghost.all(Ghost.STATE_INSIDE)[0];
@@ -52,15 +52,15 @@ DotCounter.prototype = {
     // every frame, not just when a dot is eaten, to ensure that ghosts with a
     // zero dot count are instantly released.
     waitingGhost: function () {
-        var blinky = lookup('blinky');
+        var blinky = getObject('blinky');
         // The Pac-Man Dossier suggests that Blinky isn't affected by the global
         // dot counter, so just release him as soon as he comes inside.
         if (blinky.is(Ghost.STATE_INSIDE)) {
             return blinky;
         } else if (this._usingGlobalCounter) {
-            var pinky = lookup('pinky'),
-                inky = lookup('inky'),
-                clyde = lookup('clyde');
+            var pinky = getObject('pinky'),
+                inky = getObject('inky'),
+                clyde = getObject('clyde');
             return this.dotCounter === 7 && pinky.is(Ghost.STATE_INSIDE) ? pinky :
                    this.dotCounter === 17 && inky.is(Ghost.STATE_INSIDE) ? inky :
                    this.dotCounter === 32 && clyde.is(Ghost.STATE_INSIDE) ? clyde :

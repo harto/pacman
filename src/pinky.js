@@ -2,7 +2,7 @@
  * The pink ghost.
  */
 
-/*global Ghost, Maze, lookup, toDx, toDy */
+/*global Ghost, Maze, getObject, toDx, toDy */
 
 function Pinky() {
     this.name = 'pinky';
@@ -15,7 +15,7 @@ Pinky.prototype = new Ghost({
 
     calcTarget: function () {
         // target 4 tiles ahead of pacman's current direction
-        var pacman = lookup('pacman');
+        var pacman = getObject('pacman');
         return { col: pacman.col + toDx(pacman.direction) * 4,
                  row: pacman.row + toDy(pacman.direction) * 4 };
     }

@@ -5,7 +5,7 @@
 /*jslint bitwise:false */
 /*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, FrameGrid, TILE_CENTRE,
   TILE_SIZE, UPDATE_HZ, WEST, copy, debug, distance, enqueueInitialiser,
-  format, keys, level, lookup, ordinal, resources, reverse, toCol, toDx, toDy,
+  format, keys, level, getObject, ordinal, resources, reverse, toCol, toDx, toDy,
   toRow, toTicks */
 
 function Ghost(props) {
@@ -39,7 +39,7 @@ Ghost.STATE_LABELS = (function () {
 
 // Returns ghosts in the given state, in preferred-release-order.
 Ghost.all = function (state) {
-    return ['blinky', 'pinky', 'inky', 'clyde'].map(lookup).filter(function (g) {
+    return ['blinky', 'pinky', 'inky', 'clyde'].map(getObject).filter(function (g) {
         return !state || g.is(state);
     });
 };

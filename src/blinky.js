@@ -2,7 +2,7 @@
  * The red ghost.
  */
 
-/*global COLS, Ghost, Maze, lookup */
+/*global COLS, Ghost, Maze, getObject */
 
 function Blinky() {
     this.name = 'blinky';
@@ -15,7 +15,7 @@ Blinky.prototype = new Ghost({
 
     calcTarget: function () {
         // target pacman directly
-        var pacman = lookup('pacman');
+        var pacman = getObject('pacman');
         return { col: pacman.col, row: pacman.row };
     }
 });

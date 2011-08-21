@@ -11,8 +11,8 @@
   InlineScore, LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
   ReleaseTimer, ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text,
   UPDATE_HZ, WEST, alert, broadcast, cookies, debug, format, highscore:true,
-  initialisers, insert, invalidateScreen, level:true, lives:true, lookup,
-  merge, objects:true, remove, resources:true, score:true, toTicks, wait,
+  initialisers, insertObject, invalidateScreen, level:true, lives:true, getObject,
+  merge, objects:true, removeObject, resources:true, score:true, toTicks, wait,
   window */
 
 function getPref(key) {
@@ -86,13 +86,13 @@ function respawn(starting) {
     invalidateScreen();
     mode = MODE_RUNNING;
 
-    insert('modeSwitcher', new ModeSwitcher(level));
-    insert('releaseTimer', new ReleaseTimer(level));
+    insertObject('modeSwitcher', new ModeSwitcher(level));
+    insertObject('releaseTimer', new ReleaseTimer(level));
     var lifeDisplay = new LifeDisplay(starting ? lives : lives - 1);
-    insert('lifeDisplay', lifeDisplay);
+    insertObject('lifeDisplay', lifeDisplay);
 
     function insertStartupText(id, props) {
-        insert(id, new Text(merge(props, {
+        insertObject(id, new Text(merge(props, {
             size: TILE_SIZE,
             style: Text.STYLE_FIXED_WIDTH
         })));
@@ -106,15 +106,15 @@ function respawn(starting) {
     });
 
     function start() {
-        insert('pacman', new Pacman());
-        insert('blinky', new Blinky());
-        insert('pinky', new Pinky());
-        insert('inky', new Inky());
-        insert('clyde', new Clyde());
-        insert('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
+        insertObject('pacman', new Pacman());
+        insertObject('blinky', new Blinky());
+        insertObject('pinky', new Pinky());
+        insertObject('inky', new Inky());
+        insertObject('clyde', new Clyde());
+        insertObject('elroyCounter', new ElroyCounter(level, getObject('dots').dotsRemaining()));
         broadcast('onRespawn');
         wait(starting ? 2 : 1, function () {
-            remove('readyText');
+            removeObject('readyText');
         });
     }
 
@@ -127,7 +127,7 @@ function respawn(starting) {
         });
         wait(2, function () {
             lifeDisplay.setLives(lives - 1);
-            remove('playerOneText');
+            removeObject('playerOneText');
             start();
         });
         resources.playSound('intro');
@@ -141,9 +141,9 @@ function levelUp(starting) {
     ++level;
     debug('starting level %s', level);
 
-    insert('dots', new DotGroup());
-    insert('dotCounter', new DotCounter(level));
-    insert('bonusDisplay', new BonusDisplay(level));
+    insertObject('dots', new DotGroup());
+    insertObject('dotCounter', new DotCounter(level));
+    insertObject('bonusDisplay', new BonusDisplay(level));
 
     respawn(starting);
 }
@@ -151,20 +151,20 @@ function levelUp(starting) {
 function addPoints(points) {
     score += points;
     highscore = Math.max(score, highscore);
-    lookup('header').updateScore(score, highscore);
+    getObject('header').updateScore(score, highscore);
 }
 
 // Removes all entities that will be replaced on respawn.
 function removeTransientEntities() {
     ['blinky', 'inky', 'pinky', 'clyde', 'bonus', 'bonusScore',
-     'ghostScore', 'releaseTimer', 'modeSwitcher'].forEach(remove);
+     'ghostScore', 'releaseTimer', 'modeSwitcher'].forEach(removeObject);
 }
 
 function levelComplete() {
     removeTransientEntities();
-    remove('dots');
-    lookup('pacman').wait();
-    lookup('maze').flash(levelUp);
+    removeObject('dots');
+    getObject('pacman').wait();
+    getObject('maze').flash(levelUp);
     mode = MODE_LEVELUP;
 }
 
@@ -187,20 +187,20 @@ function processDotCollisions(pacman, dots) {
 function processBonusCollision(pacman, bonus) {
     if (bonus && bonus.colliding(pacman)) {
         debug('bonus eaten');
-        remove('bonus');
+        removeObject('bonus');
         addPoints(bonus.value);
         var bonusScore = new InlineScore(bonus.value, '#FBD', bonus.cx, bonus.cy);
-        insert('bonusScore', bonusScore);
+        insertObject('bonusScore', bonusScore);
         bonusScore.delayEvent(toTicks(1), function () {
-            remove('bonusScore');
+            removeObject('bonusScore');
         });
     }
 }
 
 function killPacman() {
     removeTransientEntities();
-    lookup('pacman').kill();
-    lookup('dotCounter').useGlobalCounter();
+    getObject('pacman').kill();
+    getObject('dotCounter').useGlobalCounter();
     mode = MODE_DYING;
 }
 
@@ -217,9 +217,9 @@ function killGhosts(pacman, deadGhosts) {
         scoreCy = g.cy;
         addPoints(scoreValue);
     });
-    insert('ghostScore', new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
+    insertObject('ghostScore', new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
     wait(0.5, function () {
-        remove('ghostScore');
+        removeObject('ghostScore');
         deadGhosts.concat(pacman).forEach(function (o) {
             o.setVisible(true);
         });
@@ -263,12 +263,12 @@ function update() {
 
     objects.dispatch('update');
 
-    var pacman = lookup('pacman');
+    var pacman = getObject('pacman');
     if (mode === MODE_RUNNING) {
-        processDotCollisions(pacman, lookup('dots'));
-        processBonusCollision(pacman, lookup('bonus'));
+        processDotCollisions(pacman, getObject('dots'));
+        processBonusCollision(pacman, getObject('bonus'));
         processGhostCollisions(pacman, Ghost.all());
-        var waitingGhost = lookup('dotCounter').waitingGhost();
+        var waitingGhost = getObject('dotCounter').waitingGhost();
         if (waitingGhost) {
             waitingGhost.release();
         }
@@ -312,10 +312,10 @@ function newGame() {
     paused = false;
 
     objects = new Group();
-    insert('maze', new Maze());
-    insert('header', new Header());
+    insertObject('maze', new Maze());
+    insertObject('header', new Header());
     if (DEBUG) {
-        insert('stats', stats);
+        insertObject('stats', stats);
     }
 
     levelUp(true);
@@ -328,9 +328,9 @@ function togglePause() {
     paused = !paused;
     resources.togglePause(paused);
     if (paused) {
-        insert('pauseText', new InfoText('Paused'));
+        insertObject('pauseText', new InfoText('Paused'));
     } else {
-        remove('pauseText');
+        removeObject('pauseText');
     }
 }
 
@@ -387,7 +387,7 @@ function initKeyBindings() {
         case keys.right:
         case keys.up:
         case keys.down:
-            var pacman = lookup('pacman');
+            var pacman = getObject('pacman');
             if (pacman) {
                 pacman.turning = directions[k];
             }
@@ -410,7 +410,7 @@ function initKeyBindings() {
     });
 
     $(window).keyup(function (e) {
-        var pacman = lookup('pacman');
+        var pacman = getObject('pacman');
         var k = getKeyCode(e);
         if (pacman && pacman.turning === directions[k]) {
             pacman.turning = null;

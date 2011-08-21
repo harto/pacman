@@ -78,15 +78,15 @@ function debug(/*msg, args*/) {
     }
 }
 
-function insert(id, o) {
+function insertObject(id, o) {
     objects.set(id, o);
 }
 
-function lookup(id) {
+function getObject(id) {
     return objects.get(id);
 }
 
-function remove(id) {
+function removeObject(id) {
     return objects.remove(id);
 }
 

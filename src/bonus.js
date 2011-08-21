@@ -2,7 +2,7 @@
  * Bonus/fruit
  */
 
-/*global Maze, Sprite, TILE_SIZE, debug, insert, remove, toTicks */
+/*global Maze, Sprite, TILE_SIZE, debug, insertObject, removeObject, toTicks */
 
 function Bonus(symbol, value) {
     // FIXME: do something with symbol
@@ -25,10 +25,10 @@ Bonus.prototype = new Sprite({
         this.centreAt(Maze.BONUS_X, Maze.BONUS_Y);
         var secs = 9 + Math.random();
         debug('displaying bonus for %.3ns', secs);
-        insert('bonus', this);
+        insertObject('bonus', this);
         this.timeout = this.delayEvent(toTicks(secs), function () {
             debug('bonus timeout');
-            remove('bonus');
+            removeObject('bonus');
         });
     },
 

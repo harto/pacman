@@ -2,7 +2,7 @@
  * Counter that triggers 'Cruise Elroy' mode
  */
 
-/*global Ghost, debug, level, lookup */
+/*global Ghost, debug, level, getObject */
 
 function ElroyCounter(level, dots) {
     var threshold = this.threshold(level);
@@ -28,11 +28,11 @@ ElroyCounter.prototype = {
 
     trigger: function (n) {
         debug('elroy %n', n);
-        lookup('blinky').set(n === 1 ? Ghost.STATE_ELROY_1 : Ghost.STATE_ELROY_2);
+        getObject('blinky').set(n === 1 ? Ghost.STATE_ELROY_1 : Ghost.STATE_ELROY_2);
     },
 
     onDotEaten: function () {
-        var dots = lookup('dots').dotsRemaining();
+        var dots = getObject('dots').dotsRemaining();
         var threshold = this.threshold(level);
         if (dots === threshold) {
             this.trigger(2);

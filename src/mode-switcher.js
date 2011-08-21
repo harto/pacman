@@ -3,7 +3,7 @@
  * modes.
  */
 
-/*global Entity, Ghost, debug, level, lookup, toSeconds, toTicks */
+/*global Entity, Ghost, debug, level, getObject, toSeconds, toTicks */
 
 function ModeSwitcher(level) {
     this.switchDelays = [
@@ -44,7 +44,7 @@ ModeSwitcher.prototype = new Entity({
             debug('mode switch (%n): %s', n, Ghost.STATE_LABELS[newState]);
 
             ['blinky', 'pinky', 'inky', 'clyde'].map(function (name) {
-                return lookup(name);
+                return getObject(name);
             }).forEach(function (g) {
                 g.unset(oldState);
                 g.set(newState);
