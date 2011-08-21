@@ -3,7 +3,7 @@
  */
 
 /*jslint bitwise:false */
-/*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, SpriteMap, TILE_CENTRE,
+/*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, FrameGrid, TILE_CENTRE,
   TILE_SIZE, UPDATE_HZ, WEST, copy, debug, distance, enqueueInitialiser,
   format, keys, level, lookup, ordinal, resources, reverse, toCol, toDx, toDy,
   toRow, toTicks */
@@ -65,7 +65,7 @@ enqueueInitialiser(function () {
         h = Ghost.SIZE,
         ids = ['blinky', 'pinky', 'inky', 'clyde', 'frightened', 'flashing', 'dead'];
     ids.forEach(function (id) {
-        Ghost.SPRITES[id] = new SpriteMap(resources.getImage(id), w, h);
+        Ghost.SPRITES[id] = new FrameGrid(resources.getImage(id), w, h);
     });
 });
 

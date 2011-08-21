@@ -4,7 +4,7 @@
 
 /*jslint bitwise:false */
 /*global Actor, EAST, Ghost, GraphicsBuffer, MAX_SPEED, Maze, NORTH, SOUTH,
-  SpriteMap, TILE_CENTRE, TILE_SIZE, WEST, enqueueInitialiser, level, ordinal,
+  FrameGrid, TILE_CENTRE, TILE_SIZE, WEST, enqueueInitialiser, level, ordinal,
   toDx, toDy, toTicks */
 
 function Pacman() {
@@ -61,7 +61,7 @@ enqueueInitialiser(function () {
     // movement (i.e. contains fewer frames) and only limits mouth angle to
     // 40% of the maximum.
 
-    function createSpriteMap(steps, stepProportion) {
+    function createFrameGrid(steps, stepProportion) {
         var size = Pacman.SIZE,
             // iterate through directions in increasing-angle order
             directions = [EAST, SOUTH, WEST, NORTH],
@@ -81,13 +81,13 @@ enqueueInitialiser(function () {
             }
         });
 
-        return new SpriteMap(buf, size, size);
+        return new FrameGrid(buf, size, size);
     }
 
     var steps = toTicks(0.08);
-    Pacman.SPRITES = createSpriteMap(steps, 0.4 / steps);
+    Pacman.SPRITES = createFrameGrid(steps, 0.4 / steps);
     steps = toTicks(1);
-    Pacman.SPRITES_DYING = createSpriteMap(steps, 1 / steps);
+    Pacman.SPRITES_DYING = createFrameGrid(steps, 1 / steps);
 
     // TODO: create dead 'blink'
 });
