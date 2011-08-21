@@ -7,11 +7,11 @@
  */
 
 /*global $, Blinky, BonusDisplay, Clyde, DEBUG, Delay, DotCounter, DotGroup,
-  EAST, ElroyCounter, EventManager, Ghost, Group, Header, InfoText, Inky,
-  InlineScore, LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky,
-  ReleaseTimer, ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text,
-  UPDATE_HZ, WEST, alert, broadcast, cookies, debug, events:true, format,
-  highscore:true, initialisers, level:true, lives:true, lookup, merge,
+  EAST, ElroyCounter, Ghost, Group, Header, InfoText, Inky, InlineScore,
+  LifeDisplay, Maze, ModeSwitcher, NORTH, Pacman, Pinky, ReleaseTimer,
+  ResourceManager, SCREEN_H, SCREEN_W, SOUTH, TILE_SIZE, Text, UPDATE_HZ, WEST,
+  alert, broadcast, cookies, debug, format, highscore:true, initialisers,
+  insert, invalidateScreen, level:true, lives:true, lookup, merge,
   objects:true, remove, resources:true, score:true, toTicks, wait, window */
 
 function getPref(key) {
@@ -81,20 +81,17 @@ function wait(secs, onResume) {
     mode = MODE_WAITING;
 }
 
-function reset(starting) {
-    broadcast('invalidateRegion', [0, 0, SCREEN_W, SCREEN_H]);
+function respawn(starting) {
+    invalidateScreen();
     mode = MODE_RUNNING;
 
-    // These objects (and those in `start()' below) are replaced each time a
-    // life is lost, and on levelup.
-    events = new EventManager();
-    objects.set('modeSwitcher', new ModeSwitcher(level));
-    objects.set('releaseTimer', new ReleaseTimer(level));
+    insert('modeSwitcher', new ModeSwitcher(level));
+    insert('releaseTimer', new ReleaseTimer(level));
     var lifeDisplay = new LifeDisplay(starting ? lives : lives - 1);
-    objects.set('lifeDisplay', lifeDisplay);
+    insert('lifeDisplay', lifeDisplay);
 
     function insertStartupText(props) {
-        return objects.add(new Text(merge(props, {
+        return insert(new Text(merge(props, {
             size: TILE_SIZE,
             style: Text.STYLE_FIXED_WIDTH
         })));
@@ -108,15 +105,15 @@ function reset(starting) {
     });
 
     function start() {
-        objects.set('pacman', new Pacman());
-        objects.set('blinky', new Blinky());
-        objects.set('pinky', new Pinky());
-        objects.set('inky', new Inky());
-        objects.set('clyde', new Clyde());
-        objects.set('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
-        broadcast('start');
+        insert('pacman', new Pacman());
+        insert('blinky', new Blinky());
+        insert('pinky', new Pinky());
+        insert('inky', new Inky());
+        insert('clyde', new Clyde());
+        insert('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
+        broadcast('onRespawn');
         wait(starting ? 2 : 1, function () {
-            objects.remove(readyTextId);
+            remove(readyTextId);
         });
     }
 
@@ -129,7 +126,7 @@ function reset(starting) {
         });
         wait(2, function () {
             lifeDisplay.setLives(lives - 1);
-            objects.remove(playerOneTextId);
+            remove(playerOneTextId);
             start();
         });
         resources.playSound('intro');
@@ -143,43 +140,30 @@ function levelUp(starting) {
     ++level;
     debug('starting level %s', level);
 
-    objects = new Group();
+    insert('dots', new DotGroup());
+    insert('dotCounter', new DotCounter(level));
+    insert('bonusDisplay', new BonusDisplay(level));
 
-    // These objects persist between lost lives.
-    objects.set('maze', new Maze());
-    objects.set('dots', new DotGroup());
-    objects.set('dotCounter', new DotCounter(level));
-    objects.add(new Header());
-    objects.add(new BonusDisplay(level));
-    if (DEBUG) {
-        objects.set('stats', stats);
-    }
-
-    reset(starting);
+    respawn(starting);
 }
 
 function addPoints(points) {
     score += points;
     highscore = Math.max(score, highscore);
-    broadcast('scoreChanged');
+    lookup('header').updateScore(score, highscore);
+}
+
+// Removes all entities that will be replaced on respawn.
+function removeTransientEntities() {
+    ['blinky', 'inky', 'pinky', 'clyde', 'bonus', 'bonusScore',
+     'ghostScore', 'releaseTimer', 'modeSwitcher'].forEach(remove);
 }
 
 function levelComplete() {
-    broadcast('levelCompleted');
-
-    Ghost.all().forEach(remove);
-    remove('bonus');
+    removeTransientEntities();
     remove('dots');
-    suspend('pacman');
-    // FIXME
-    broadcast('stop');
-    events.cancelAll(lookup('dotCounter'));
-
-    var flashDuration = toTicks(0.4);
-    var nFlashes = 8;
-    lookup('maze').flash(nFlashes, flashDuration);
-    events.delay(this, flashDuration * (nFlashes + 1), levelUp);
-
+    lookup('pacman').wait();
+    lookup('maze').flash(levelUp);
     mode = MODE_LEVELUP;
 }
 
@@ -200,20 +184,19 @@ function processBonusCollision(pacman, bonus) {
     if (bonus && bonus.colliding(pacman)) {
         debug('bonus eaten');
         remove('bonus');
-        var bonusScore = new InlineScore(bonus.value, '#FBD', bonus.cx, bonus.cy);
-        bonusScore.showFor(toTicks(1));
         addPoints(bonus.value);
+        var bonusScore = new InlineScore(bonus.value, '#FBD', bonus.cx, bonus.cy);
+        insert('bonusScore', bonusScore);
+        bonusScore.delayEvent(toTicks(1), function () {
+            remove('bonusScore');
+        });
     }
 }
 
 function killPacman() {
+    removeTransientEntities();
     lookup('pacman').kill();
-    // FIXME
-    events.cancelAll();
-    Ghost.all().forEach(function (g) {
-        objects.remove(g.name);
-    });
-
+    lookup('dotCounter').useGlobalCounter();
     mode = MODE_DYING;
 }
 
@@ -230,12 +213,11 @@ function killGhosts(pacman, deadGhosts) {
         scoreCy = g.cy;
         addPoints(scoreValue);
     });
-    var scoreTextId = objects.add(new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
+    insert('ghostScore', new InlineScore(scoreValue, 'cyan', scoreCx, scoreCy));
     wait(0.5, function () {
-        objects.remove(scoreTextId);
-        pacman.setVisible(true);
-        deadGhosts.forEach(function (g) {
-            g.setVisible(true);
+        remove('ghostScore');
+        deadGhosts.concat(pacman).forEach(function (o) {
+            o.setVisible(true);
         });
     });
 }
@@ -256,7 +238,7 @@ function processGhostCollisions(pacman, ghosts) {
 
 function lifeLost() {
     if (--lives) {
-        reset();
+        respawn();
     } else {
         // game over
         var prevBest = getPref('highscore') || 0;
@@ -275,11 +257,9 @@ function update() {
         return;
     }
 
-    objects.update();
-    events.update();
+    objects.dispatch('update');
 
     var pacman = lookup('pacman');
-
     if (mode === MODE_RUNNING) {
         processDotCollisions(pacman, lookup('dots'));
         processBonusCollision(pacman, lookup('bonus'));
@@ -296,7 +276,7 @@ function update() {
 var ctx;
 
 function draw() {
-    broadcast('draw', [ctx]);
+    objects.dispatch('draw', [ctx]);
 }
 
 var UPDATE_DELAY = 1000 / UPDATE_HZ,
@@ -327,6 +307,13 @@ function newGame() {
     score = 0;
     paused = false;
 
+    objects = new Group();
+    insert('maze', new Maze());
+    insert('header', new Header());
+    if (DEBUG) {
+        insert('stats', stats);
+    }
+
     levelUp(true);
     loop();
 }
@@ -337,9 +324,9 @@ function togglePause() {
     paused = !paused;
     resources.togglePause(paused);
     if (paused) {
-        pauseTextId = objects.add(new InfoText('Paused'));
+        pauseTextId = insert(new InfoText('Paused'));
     } else {
-        objects.remove(pauseTextId);
+        remove(pauseTextId);
     }
 }
 

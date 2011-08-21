@@ -5,8 +5,8 @@
 /*jslint bitwise:false */
 /*global Actor, EAST, MAX_SPEED, Maze, NORTH, SOUTH, SpriteMap, TILE_CENTRE,
   TILE_SIZE, UPDATE_HZ, WEST, copy, debug, distance, enqueueInitialiser,
-  events, format, keys, level, lookup, ordinal, resources, reverse, toCol,
-  toDx, toDy, toRow, toTicks */
+  format, keys, level, lookup, ordinal, resources, reverse, toCol, toDx, toDy,
+  toRow, toTicks */
 
 function Ghost(props) {
     copy(props, this);
@@ -39,9 +39,7 @@ Ghost.STATE_LABELS = (function () {
 
 // Returns ghosts in the given state, in preferred-release-order.
 Ghost.all = function (state) {
-    return ['blinky', 'pinky', 'inky', 'clyde'].map(function (id) {
-        return lookup(id);
-    }).filter(function (g) {
+    return ['blinky', 'pinky', 'inky', 'clyde'].map(lookup).filter(function (g) {
         return !state || g.is(state);
     });
 };
@@ -73,7 +71,7 @@ enqueueInitialiser(function () {
 
 Ghost.prototype = new Actor({
 
-    start: function () {
+    onRespawn: function () {
         this.startCx = this.startCol * TILE_SIZE;
         this.startCy = this.startRow * TILE_SIZE + TILE_CENTRE;
         this.centreAt(this.startCx, this.startCy);
@@ -160,7 +158,7 @@ Ghost.prototype = new Actor({
                 (level === 1 ? 0.75 : level < 5 ? 0.85 : 0.95)) * MAX_SPEED;
     },
 
-    update: function () {
+    doUpdate: function () {
         if (this.is(Ghost.STATE_INSIDE)) {
             this.jostle();
         } else if (this.is(Ghost.STATE_ENTERING) || this.is(Ghost.STATE_EXITING)) {
@@ -353,7 +351,7 @@ Ghost.prototype = new Actor({
         // FIXME: might be unnecessary
         this.invalidate();
 
-        this.unfrightenTimer = events.delay(this, frightTicks, function () {
+        this.unfrightenTimer = this.delayEvent(frightTicks, function () {
             this.unfrighten();
         });
 
@@ -363,17 +361,17 @@ Ghost.prototype = new Actor({
             flashStart = frightTicks - (flashes + 1) * flashDuration;
 
         this.flashing = false;
-        this.startFlashTimer = events.delay(this, flashStart, function () {
-            this.flashTimer = events.repeat(this, flashDuration, function () {
+        this.startFlashTimer = this.delayEvent(flashStart, function () {
+            this.flashTimer = this.repeatEvent(flashDuration, function () {
                 this.flashing = !this.flashing;
             }, flashes);
         });
     },
 
     unfrighten: function () {
-        events.cancel(this.unfrightenTimer);
-        events.cancel(this.startFlashTimer);
-        events.cancel(this.flashTimer);
+        [this.unfrightenTimer,
+         this.startFlashTimer,
+         this.flashTimer].forEach(this.cancelEvent, this);
         this.unset(Ghost.STATE_FRIGHTENED);
     }
 });

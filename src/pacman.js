@@ -4,8 +4,8 @@
 
 /*jslint bitwise:false */
 /*global Actor, EAST, Ghost, GraphicsBuffer, MAX_SPEED, Maze, NORTH, SOUTH,
-  SpriteMap, TILE_CENTRE, TILE_SIZE, WEST, enqueueInitialiser, events, level,
-  noop, ordinal, toDx, toDy, toTicks */
+  SpriteMap, TILE_CENTRE, TILE_SIZE, WEST, enqueueInitialiser, level, ordinal,
+  toDx, toDy, toTicks */
 
 function Pacman() {
     this.direction = WEST;
@@ -95,11 +95,7 @@ enqueueInitialiser(function () {
 Pacman.prototype = new Actor({
 
     dotEaten: function (d) {
-        // stub update() for duration of dot delay
-        this.update = noop;
-        events.delay(this, d.delay, function () {
-            delete this.update;
-        });
+        this.wait(d.delay);
     },
 
     energiserEaten: function (e) {
@@ -124,7 +120,7 @@ Pacman.prototype = new Actor({
         }
     },
 
-    // replaces update on kill
+    // replaces doUpdate on kill (FIXME: ugly)
     deathSequence: function () {
         if (this.deathTicks++ > Pacman.SPRITES_DYING.cols + toTicks(0.5)) {
             this.dead = true;
@@ -132,7 +128,7 @@ Pacman.prototype = new Actor({
         this.invalidate();
     },
 
-    update: function () {
+    doUpdate: function () {
         var newDirection = this.turning || this.direction;
         if (this.move(newDirection)) {
             this.direction = newDirection;
@@ -184,7 +180,8 @@ Pacman.prototype = new Actor({
     kill: function () {
         this.dying = true;
         this.deathTicks = 0;
-        this.update = this.deathSequence;
+        // XXX: ugly
+        this.doUpdate = this.deathSequence;
     },
 
     toString: function () {

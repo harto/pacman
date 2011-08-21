@@ -10,12 +10,9 @@
  * checked on insert.
  */
 
-/*global copy, dispatch, keys */
+/*global copy, dispatch, idGenerator, keys */
 
 function Group(props) {
-    this.members = {};
-    this.zIndex = [];
-    this.nextId = 0;
     copy(props, this);
 }
 
@@ -28,6 +25,10 @@ Group.prototype = {
 
     // Add a named member.
     set: function (id, o) {
+        if (!this.members) {
+            this.members = {};
+            this.zIndex = [];
+        }
         if (id in this.members) {
             // Remove previous incarnation
             this.remove(id);
@@ -52,7 +53,10 @@ Group.prototype = {
 
     // Add a group member and return its auto-generated ID.
     add: function (o) {
-        var id = this.nextId++;
+        if (!this.nextId) {
+            this.nextId = idGenerator();
+        }
+        var id = this.nextId();
         this.set(id, o);
         return id;
     },
@@ -65,20 +69,6 @@ Group.prototype = {
             dispatch(o, 'invalidate');
         }
         return o;
-    },
-
-    // Return group members in z-index order.
-    all: function () {
-        return this.zIndex;
-    },
-
-    // Update all active group members
-    update: function () {
-        this.all().filter(function (o) {
-            return 'update' in o && o._active !== false;
-        }).forEach(function (o) {
-            o.update();
-        });
     },
 
     suspend: function (id) {
@@ -94,7 +84,7 @@ Group.prototype = {
     // This function could then be manually called from within the handler to
     // continue propagating the message.
     dispatch: function (msg, args) {
-        this.all().forEach(function (o) {
+        this.zIndex.forEach(function (o) {
             dispatch(o, msg, args);
         });
     },

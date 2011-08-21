@@ -2,7 +2,7 @@
  * Drawable text
  */
 
-/*global Entity, copy, format */
+/*global Sprite, copy, format */
 
 function Text(props) {
     copy(props, this);
@@ -11,7 +11,7 @@ function Text(props) {
 Text.STYLE_NORMAL = '"Helvetica Neue", Helvetica, sans-serif';
 Text.STYLE_FIXED_WIDTH = '"Press Start 2P"';
 
-Text.prototype = new Entity({
+Text.prototype = new Sprite({
 
     repaint: function (g) {
         g.save();

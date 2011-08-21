@@ -28,7 +28,6 @@ var SCALE = 2,
     // forward declarations
 
     objects,   // top-level entity group
-    events,    // event manager
     resources, // resource manager
     lives,
     level;
@@ -80,36 +79,27 @@ function debug(/*msg, args*/) {
 }
 
 function insert(id, o) {
-    objects.set(id, o);
+    return objects[arguments.length === 2 ? 'set' : 'add'].apply(objects, arguments);
 }
 
 function lookup(id) {
     return objects.get(id);
 }
 
-function suspend(id) {
-    objects.suspend(id);
-    events.suspendAll(lookup(id));
-}
-
-function resume(id) {
-    objects.resume(id);
-    events.resumeAll(lookup(id));
-}
-
 function remove(id) {
-    var o = objects.remove(id);
-    if (o) {
-        events.cancelAll(o);
-    }
+    return objects.remove(id);
 }
 
-function broadcast(event, args) {
-    return dispatch(objects, event, args);
+function broadcast(msg, args) {
+    dispatch(objects, msg, args);
 }
 
 function invalidateRegion(x, y, w, h) {
     broadcast('invalidateRegion', [x, y, w, h]);
+}
+
+function invalidateScreen() {
+    invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
 }
 
 // once-off initialisation

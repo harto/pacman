@@ -2,7 +2,7 @@
  * Bonus/fruit
  */
 
-/*global Entity, Maze, TILE_SIZE, debug, events, objects, remove, toTicks */
+/*global Maze, Sprite, TILE_SIZE, debug, insert, remove, toTicks */
 
 function Bonus(symbol, value) {
     // FIXME: do something with symbol
@@ -11,7 +11,7 @@ function Bonus(symbol, value) {
     this.value = value;
 }
 
-Bonus.prototype = new Entity({
+Bonus.prototype = new Sprite({
 
     repaint: function (g) {
         // FIXME
@@ -25,8 +25,8 @@ Bonus.prototype = new Entity({
         this.centreAt(Maze.BONUS_X, Maze.BONUS_Y);
         var secs = 9 + Math.random();
         debug('displaying bonus for %.3ns', secs);
-        objects.set('bonus', this);
-        this.timeout = events.delay(this, toTicks(secs), function () {
+        insert('bonus', this);
+        this.timeout = this.delayEvent(toTicks(secs), function () {
             debug('bonus timeout');
             remove('bonus');
         });

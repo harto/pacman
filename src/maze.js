@@ -3,13 +3,15 @@
  */
 
 /*jslint bitwise: false */
-/*global COLS, DEBUG, EAST, GraphicsBuffer, NORTH, ROWS, SCREEN_H, SCREEN_W,
-  SOUTH, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser, events,
-  invalidateRegion, resources */
+/*global COLS, DEBUG, EAST, Entity, GraphicsBuffer, NORTH, ROWS, SCREEN_H,
+  SCREEN_W, SOUTH, TILE_CENTRE, TILE_SIZE, WEST, debug, enqueueInitialiser,
+  invalidateScreen, resources, toTicks */
 
 function Maze() {
     this.invalidatedRegions = [];
     this.img = Maze.BG;
+    // always draw first
+    this.z = -Infinity;
 }
 
 // house entry/exit tile
@@ -95,13 +97,10 @@ Maze.northDisallowed = function (col, row) {
            (row === Maze.NNTZ_ROW_1 || row === Maze.NNTZ_ROW_2);
 };
 
-Maze.prototype = {
-
-    // always draw first
-    z: -Infinity,
+Maze.prototype = new Entity({
 
     invalidate: function () {
-        invalidateRegion(0, 0, SCREEN_W, SCREEN_H);
+        invalidateScreen();
     },
 
     invalidateRegion: function (x, y, w, h) {
@@ -125,12 +124,16 @@ Maze.prototype = {
         this.invalidate();
     },
 
-    flash: function (times, duration) {
-        events.repeat(this, duration, function () {
+    flash: function (fn) {
+        var duration = toTicks(0.4);
+        var times = 8;
+
+        this.repeatEvent(duration, function () {
             this.setFlashing(!this.isFlashing());
         }, times);
+        this.delayEvent(duration * (times + 1), fn);
     }
-};
+});
 
 enqueueInitialiser(function () {
     function createBuffer(imgName) {

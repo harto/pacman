@@ -54,6 +54,13 @@ function bind(o, f) {
     };
 }
 
+function idGenerator() {
+    var nextId = 0;
+    return function () {
+        return nextId++;
+    };
+}
+
 function keys(o) {
     var ks = [];
     for (var k in o) {
@@ -114,7 +121,7 @@ Math.sign = function (x) {
 
 // remove fractional part of number
 Math.trunc = function (x) {
-    return Math.sign(x) * Math.floor(Math.abs(x));
+    return x | 0;
 };
 
 // Array extensions

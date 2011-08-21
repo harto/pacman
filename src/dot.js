@@ -2,7 +2,7 @@
  * An edible maze dot.
  */
 
-/*global Entity, GraphicsBuffer, TILE_SIZE, copy, enqueueInitialiser */
+/*global GraphicsBuffer, Sprite, TILE_SIZE, copy, enqueueInitialiser */
 
 function Dot(props) {
     copy(props, this);
@@ -23,7 +23,7 @@ Dot.createSprite = function (size, colour) {
     return sprite;
 };
 
-Dot.prototype = new Entity({
+Dot.prototype = new Sprite({
 
     value: 10,
     delay: 1,

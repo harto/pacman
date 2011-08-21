@@ -3,16 +3,16 @@
  * for some level-specific amount of time, the first waiting ghost is released.
  */
 
-/*global Ghost, debug, events, toTicks */
+/*global Entity, Ghost, debug, toTicks */
 
 function ReleaseTimer(level) {
     this.frequency = toTicks(level < 5 ? 4 : 3);
 }
 
-ReleaseTimer.prototype = {
+ReleaseTimer.prototype = new Entity({
 
-    start: function () {
-        this.timer = events.repeat(this, this.frequency, function () {
+    onRespawn: function () {
+        this.timer = this.repeatEvent(this.frequency, function () {
             var ghost = Ghost.all(Ghost.STATE_INSIDE)[0];
             if (ghost) {
                 debug('dot-eaten timeout');
@@ -22,6 +22,6 @@ ReleaseTimer.prototype = {
     },
 
     dotEaten: function () {
-        events.reset(this.timer);
+        this.timer.reset();
     }
-};
+});

@@ -27,26 +27,29 @@ function DotCounter(level) {
 
 DotCounter.prototype = {
 
-    start: function () {
+    onRespawn: function () {
         this.running = true;
     },
 
-    stop: function () {
-        this.running = false;
-        this.useGlobalCounter = true;
-        this.globalCounter = 0;
+    useGlobalCounter: function () {
+        this._usingGlobalCounter = true;
+        this._globalCounter = 0;
     },
 
     dotEaten: function () {
-        if (this.useGlobalCounter && ++this.globalCounter === 32 &&
+        if (this._usingGlobalCounter && ++this._globalCounter === 32 &&
             lookup('clyde').is(Ghost.STATE_INSIDE)) {
-            this.useGlobalCounter = false;
+            this._usingGlobalCounter = false;
         } else {
             var first = Ghost.all(Ghost.STATE_INSIDE)[0];
             if (first) {
                 --this.counters[first.name];
             }
         }
+    },
+
+    energiserEaten: function () {
+        this.dotEaten();
     },
 
     // Check counters and return first ghost waiting for release. This happens
@@ -58,7 +61,7 @@ DotCounter.prototype = {
         // dot counter, so just release him as soon as he comes inside.
         if (blinky.is(Ghost.STATE_INSIDE)) {
             return blinky;
-        } else if (this.useGlobalCounter) {
+        } else if (this._usingGlobalCounter) {
             var pinky = lookup('pinky'),
                 inky = lookup('inky'),
                 clyde = lookup('clyde');
@@ -74,5 +77,3 @@ DotCounter.prototype = {
         }
     }
 };
-
-DotCounter.prototype.energiserEaten = DotCounter.prototype.dotEaten;

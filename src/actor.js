@@ -2,8 +2,8 @@
  * Base class of entities that move through the maze.
  */
 
-/*global EAST, Entity, Maze, NORTH, SOUTH, TILE_CENTRE, TILE_SIZE, WEST, copy,
-  toCol, toDx, toDy, toRow */
+/*global EAST, Maze, NORTH, SOUTH, Sprite, TILE_CENTRE, TILE_SIZE, WEST, copy,
+  toCol, toRow */
 
 function Actor(props) {
     copy(props, this);
@@ -39,7 +39,7 @@ Actor._pastTileCentre = function (lx, ly, direction) {
            (direction === SOUTH && ly >= TILE_CENTRE);
 };
 
-Actor.prototype = new Entity({
+Actor.prototype = new Sprite({
 
     pastTileCentre: function () {
         return Actor._pastTileCentre(this.lx, this.ly, this.direction);
@@ -78,7 +78,7 @@ Actor.prototype = new Entity({
         this.prevCol = this.col;
         this.prevRow = this.row;
 
-        Entity.prototype.moveTo.call(this, x, y);
+        Sprite.prototype.moveTo.call(this, x, y);
 
         // local x, y
         this.lx = Math.abs(this.cx % TILE_SIZE);

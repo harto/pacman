@@ -2,7 +2,7 @@
  * Text overlay for pause etc.
  */
 
-/*global Entity, SCREEN_H, SCREEN_W, TILE_SIZE, Text */
+/*global SCREEN_H, SCREEN_W, Sprite, TILE_SIZE, Text */
 
 function InfoText(txt) {
     this.txt = new Text({
@@ -22,7 +22,7 @@ function InfoText(txt) {
     this.w = this.h = 0;
 }
 
-InfoText.prototype = new Entity({
+InfoText.prototype = new Sprite({
 
     repaint: function (g) {
         g.save();

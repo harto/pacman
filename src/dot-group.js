@@ -7,20 +7,25 @@
 function DotGroup() {
     this.nDots = 0;
     this.dots = [];
+    this.energisers = [];
 
     var layout = Maze.LAYOUT;
     for (var row = 0; row < layout.length; row++) {
         this.dots[row] = [];
         for (var col = 0; col < layout[row].length; col++) {
             var ch = layout[row][col];
-            var dot = ch === '.' ? new Dot() :
-                      ch === 'o' ? new Energiser() :
-                      null;
-            if (dot) {
-                this.dots[row][col] = dot;
-                dot.place(col, row);
-                ++this.nDots;
+            var dot;
+            if (ch === '.') {
+                dot = new Dot();
+            } else if (ch === 'o') {
+                dot = new Energiser();
+                this.energisers.push(dot);
+            } else {
+                continue;
             }
+            this.dots[row][col] = dot;
+            dot.place(col, row);
+            ++this.nDots;
         }
     }
 
@@ -29,11 +34,9 @@ function DotGroup() {
 
 DotGroup.prototype = {
 
-    start: function () {
-        this.dots.forEach(function (row) {
-            row.forEach(function (d) {
-                dispatch(d, 'start');
-            });
+    onRespawn: function () {
+        this.energisers.forEach(function (energiser) {
+            energiser.onRespawn();
         });
     },
 
@@ -56,6 +59,9 @@ DotGroup.prototype = {
 
     remove: function (dot) {
         delete this.dots[dot.row][dot.col];
+        if (dot instanceof Energiser) {
+            this.energisers.remove(dot);
+        }
         --this.nDots;
         // FIXME: pull up
         if (this.nDots === 74 || this.nDots === 174) {
@@ -95,5 +101,11 @@ DotGroup.prototype = {
             d.repaint(g);
         });
         this.invalidated = [];
+    },
+
+    update: function () {
+        this.energisers.forEach(function (energiser) {
+            energiser.update();
+        });
     }
 };

@@ -2,7 +2,8 @@
  * Gutter panel displaying remaining number of lives
  */
 
-/*global Entity, Pacman, SCREEN_H, GraphicsBuffer, TILE_SIZE, enqueueInitialiser */
+/*global GraphicsBuffer, Pacman, SCREEN_H, Sprite, TILE_SIZE,
+  enqueueInitialiser */
 
 function LifeDisplay(lives) {
     this.setLives(lives);
@@ -11,7 +12,7 @@ function LifeDisplay(lives) {
 LifeDisplay.GRID_SIZE = 2 * TILE_SIZE;
 LifeDisplay.ICON_SIZE = Math.floor(1.4 * TILE_SIZE);
 
-LifeDisplay.prototype = new Entity({
+LifeDisplay.prototype = new Sprite({
 
     setLives: function (lives) {
         this.invalidate();

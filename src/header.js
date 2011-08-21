@@ -2,7 +2,7 @@
  * Text bits and pieces appearing in the header area
  */
 
-/*global Group, TILE_SIZE, Text, events, highscore, merge, score, toTicks */
+/*global Group, TILE_SIZE, Text, highscore, merge, score, toTicks */
 
 function Header() {
     var props = {
@@ -35,15 +35,18 @@ function Header() {
 
 Header.prototype = new Group({
 
-    start: function () {
+    onRespawn: function () {
         var oneup = this.get('1up');
-        events.repeat(oneup, toTicks(0.25), function () {
+        oneup.cancelEvent(oneup._blinker);
+        oneup._blinker = oneup.repeatEvent(toTicks(0.25), function () {
             this.setVisible(!this.isVisible());
         });
     },
 
-    scoreChanged: function () {
+    updateScore: function (score, highscore) {
         this.get('score').setText(score);
-        this.get('highscore').setText(highscore);
+        if (score === highscore) {
+            this.get('highscore').setText(highscore);
+        }
     }
 });
