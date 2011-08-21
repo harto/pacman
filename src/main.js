@@ -91,14 +91,14 @@ function respawn(starting) {
     var lifeDisplay = new LifeDisplay(starting ? lives : lives - 1);
     insert('lifeDisplay', lifeDisplay);
 
-    function insertStartupText(props) {
-        return insert(new Text(merge(props, {
+    function insertStartupText(id, props) {
+        insert(id, new Text(merge(props, {
             size: TILE_SIZE,
             style: Text.STYLE_FIXED_WIDTH
         })));
     }
 
-    var readyTextId = insertStartupText({
+    insertStartupText('readyText', {
         txt: 'READY!',
         colour: 'yellow',
         x: 11 * TILE_SIZE,
@@ -114,12 +114,12 @@ function respawn(starting) {
         insert('elroyCounter', new ElroyCounter(level, lookup('dots').dotsRemaining()));
         broadcast('onRespawn');
         wait(starting ? 2 : 1, function () {
-            remove(readyTextId);
+            remove('readyText');
         });
     }
 
     if (starting) {
-        var playerOneTextId = insertStartupText({
+        insertStartupText('playerOneText', {
             txt: 'PLAYER ONE',
             colour: 'cyan',
             x: 9 * TILE_SIZE,
@@ -127,7 +127,7 @@ function respawn(starting) {
         });
         wait(2, function () {
             lifeDisplay.setLives(lives - 1);
-            remove(playerOneTextId);
+            remove('playerOneText');
             start();
         });
         resources.playSound('intro');
@@ -328,9 +328,9 @@ function togglePause() {
     paused = !paused;
     resources.togglePause(paused);
     if (paused) {
-        pauseTextId = insert(new InfoText('Paused'));
+        insert('pauseText', new InfoText('Paused'));
     } else {
-        remove(pauseTextId);
+        remove('pauseText');
     }
 }
 

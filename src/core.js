@@ -79,7 +79,7 @@ function debug(/*msg, args*/) {
 }
 
 function insert(id, o) {
-    return objects[arguments.length === 2 ? 'set' : 'add'].apply(objects, arguments);
+    objects.set(id, o);
 }
 
 function lookup(id) {

@@ -6,4 +6,3 @@ Music
 Fix Maze constants
 Pull dot-counter into main
 Better names for insert, remove, lookup
-Un-overload insert
