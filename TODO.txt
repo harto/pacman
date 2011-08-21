@@ -1,0 +1,6 @@
+Pick better fonts
+Maze artwork
+Ghost jostling & proper entry/exit
+Bonus symbol artwork
+Music
+Fix Maze constants
