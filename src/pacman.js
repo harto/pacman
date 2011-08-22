@@ -44,7 +44,7 @@ Pacman.draw = function (g, x, y, radius, startAngle, proportion, offsetHinge) {
     g.moveTo(x + xOffset, y + yOffset);
     var start = startAngle || 0;
     var angle = Math.PI - proportion * Math.PI;
-    g.arc(x, y, radius, start + angle, start + (angle === 0 ? 2 * Math.PI : -angle));
+    g.arc(x, y, radius, start + angle, start + (angle === 0 ? 2 * Math.PI : -angle), false);
     g.moveTo(x + xOffset, y + yOffset);
     g.closePath();
     g.fillStyle = 'yellow';
