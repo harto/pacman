@@ -1,0 +1,61 @@
+#content {
+  max-width: 30em;
+}
+body {
+  margin: 0;
+  padding: 10px;
+  background: white;
+  font-size: 70%;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.5em;
+}
+p {
+  margin: 0 0 1em;
+}
+.warning {
+  width: 20em;
+  background: #FCC;
+  font-weight: bold;
+  margin: 0 0 1em 0;
+  padding: 1em;
+}
+canvas {
+  border: 2px #333 solid;
+  background: #CCC;
+  float: left;
+}
+#cruft {
+  float: left;
+  padding: 0 0 0 10px;
+}
+#keymap {
+  margin: 0 0 1em;
+  padding: 0;
+}
+#keymap:after {
+  content: ".";
+  clear: left;
+  display: block;
+  visibility: hidden;
+  height: 0;
+}
+dt {
+  float: left;
+  clear: left;
+  margin: 0.2em 0;
+  width: 2.5em;
+}
+dd {
+  float: left;
+  margin: 0;
+  padding: 0.4em 0 0 0;
+}
+kbd {
+  font-weight: bold;
+  font-size: 1.1em;
+  padding: 0.1em;
+  background-color: #EEE;
+  border: 1px #CCC solid;
+  border-bottom-color: #111;
+  border-left-color: #111;
+}

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Pac-Man</title>
+
+  <link rel="stylesheet" type="text/css" href="pacman.css" />
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+  <script src="pacman.js"></script>
+  <script src="analytics.js"></script>
+</head>
+
+<body>
+  <!--[if IE]>
+    <p class="warning">
+      Oops. Sorry. I don't work in Internet Explorer. If you'd really
+      like to play, try upgrading to either
+      <a href="http://www.mozilla.com/firefox">Firefox</a> or
+      <a href="http://www.google.com/chrome">Chrome</a>.
+    </p>
+  <![endif]-->
+
+  <noscript>
+    <p class="warning">
+      Aow. I can't work without JavaScript. Try enabling JavaScript in
+      your browser settings and reloading the page.
+    </p>
+  </noscript>
+
+  <canvas width="448" height="576"></canvas>
+
+  <div id="cruft">
+    <dl id="keymap">
+      <dt><kbd>&larr;</kbd></dt>
+      <dd>left</dd>
+
+      <dt><kbd>&rarr;</kbd>
+      </dt><dd>right</dd>
+
+      <dt><kbd>&uarr;</kbd>
+      </dt><dd>up</dd>
+
+      <dt><kbd>&darr;</kbd>
+      </dt><dd>down</dd>
+
+      <dt><kbd>P</kbd>
+      </dt><dd>pause</dd>
+
+      <dt><kbd>N</kbd>
+      </dt><dd>new game</dd>
+    </dl>
+
+    <p>
+    <input type="checkbox" id="enableSounds" disabled="disabled" />
+    <label for="enableSounds">Enable sound?</label>
+    </p>
+
+    <p>
+      <a href="https://www.github.com/harto/pacman">View source on Github</a>
+    </p>
+ </div>
+</body>
+</html>
