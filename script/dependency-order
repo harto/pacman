@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Determines the order in which JavaScript files should be concatenated by
 scanning JSLint /*global ... */ declarations.

@@ -1,20 +1,27 @@
-JAVASCRIPTS = $(wildcard src/*.js)
-DEPLOYABLE_FILES = index.html pacman.js pacman.css analytics.js res
+STATICS := $(subst static, .build, $(wildcard static/*))
+JAVASCRIPTS := $(wildcard src/*.js)
 
-.PHONY: lint deploy clean
+.PHONY: all lint deploy clean
 
-pacman.js: $(JAVASCRIPTS)
-	cat `python tools/dependency-order.py $(JAVASCRIPTS)` >pacman.js
+all: .build/pacman.js
+
+.build/pacman.js: $(JAVASCRIPTS) $(STATICS) .build/res
+	cat `script/dependency-order $(JAVASCRIPTS)` >.build/pacman.js
+
+.build/res: res | .build
+	cp -R res .build/res
+
+.build/%: static/% | .build
+	cp -R $< $@
+
+.build:
+	mkdir -p .build
 
 lint:
 	jslint $(JAVASCRIPTS)
 
-.build: $(DEPLOYABLE_FILES)
-	mkdir -p .build
-	cp -R $(DEPLOYABLE_FILES) .build
-
 deploy: .build
-	./deploy.sh .build
+	script/deploy .build
 
 clean:
-	rm -f pacman.js .build
+	rm -rf .build
