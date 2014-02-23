@@ -27,7 +27,7 @@ git checkout --orphan gh-pages
 git rm -rf .
 
 # Commit deployable files
-cp $BUILD/* .
+cp -R $BUILD/* .
 git add -A
 
 # Clobber remote gh-pages
